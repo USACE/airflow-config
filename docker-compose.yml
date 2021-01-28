@@ -1,0 +1,50 @@
+version: "3"
+
+services:
+  airflowdb:
+    image: mdillon/postgis
+    volumes:
+      - ./database/sql:/sql
+      - ./database/sql/init.sql:/docker-entrypoint-initdb.d/z_init.sql
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    # ports:
+    #   - "5432:5432"
+
+  airflow_init:
+    env_file:
+      - ./airflow.env
+    image: apache/airflow:master-python3.8
+    depends_on:
+      - airflowdb
+    entrypoint: >
+      /bin/sh -c "
+      /entrypoint db reset -y;
+      /entrypoint db init;
+      /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
+      exit 0
+      "
+  airflow_scheduler:
+    env_file:
+      - ./airflow.env
+    image: apache/airflow:master-python3.8
+    depends_on:
+      - airflow_init
+    restart: always
+    command: scheduler
+    volumes:
+      - ./logs:/opt/airflow/logs
+      - ./dags:/opt/airflow/dags
+      - ./plugins:/opt/airflow/plugins
+  airflow_ui:
+    env_file:
+      - ./airflow.env
+    image: apache/airflow:master-python3.8
+    depends_on:
+      - airflow_init
+      - airflow_scheduler
+    restart: always
+    # environment:
+    ports:
+      - "8000:8080"
+    command: webserver

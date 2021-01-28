@@ -135,7 +135,7 @@ with DAG(
     ##############################################################################    
     get_midas_task = PythonOperator(
         task_id='midas_query',
-        python_callable=midas.get_aware_local,
+        python_callable=midas.get_aware_instruments,
     )    
 
     flashflood_authenticate_task = PythonOperator(

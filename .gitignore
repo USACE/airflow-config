@@ -1,0 +1,18 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.zip
+
+**.DS_Store
+
+**.pyc
+**__pycache__
+
+**/__debug*
+
+# Airflow Logs Directory
+airflow/logs/**
+!airflow/logs/README.md
