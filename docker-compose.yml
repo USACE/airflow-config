@@ -1,5 +1,11 @@
 version: "3"
 
+networks:
+  default:
+    external:
+      name: cumulus-api_default
+      # name: instrumentation-api_default
+
 services:
   airflowdb:
     image: mdillon/postgis
