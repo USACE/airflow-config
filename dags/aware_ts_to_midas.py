@@ -135,7 +135,7 @@ with DAG(
     ##############################################################################    
     get_midas_task = PythonOperator(
         task_id='midas_query',
-        python_callable=midas.get_aware_instruments,
+        python_callable=midas.get_aware_param_config,
     )    
 
     flashflood_authenticate_task = PythonOperator(
@@ -143,7 +143,7 @@ with DAG(
         python_callable=aware.flashfloodinfo_authenticate
     )
 
-    instruments = json.loads(midas.get_aware_instruments()) 
+    instruments = json.loads(midas.get_aware_param_config()) 
 
     for i in instruments:
         
