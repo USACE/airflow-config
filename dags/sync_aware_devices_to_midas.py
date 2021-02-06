@@ -24,57 +24,61 @@ with DAG(
     'sync_aware_devices_to_midas',
     default_args=default_args,
     description='Synchronize AWARE Devices to MIDAS Instruments',
-    start_date=days_ago(1),
+    start_date=days_ago(0),
     tags=['midas'],
-    schedule_interval='@daily'
+    # schedule_interval='@daily',
+    schedule_interval='0 17,23 * * *'
     
 ) as dag:
     # dag.doc_md = __doc__
     ##############################################
-    def add_devices_to_midas(aware_devices, metadata, midas_aware_instruments):
+    def sync_devices_to_midas(aware_devices, metadata, midas_aware_param_config_instruments, midas_aware_instruments):
 
         aware_devices = json.loads(aware_devices)
+        midas_aware_param_config_instruments = json.loads(midas_aware_param_config_instruments)
         midas_aware_instruments = json.loads(midas_aware_instruments)
-       
-        # print(f'aware_devices: {aware_devices}')
-        instruments_dict = {}
 
-        # Convert midas aware instruments list results to dict with aware_id as key
-        for i in midas_aware_instruments:            
-            instruments_dict[i['aware_id']] = i          
-            
+       
+        midas_aware_param_config_instruments_dict = {}
+        # Convert midas_aware_param_config_instruments list results to dict with aware_id as key
+        for i in midas_aware_param_config_instruments:            
+            midas_aware_param_config_instruments_dict[i['aware_id']] = i
+
+        
+        instruments_dict = {}
+        # Convert midas_aware_instruments list results to dict with aware_id as key
+        for x in midas_aware_instruments:            
+            instruments_dict[x['id']] = x           
 
 
         project_id = "82c07c9a-9ec8-4ff5-850c-b1d74ffb5e14"
         metadata = json.loads(metadata)
 
-        # print('--METaDATA--')
-        # print(metadata)
-
-        payload = []  
+        insert_payload = []        
 
         # Fake new gage not in MIDAS
         # aware_devices['d0574790-4fc3-11eb-a888-07a0a8e5af03'] = {'name': 'USACE00999', 'type': 'USACE', 'label': None, 'entityType': 'DEVICE'}   
         
         for d_id, d_obj in aware_devices.items(): 
 
-            #if not any(obj['name'] == f"AWARE Gage {d_obj['name']}" for obj in midas_aware_instruments):                
+            #if not any(obj['name'] == f"AWARE Gage {d_obj['name']}" for obj in midas_aware_instruments):               
+            print('-'*30) 
 
-            if d_id not in instruments_dict.keys():            
+            # Metadata may not be available.  It requires a timeseries call
+            # and may not result in values if the window is not large enough
+            try:
+                lat = float(metadata[d_id]['lat']['value'])
+                lon = float(metadata[d_id]['lon']['value'])
+            except:
+                logging.warning(f"lat/lon not available for: {d_obj['name']}")
+                lat = 0.0
+                lon = 0.0           
+            
+            if d_id not in midas_aware_param_config_instruments_dict.keys():            
                 
                 print('#'*50)
                 print(f"AWARE Gage {d_obj['name']} NOT in MIDAS, preparing to add...")           
-                instrument_obj = {}             
-                
-                # Metadata may not be available.  It requires a timeseries call
-                # and may not result in values if the window is not large enough
-                try:
-                    lat = float(metadata[d_id]['lat']['value'])
-                    lon = float(metadata[d_id]['lon']['value'])
-                except:
-                    logging.warning(f"lat/lon not available for: {d_obj['name']}")
-                    lat = 0.0
-                    lon = 0.0              
+                instrument_obj = {}                          
                 
                 instrument_obj['aware_id'] = d_id
                 instrument_obj['status_id'] = "e26ba2ef-9b52-4c71-97df-9e4b6cf4174d"
@@ -90,18 +94,47 @@ with DAG(
                 instrument_obj['offset'] = None
                 instrument_obj['project_id'] = project_id
 
-                payload.append(instrument_obj) 
+                insert_payload.append(instrument_obj) 
 
                 for k,v in instrument_obj.items():
                     print(f'{k}: {v}')
 
             else:                
-                print(f"{d_obj['name']} already in MIDAS, skipping...")       
+                print(f"{d_obj['name']} already in MIDAS.")
+                #
+                # Check MIDAS VS AWARE Coordinates and update where needed
+                #
+
+                midas_instrument_id = midas_aware_param_config_instruments_dict[d_id]['instrument_id']                
+                # print(f"Checking coordinates for: {d_obj['name']}")                
+                midas_lon = instruments_dict[midas_instrument_id]['geometry']['coordinates'][0]
+                midas_lat = instruments_dict[midas_instrument_id]['geometry']['coordinates'][1]
+                
+                if round(float(midas_lat),4) != round(float(lat),4) or round(float(midas_lon),4) != round(float(lon),4):
+                    print('NOTICE: **MIDAS Coordinates need updated**')
+                    print(f'MIDAS Coords: lat={midas_lat}, lon={midas_lon}')
+                    print(f'AWARE Coords: lat={lat}, lon={lon}')
+                    midas_project_id = midas_aware_param_config_instruments_dict[d_id]['project_id']
+
+                    # Only update MIDAS if the coordinates aren't defaulting to 0,0
+                    if int(lat) != 0 and int(lon) != 0:
+                        update_payload = {"type":"Point","coordinates":[round(float(lon),4), round(float(lat),4)]}
+                    
+                        conn = midas.get_connection()
+                        h = HttpHook(http_conn_id=conn.conn_id, method='PUT')    
+                        endpoint = f'/projects/{midas_project_id}/instruments/{midas_instrument_id}/geometry?key_id={conn.login}&key={conn.password}'
+                        headers = {"Content-Type": "application/json"}
+                        r = h.run(endpoint=endpoint, json=update_payload, headers=headers)
+                    else:
+                        print(f'Ignoring AWARE Coordinates:{lat},{lon}')
+
+                else:
+                    print('MIDAS/AWARE Coordinates match. All good :-)')
 
 
-        print(json.dumps(payload)) 
+        print(json.dumps(insert_payload)) 
 
-        if len(payload) > 0:
+        if len(insert_payload) > 0:
             conn = midas.get_connection()
             h = HttpHook(http_conn_id=conn.conn_id, method='POST')    
             endpoint = f'/projects/{project_id}/instruments?key_id={conn.login}&key={conn.password}'
@@ -131,6 +164,8 @@ with DAG(
         #     "project_id": "82c07c9a-9ec8-4ff5-850c-b1d74ffb5e14"
         # }]
 
+
+
         return
 
     def get_aware_device_metadata(token, devices, start, end):
@@ -155,8 +190,8 @@ with DAG(
         for d_id, d_obj in devices.items():
             
             device_metadata = {}                
-            print('###################')
-            print(d_id, d_obj)
+            # print('###################')
+            # print(d_id, d_obj)
 
             # Query AWARE API for the metadata (which is actually in the timeseries)
             r = aware.get_device_ts_data(token, d_id, startTs, endTs, keys, limit)
@@ -164,7 +199,7 @@ with DAG(
             # Loop through metadata results
             for field, ts_obj in r.json().items():
                 device_metadata[field] = ts_obj[0] #assign the first (latest) value
-                print(f'Adding {field}->{ts_obj[0]} to metdata result payload')
+                # print(f'Adding {field}->{ts_obj[0]} to metdata result payload')
 
             results_metadata[d_id] = device_metadata
             
@@ -197,7 +232,12 @@ with DAG(
 
     get_midas_aware_instruments_task = PythonOperator(
             task_id='get_midas_aware_instruments',
-            python_callable=midas.get_aware_instruments            
+            python_callable=midas.get_aware_instruments           
+        )
+
+    get_midas_aware_param_config_task = PythonOperator(
+            task_id='get_midas_aware_param_config',
+            python_callable=midas.get_aware_param_config           
         )
 
     get_aware_devices_metadata_task = PythonOperator(
@@ -211,15 +251,16 @@ with DAG(
                 }
         )    
 
-    add_devices_to_midas_task = PythonOperator(
-            task_id='add_devices_to_midas',
-            python_callable=add_devices_to_midas,
+    sync_devices_to_midas_task = PythonOperator(
+            task_id='sync_devices_to_midas',
+            python_callable=sync_devices_to_midas,
             op_kwargs={                
                 'aware_devices': "{{task_instance.xcom_pull(task_ids='get_aware_devices')}}",
                 #'token': "{{task_instance.xcom_pull(task_ids='midas_authenticate')}}",
                 'metadata': "{{task_instance.xcom_pull(task_ids='get_aware_device_metadata')}}",
+                'midas_aware_param_config_instruments': "{{task_instance.xcom_pull(task_ids='get_midas_aware_param_config')}}",
                 'midas_aware_instruments': "{{task_instance.xcom_pull(task_ids='get_midas_aware_instruments')}}"
                 }
         ) 
 
-    get_midas_aware_instruments_task >> flashflood_authenticate_task >> flashflood_get_customer >> get_aware_devices_task >> get_aware_devices_metadata_task >> add_devices_to_midas_task
+    [get_midas_aware_param_config_task, get_midas_aware_instruments_task] >> flashflood_authenticate_task >> flashflood_get_customer >> get_aware_devices_task >> get_aware_devices_metadata_task >> sync_devices_to_midas_task
