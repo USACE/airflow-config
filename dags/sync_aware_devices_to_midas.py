@@ -24,7 +24,7 @@ with DAG(
     'sync_aware_devices_to_midas',
     default_args=default_args,
     description='Synchronize AWARE Devices to MIDAS Instruments',
-    start_date=days_ago(0),
+    start_date=days_ago(1),
     tags=['midas'],
     # schedule_interval='@daily',
     schedule_interval='0 17,23 * * *'
