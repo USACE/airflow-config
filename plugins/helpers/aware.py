@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 
 from airflow.hooks.base_hook import BaseHook
@@ -38,6 +39,9 @@ def epoch_ms_to_human(ts):
         """
 
         return datetime.utcfromtimestamp(ts/1000).strftime('%Y-%m-%dT%H:%M:%SZ')
+################################################################
+def milliseconds_since_epoch(dt=datetime.now()):
+    return int(dt.timestamp() * 1000)
 ################################################################
 def get_aware_devices(token, customer_id):
     
@@ -80,3 +84,64 @@ def get_device_ts_data(token, device_id, startTs, endTs, keys, limit):
     r = h.run(endpoint=endpoint, headers=headers)
 
     return r
+################################################################
+def get_aware_device_metadata(token, devices, start, end):
+
+    print(f'Calling get_aware_device_metadata() task')
+            
+    token   = json.loads(token)['token']        
+    devices = json.loads(devices)
+    limit   = 5
+    startTs = int(start)*1000
+    endTs   = int(end)*1000
+    keys    = "lat,lon,IMEI,elev"
+
+    logging.info('*****************')
+    logging.info(f"Start: {datetime.fromtimestamp(int(start)).strftime('%Y-%m-%d %H:%M:%S.%f')}")
+    logging.info(f"End: {datetime.fromtimestamp(int(end)).strftime('%Y-%m-%d %H:%M:%S.%f')}")
+    logging.info('*****************')
+
+    results_metadata = {}        
+    
+    for d_id, d_obj in devices.items():
+        
+        device_metadata = {}                
+        print('-'*50)
+        print(d_id, d_obj)
+
+        # Query AWARE API for the metadata (which is actually in the timeseries)
+        r = get_device_ts_data(token, d_id, startTs, endTs, keys, limit)
+        
+        # Loop through metadata results
+        for field, ts_obj in r.json().items():
+            device_metadata[field] = ts_obj[0] #assign the first (latest) value
+            # print(f'Adding {field}->{ts_obj[0]} to metdata result payload')
+
+        # Add the name for the device
+        device_metadata['name'] = d_obj['name']        
+
+        results_metadata[d_id] = device_metadata        
+
+    #print(json.dumps(results_metadata))
+    return json.dumps(results_metadata)
+################################################################
+def send_device_command(token, device_id, params):
+
+    token   = json.loads(token)['token']
+    conn = get_connection()
+    
+    payload = {}     
+    payload['method'] = "AWARECommands"
+    payload['timeout'] = 5000
+
+    params['issuer']      = [conn.login]
+    params['deviceType']  = ["USACE"]    
+    params['cmdSendDate'] = str(milliseconds_since_epoch())
+    params['node'][0]     = params['node'][0].replace('USACE', '')
+              
+    payload['params'] = params
+    
+    h = HttpHook(http_conn_id=conn.conn_id, method='POST')
+    headers = {"Content-Type": "application/json", "X-Authorization": "Bearer "+token}
+    endpoint = f"/api/plugins/rpc/twoway/{device_id}"   
+    r = h.run(endpoint=endpoint, json=payload, headers=headers)

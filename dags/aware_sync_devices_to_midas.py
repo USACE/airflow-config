@@ -24,10 +24,10 @@ with DAG(
     'sync_aware_devices_to_midas',
     default_args=default_args,
     description='Synchronize AWARE Devices to MIDAS Instruments',
-    start_date=days_ago(1),
+    start_date=datetime(2021, 2, 7),
     tags=['midas'],
     # schedule_interval='@daily',
-    schedule_interval='0 17,23 * * *'
+    schedule_interval='0 19 * * *'
     
 ) as dag:
     # dag.doc_md = __doc__
@@ -104,7 +104,6 @@ with DAG(
                 #
                 # Check MIDAS VS AWARE Coordinates and update where needed
                 #
-
                 midas_instrument_id = midas_aware_param_config_instruments_dict[d_id]['instrument_id']                
                 # print(f"Checking coordinates for: {d_obj['name']}")                
                 midas_lon = instruments_dict[midas_instrument_id]['geometry']['coordinates'][0]
@@ -164,48 +163,7 @@ with DAG(
         #     "project_id": "82c07c9a-9ec8-4ff5-850c-b1d74ffb5e14"
         # }]
 
-
-
-        return
-
-    def get_aware_device_metadata(token, devices, start, end):
-
-        print(f'Calling get_aware_device_metadata() task')
-              
-        token   = json.loads(token)['token']        
-        devices = json.loads(devices)
-        limit   = 5
-        startTs = int(start)*1000
-        endTs   = int(end)*1000
-        keys    = "lat,lon,IMEI,elev"
-
-        logging.info('*****************')
-        logging.info(f"Start: {datetime.fromtimestamp(int(start)).strftime('%Y-%m-%d %H:%M:%S.%f')}")
-        logging.info(f"End: {datetime.fromtimestamp(int(end)).strftime('%Y-%m-%d %H:%M:%S.%f')}")
-        logging.info('*****************')
-
-        # conn = aware.get_connection()
-        results_metadata = {}        
-        
-        for d_id, d_obj in devices.items():
-            
-            device_metadata = {}                
-            # print('###################')
-            # print(d_id, d_obj)
-
-            # Query AWARE API for the metadata (which is actually in the timeseries)
-            r = aware.get_device_ts_data(token, d_id, startTs, endTs, keys, limit)
-            
-            # Loop through metadata results
-            for field, ts_obj in r.json().items():
-                device_metadata[field] = ts_obj[0] #assign the first (latest) value
-                # print(f'Adding {field}->{ts_obj[0]} to metdata result payload')
-
-            results_metadata[d_id] = device_metadata
-            
-
-        print(json.dumps(results_metadata))
-        return json.dumps(results_metadata)
+        return    
     ##############################################    
 
     flashflood_authenticate_task = PythonOperator(
@@ -242,7 +200,7 @@ with DAG(
 
     get_aware_devices_metadata_task = PythonOperator(
             task_id='get_aware_device_metadata',
-            python_callable=get_aware_device_metadata,
+            python_callable=aware.get_aware_device_metadata,
             op_kwargs={                
                 'token': "{{task_instance.xcom_pull(task_ids='flashflood_authenticate')}}",
                 'devices': "{{task_instance.xcom_pull(task_ids='get_aware_devices')}}",
