@@ -21,7 +21,7 @@ default_args = {
     'owner': 'airflow',
 }
 with DAG(
-    'sync_aware_devices_to_midas',
+    'aware_sync_devices_to_midas',
     default_args=default_args,
     description='Synchronize AWARE Devices to MIDAS Instruments',
     start_date=datetime(2021, 2, 7),
