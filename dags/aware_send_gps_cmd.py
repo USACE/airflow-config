@@ -41,7 +41,7 @@ with DAG(
     'aware_send_gps_cmd',
     default_args=default_args,
     description='Send GPS Sync Command to AWARE Devices via API',
-    start_date=datetime(2021, 2, 9),
+    start_date=(datetime.utcnow()-timedelta(days=1)).replace(hour=16, minute=0, second=0),
     tags=['midas'],
     # schedule_interval='@daily',
     schedule_interval='0 17 * * *'
