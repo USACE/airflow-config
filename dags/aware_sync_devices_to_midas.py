@@ -24,7 +24,7 @@ with DAG(
     'aware_sync_devices_to_midas',
     default_args=default_args,
     description='Synchronize AWARE Devices to MIDAS Instruments',
-    start_date=datetime(2021, 2, 7),
+    start_date=(datetime.utcnow()-timedelta(days=1)).replace(hour=18, minute=0, second=0),
     tags=['midas'],
     # schedule_interval='@daily',
     schedule_interval='0 19 * * *'
@@ -138,7 +138,7 @@ with DAG(
             h = HttpHook(http_conn_id=conn.conn_id, method='POST')    
             endpoint = f'/projects/{project_id}/instruments?key_id={conn.login}&key={conn.password}'
             headers = {"Content-Type": "application/json"}
-            r = h.run(endpoint=endpoint, json=payload, headers=headers)
+            r = h.run(endpoint=endpoint, json=insert_payload, headers=headers)
 
         ########### Example payload ###################
         # [{
