@@ -3,6 +3,7 @@ from botocore.exceptions import ClientError
 import json
 import logging
 from tempfile import TemporaryDirectory
+from pathlib import Path
 import os
 from urllib.request import urlretrieve
 
@@ -19,9 +20,26 @@ DOWNLOAD_OPERATOR_USE_LAMBDA_REGION = os.getenv("DOWNLOAD_OPERATOR_USE_LAMBDA_RE
 def upload_file(file_name, bucket, object_name=None):
     """Upload a file to an S3 bucket"""
     hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
-    load_file = hook.load_file(file_name, object_name, bucket)
+    load_file = hook.load_file(file_name, object_name, bucket, replace=True)
     return load_file
 
+def read_s3_file(file_name, bucket, object_name=None):
+    """Download a file from S3 bucket, return text contents"""
+    hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
+    try:
+        h = hook.download_file(file_name, bucket)
+    except:
+        return []
+    
+    with open(h, "r") as f:   
+        contents = f.readlines()
+
+    # S3 Hook.download_file uses a built-in namedtemporaryfile method
+    # however tests were showing the file wasn't being deleted    
+    if os.path.exists(h): os.remove(h)
+
+    # returns a list of strings
+    return contents
 
 def download(url, outfile):
     local_filename, headers = urlretrieve(url, outfile)
