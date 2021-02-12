@@ -39,7 +39,8 @@ def download_and_process_wpc_qpf():
 
     URL_ROOT = f'https://ftp.wpc.ncep.noaa.gov'
     STATUS_SOURCE = f'{URL_ROOT}/pqpf/pqpf_status.txt'
-    STATUS_S3_KEY = f'cumulus/wpc_2p5km_qpf_status/{os.path.basename(STATUS_SOURCE)}'
+    S3_KEY_DIR = f'cumulus/wpc_qpf_2p5km'
+    STATUS_S3_KEY = f'{S3_KEY_DIR}_status/{os.path.basename(STATUS_SOURCE)}'
     PROD_SOURCE_DIR = '2p5km_qpf'
 
     @task()
@@ -98,7 +99,7 @@ def download_and_process_wpc_qpf():
 
         for hour in fcst_hrs[forecast_hour]:
             filename = f'p06m_{forecast_datetime}f{hour}.grb'
-            output = trigger_download(url=f'{URL_ROOT}/{PROD_SOURCE_DIR}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'cumulus/wpc_{PROD_SOURCE_DIR}/{filename}')
+            output = trigger_download(url=f'{URL_ROOT}/{PROD_SOURCE_DIR}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{S3_KEY_DIR}/{filename}')
       
         # Replace the status file with new datetime contents
         output = trigger_download(url=f'{STATUS_SOURCE}', s3_bucket='corpsmap-data-incoming', s3_key=STATUS_S3_KEY)
