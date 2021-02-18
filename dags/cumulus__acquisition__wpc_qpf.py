@@ -28,7 +28,7 @@ default_args = {
 }
 
 # An Example Using the Taskflow API
-@dag(default_args=default_args, schedule_interval='@hourly', tags=['cumulus'])
+@dag(default_args=default_args, schedule_interval='@hourly', tags=['cumulus','forecast'])
 def download_and_process_wpc_qpf():
     """This pipeline handles download, processing, and derivative product creation for Weather Prediction Center QPF\n
     0000 Hours Forecast : 00f  -  006, 012, 018, 024, 030, 036, 042, 048, 054, 060, 066, 072, 078, 084, 090, 096, 102, 108, 114, 120, 126, 132, 138, 144, 150, 156, 162, 168
