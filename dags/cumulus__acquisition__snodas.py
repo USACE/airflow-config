@@ -16,12 +16,13 @@ from helpers.sqs import trigger_sqs
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2021, 1, 10, 0, 0, 0),
+    # "start_date": datetime(2021, 1, 10, 0, 0, 0),
+    "start_date": (datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 1,
+    "retries": 5,
     "retry_delay": timedelta(minutes=5),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
@@ -36,7 +37,10 @@ def cumulus_download_and_process_snodas():
 
     @task()
     def snodas_download_unmasked():
-        execution_date = get_current_context()['execution_date']
+        
+        # In order to get the current day's file, set execution forward 1 day
+        execution_date = get_current_context()['execution_date']+timedelta(hours=24)
+        
         URL_ROOT = f'ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/unmasked/{execution_date.year}/{execution_date.strftime("%m_%b")}'
         FILENAME = f'SNODAS_unmasked_{execution_date.strftime("%Y%m%d")}.tar'
         output = trigger_download(url=f'{URL_ROOT}/{FILENAME}', s3_bucket='corpsmap-data-incoming', s3_key=f'cumulus/nohrsc_snodas_unmasked/{FILENAME}')
@@ -48,7 +52,7 @@ def cumulus_download_and_process_snodas():
 
 
     downloaded = snodas_download_unmasked()
-    printit = snodas_process_cogs(downloaded)
+    # printit = snodas_process_cogs(downloaded)
 
 
 snodas_dag = cumulus_download_and_process_snodas()
