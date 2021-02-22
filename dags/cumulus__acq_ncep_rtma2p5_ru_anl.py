@@ -41,7 +41,7 @@ def download_and_process_rtma_ru_anl_airtemp():
     """
 
     URL_ROOT = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/rtma/prod'
-    S3_KEY_DIR = f'cumulus/ncep_rtma_ru_anl_airtemp'
+    S3_KEY_DIR = f'cumulus/ncep_rtma_ru_anl'
     SCHED_INTERVAL = 15
     LOOKBACK_INTERVALS = 0
 
