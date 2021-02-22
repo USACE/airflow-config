@@ -17,13 +17,13 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     # "start_date": datetime(2021, 1, 10, 0, 0, 0),
-    "start_date": (datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow()-timedelta(hours=96)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 5,
-    "retry_delay": timedelta(minutes=5),
+    "retries": 16,
+    "retry_delay": timedelta(minutes=30),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
@@ -31,9 +31,12 @@ default_args = {
 }
 
 # An Example Using the Taskflow API
-@dag(default_args=default_args, schedule_interval='0 3 * * *', tags=['cumulus'])
+@dag(default_args=default_args, schedule_interval='20 8 * * *', tags=['cumulus'])
 def cumulus_download_and_process_snodas():
-    """This pipeline handles download, processing, and derivative product creation for NOHRSC SNODAS Products"""
+    """This pipeline handles download, processing, and derivative product creation for NOHRSC SNODAS Products\n
+    Product timestamp is usually around 0320 AM EST (0820 UTC), but may not be actual time published to FTP site.
+    """
+
 
     @task()
     def snodas_download_unmasked():
