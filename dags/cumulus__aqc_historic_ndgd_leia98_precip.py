@@ -24,7 +24,7 @@ default_args = {
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    'end_date': datetime(2011, 1, 3),
+    'end_date': datetime(2012, 1, 1),
 }
 
 @dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'historic', 'precip'])
