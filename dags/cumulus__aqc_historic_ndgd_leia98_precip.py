@@ -1,5 +1,5 @@
 """
-Acquire and Process Historic NDGD LTIA98 Temps
+Acquire and Process Historic NDGD LTEA98 Precip
 """
 
 import os, json, logging
@@ -24,27 +24,27 @@ default_args = {
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    'end_date': datetime(2012, 1, 1),
+    'end_date': datetime(2011, 1, 3),
 }
 
-@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'historic'])
-def download_and_process_historic_ltia98():
+@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'historic', 'precip'])
+def download_and_process_historic_leia98():
     """This pipeline handles download and processing for \n
     URL Dir - https://www.ncei.noaa.gov/data/national-digital-guidance-database/access/
-    Files matching LTIA98_KWBR_YYYYMMDDHHMM
+    Files matching LEIA98_KWBR_YYYYMMDDHHMM
     """
 
     URL_ROOT = f'https://www.ncei.noaa.gov/data/national-digital-guidance-database/access'
 
     @task()
-    def download_raw_ltia98():
-        s3_key_dir = f'cumulus/NGDG_ltia98_temp'
+    def download_raw_leia98():
+        s3_key_dir = f'cumulus/ndgd_leia98_precip'
         execution_date = get_current_context()['execution_date']
         file_dir = f'{URL_ROOT}/historical/{execution_date.strftime("%Y%m")}/{execution_date.strftime("%Y%m%d")}'
-        filename = f'LTIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
+        filename = f'LEIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
         print(f'Downloading {filename}')
         output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
 
-    download_raw_ltia98()
+    download_raw_leia98()
 
-ltia98_dag = download_and_process_historic_ltia98()
+leia98_dag = download_and_process_historic_leia98()
