@@ -14,7 +14,7 @@ from helpers.downloads import trigger_download, read_s3_file
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2011, 1, 1),
+    "start_date": datetime(2012, 1, 1),
     "catchup_by_default": False,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
@@ -24,7 +24,7 @@ default_args = {
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    'end_date': datetime(2012, 1, 1),
+    'end_date': datetime(2020, 5, 15),
 }
 
 @dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'historic', 'airtemp'])
