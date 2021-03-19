@@ -16,7 +16,7 @@ from helpers.sqs import trigger_sqs
 import time
 
 default_args = {
-    "owner": "airflow",
+    "owner": "geoprocess_user",
     "depends_on_past": False,
     "start_date": datetime(2014, 1, 1, 1, 0, 0),
     #"start_date": (datetime.utcnow()-timedelta(hours=96)).replace(minute=0, second=0),
@@ -53,19 +53,23 @@ def cumulus_download_and_process_snodas():
     
     @task()
     def snodas_process_cogs():
+        dag_id = get_current_context()['dag_run'].dag_id
         message = {
             "process": "incoming-file-to-cogs",
             "airflow":{
-                "dag_id":get_current_context()['dag_run'].dag_id,
-                "dag_run_id": get_current_context()['dag_run'].run_id,
-                "task_id": get_current_context()['task'].task_id,
-                "dry_run": False,
-                "execution_date": get_current_context()['execution_date'].isoformat(),
-                "include_downstream": False,
-                "include_future": False,
-                "include_past": False,
-                "include_upstream": False,
-                # "new_state": "failed"
+                "callback_url": "http://service-discoveryname/api/v1/dags/{dag_id}/updateTaskInstancesState",
+                "payload": {
+                    "dag_id":dag_id,
+                    "dag_run_id": get_current_context()['dag_run'].run_id,
+                    "task_id": get_current_context()['task'].task_id,
+                    "dry_run": False,
+                    "execution_date": get_current_context()['execution_date'].isoformat(),
+                    "include_downstream": False,
+                    "include_future": False,
+                    "include_past": False,
+                    "include_upstream": False,
+                    "new_state": "success"
+                }
             },             
             "process_config": {
                 "bucket": "corpsmap-data-incoming",
