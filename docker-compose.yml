@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 
 networks:
   default:
@@ -28,6 +28,8 @@ services:
       /entrypoint db reset -y;
       /entrypoint db init;
       /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
+      /entrypoint airflow roles create TaskEdit;
+      /entrypoint users create --role TaskEdit --username geoprocess_user --email gp@airflow.com --firstname geoprocess --lastname user --password airflow;
       exit 0
       "
   airflow_scheduler:
@@ -52,5 +54,5 @@ services:
     restart: always
     # environment:
     ports:
-      - "8000:8080"
+      - '8000:8080'
     command: webserver
