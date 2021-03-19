@@ -18,5 +18,5 @@ payload = {
   "new_state": "failed",
   "task_id": task_id
 }
-r = requests.post(task_update_endpoint, json=payload, auth=('airflow', 'airflow'))
+r = requests.post(task_update_endpoint, json=payload, auth=('geoprocess_user', 'airflow'))
 print(r.text)
