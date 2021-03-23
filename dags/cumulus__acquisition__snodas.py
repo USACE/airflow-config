@@ -15,6 +15,8 @@ from helpers.downloads import trigger_download
 from helpers.sqs import trigger_sqs
 import time
 
+from helpers.config import SERVICE_DISOVERY_NAME
+
 default_args = {
     "owner": "geoprocess_user",
     "depends_on_past": False,
@@ -57,7 +59,7 @@ def cumulus_download_and_process_snodas():
         message = {
             "process": "incoming-file-to-cogs",
             "airflow":{
-                "callback_url": "http://service-discoveryname/api/v1/dags/{dag_id}/updateTaskInstancesState",
+                "callback_url": f"http://{SERVICE_DISOVERY_NAME}/api/v1/dags/{dag_id}/updateTaskInstancesState",
                 "payload": {
                     "dag_id":dag_id,
                     "dag_run_id": get_current_context()['dag_run'].run_id,
