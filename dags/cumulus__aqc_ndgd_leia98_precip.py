@@ -14,17 +14,17 @@ from helpers.downloads import trigger_download
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2019, 1, 5),
+    "start_date": datetime(2020, 10, 1),
     "catchup_by_default": False,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 1,
-    "retry_delay": timedelta(minutes=1),
+    "retry_delay": timedelta(minutes=60),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    'end_date': datetime(2021, 3, 14),
+    # 'end_date': datetime(2021, 3, 14),
 }
 
 @dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'precip'])
