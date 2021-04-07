@@ -11,7 +11,9 @@ from airflow.operators.python import task, get_current_context
 from datetime import datetime, timedelta
 
 from helpers.downloads import trigger_download
-from helpers.sqs import trigger_sqs
+# from helpers.sqs import trigger_sqs
+
+import helpers.cumulus as cumulus
 
 default_args = {
     "owner": "airflow",
@@ -37,6 +39,7 @@ def cumulus_download_and_process_snodas():
     Product timestamp is usually around 0320 AM EST (0820 UTC), but may not be actual time published to FTP site.
     """
 
+    PRODUCT_SLUG = 'nohrsc-snodas-unmasked'
 
     @task()
     def snodas_download_unmasked():
@@ -44,18 +47,26 @@ def cumulus_download_and_process_snodas():
         # In order to get the current day's file, set execution forward 1 day
         execution_date = get_current_context()['execution_date']+timedelta(hours=24)
         
-        URL_ROOT = f'ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/unmasked/{execution_date.year}/{execution_date.strftime("%m_%b")}'
-        FILENAME = f'SNODAS_unmasked_{execution_date.strftime("%Y%m%d")}.tar'
-        output = trigger_download(url=f'{URL_ROOT}/{FILENAME}', s3_bucket='corpsmap-data-incoming', s3_key=f'cumulus/nohrsc_snodas_unmasked/{FILENAME}')
-        return output
+        URL_ROOT = f'ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/unmasked/{execution_date.year}/{execution_date.strftime("%m_%b")}'        
+        filename = f'SNODAS_unmasked_{execution_date.strftime("%Y%m%d")}.tar'
+        s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
+        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='corpsmap-data', s3_key=s3_key)
+        
+        return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
     
     @task()
-    def snodas_process_cogs(output):
-        result = trigger_sqs(queue_name="cumulus-test", message=json.dumps(output))
+    def snodas_unmasked_notify_cumulus(payload):
+        
+        # Airflow will convert the parameter to a string, convert it back
+        payload = json.loads(payload)
+    
+        cumulus.notify_acquirablefile(
+            acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
+            datetime=payload['datetime'], 
+            s3_key=payload['s3_key']
+            )
 
 
-    downloaded = snodas_download_unmasked()
-    # printit = snodas_process_cogs(downloaded)
-
+    snodas_unmasked_notify_cumulus(snodas_download_unmasked())
 
 snodas_dag = cumulus_download_and_process_snodas()

@@ -11,6 +11,8 @@ from airflow.decorators import dag, task
 from airflow.operators.python import task, get_current_context
 from helpers.downloads import trigger_download
 
+import helpers.cumulus as cumulus
+
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -35,16 +37,32 @@ def download_and_process_leia98():
     """
 
     URL_ROOT = f'https://www.ncei.noaa.gov/data/national-digital-guidance-database/access'
+    PRODUCT_SLUG = 'ndgd-leia98-precip'
 
     @task()
     def download_raw_leia98():
-        s3_key_dir = f'cumulus/ndgd_leia98_precip'
+        
         execution_date = get_current_context()['execution_date']
         file_dir = f'{URL_ROOT}/{execution_date.strftime("%Y%m")}/{execution_date.strftime("%Y%m%d")}'
         filename = f'LEIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
+        s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data', s3_key=s3_key)
 
-    download_raw_leia98()
+        return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
+
+    @task()
+    def notify_cumulus(payload):
+        
+        # Airflow will convert the parameter to a string, convert it back
+        payload = json.loads(payload)
+    
+        cumulus.notify_acquirablefile(
+            acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
+            datetime=payload['datetime'], 
+            s3_key=payload['s3_key']
+            )
+
+    notify_cumulus(download_raw_leia98())
 
 leia98_dag = download_and_process_leia98()
