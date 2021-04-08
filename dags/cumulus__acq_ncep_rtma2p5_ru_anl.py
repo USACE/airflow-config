@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.decorators import dag, task
-from airflow.operators.python import task, get_current_context
+from airflow.operators.python import get_current_context
 from helpers.downloads import trigger_download, read_s3_file
 
 import helpers.cumulus as cumulus

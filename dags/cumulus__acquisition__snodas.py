@@ -6,7 +6,7 @@ import json
 
 from airflow import DAG
 from airflow.decorators import dag, task
-from airflow.operators.python import task, get_current_context
+from airflow.operators.python import get_current_context
 
 from datetime import datetime, timedelta
 
