@@ -4,12 +4,13 @@ Acquire and Process Weather Prediction Center QPF
 
 import os, json, logging
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from airflow import DAG
 from airflow.decorators import dag, task
 
 from helpers.downloads import trigger_download, read_s3_file
+import helpers.cumulus as cumulus
 
 default_args = {
     "owner": "airflow",
@@ -38,9 +39,12 @@ def download_and_process_wpc_qpf():
     """
 
     URL_ROOT = f'https://ftp.wpc.ncep.noaa.gov'
+    PRODUCT_SLUG = 'wpc-qpf-2p5km'
+    S3_BUCKET = 'corpsmap-data'
+    
     STATUS_SOURCE = f'{URL_ROOT}/pqpf/pqpf_status.txt'
-    S3_KEY_DIR = f'cumulus/wpc_qpf_2p5km'
-    STATUS_S3_KEY = f'{S3_KEY_DIR}_status/{os.path.basename(STATUS_SOURCE)}'
+    # S3_KEY_DIR = f'cumulus/wpc_qpf_2p5km'
+    STATUS_S3_KEY = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}_status/{os.path.basename(STATUS_SOURCE)}'
     PROD_SOURCE_DIR = '2p5km_qpf'
 
     @task()
@@ -48,7 +52,7 @@ def download_and_process_wpc_qpf():
         
         s3_forecast_datetime = None
         # Check S3 status file for last datetime string saved from prev request
-        s3_status_contents = read_s3_file(STATUS_S3_KEY, 'corpsmap-data-incoming')
+        s3_status_contents = read_s3_file(STATUS_S3_KEY, S3_BUCKET)
 
         if s3_status_contents:
             s3_forecast_datetime = s3_status_contents[0].strip()
@@ -74,7 +78,20 @@ def download_and_process_wpc_qpf():
         for h in range(start, end+1, interval):
             # print(str(h).zfill(char_len))
             str_numbers.append(str(h).zfill(char_len))
-        return str_numbers 
+        return str_numbers
+
+    
+    def notify_cumulus(payload):        
+        
+        print(f'Notify Cumulus was called with a payload of: {payload}')
+        # Airflow will convert the parameter to a string, convert it back
+        payload = json.loads(payload)
+    
+        cumulus.notify_acquirablefile(
+            acquirable_id=cumulus.acquirables[payload['product_slug']], 
+            datetime=payload['datetime'], 
+            s3_key=payload['s3_key']
+            ) 
     
     
     @task()
@@ -98,11 +115,14 @@ def download_and_process_wpc_qpf():
         logging.info(f'Forecast hour is: {forecast_hour}')
 
         for hour in fcst_hrs[forecast_hour]:
+            print('#'*60)
             filename = f'p06m_{forecast_datetime}f{hour}.grb'
-            output = trigger_download(url=f'{URL_ROOT}/{PROD_SOURCE_DIR}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{S3_KEY_DIR}/{filename}')
+            s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
+            output = trigger_download(url=f'{URL_ROOT}/{PROD_SOURCE_DIR}/{filename}', s3_bucket=S3_BUCKET, s3_key=s3_key)
+            notify_cumulus(json.dumps({"datetime":datetime.strptime(forecast_datetime, '%Y%m%d%H').replace(tzinfo=timezone.utc).isoformat(), "s3_key":s3_key, "product_slug":PRODUCT_SLUG}))
       
         # Replace the status file with new datetime contents
-        output = trigger_download(url=f'{STATUS_SOURCE}', s3_bucket='corpsmap-data-incoming', s3_key=STATUS_S3_KEY)
+        output = trigger_download(url=f'{STATUS_SOURCE}', s3_bucket=S3_BUCKET, s3_key=STATUS_S3_KEY)
         return
 
     
