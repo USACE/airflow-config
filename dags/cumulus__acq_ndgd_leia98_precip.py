@@ -30,7 +30,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'precip'])
-def download_and_process_leia98():
+def cumulus_ndgd_leia98():
     """This pipeline handles download and processing for \n
     URL Dir - https://www.ncei.noaa.gov/data/national-digital-guidance-database/access/
     Files matching LEIA98_KWBR_YYYYMMDDHHMM
@@ -65,4 +65,4 @@ def download_and_process_leia98():
 
     notify_cumulus(download_raw_leia98())
 
-leia98_dag = download_and_process_leia98()
+leia98_dag = cumulus_ndgd_leia98()
