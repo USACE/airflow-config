@@ -27,6 +27,7 @@ def get_connection():
 def notify_acquirablefile(acquirable_id, datetime, s3_key):
     
     payload = {"datetime": datetime, "file": s3_key, "acquirable_id": acquirable_id}
+    print(f'Sending payload: {payload}')
 
     conn = get_connection()
     h = HttpHook(http_conn_id=conn.conn_id, method='POST')
