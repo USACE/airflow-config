@@ -33,8 +33,8 @@ default_args = {
 }
 
 # An Example Using the Taskflow API
-@dag(default_args=default_args, schedule_interval='20 8 * * *', tags=['cumulus'])
-def cumulus_download_and_process_snodas():
+@dag(default_args=default_args, schedule_interval='20 8 * * *', tags=['cumulus', 'snow'])
+def cumulus_snodas_unmasked():
     """This pipeline handles download, processing, and derivative product creation for NOHRSC SNODAS Products\n
     Product timestamp is usually around 0320 AM EST (0820 UTC), but may not be actual time published to FTP site.
     """
@@ -69,4 +69,4 @@ def cumulus_download_and_process_snodas():
 
     snodas_unmasked_notify_cumulus(snodas_download_unmasked())
 
-snodas_dag = cumulus_download_and_process_snodas()
+snodas_dag = cumulus_snodas_unmasked()

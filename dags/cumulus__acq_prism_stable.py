@@ -28,7 +28,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='0 12 * * *', tags=['cumulus', 'historic'])
-def download_and_process_prism_stable():
+def cumulus_prism_stable():
     """This pipeline handles download, processing, and derivative product creation for \n
     PRISM: Min Temp (tmin) stable, Max Temp (tmax) stable and Precip (ppt) stable
     URL Dir - ftp://prism.nacse.org/daily/
@@ -69,4 +69,4 @@ def download_and_process_prism_stable():
     download_raw_tmax_stable()
     download_raw_ppt_stable()
 
-prism_dag = download_and_process_prism_stable()
+prism_dag = cumulus_prism_stable()

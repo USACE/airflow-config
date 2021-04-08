@@ -30,7 +30,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'airtemp'])
-def download_and_process_ltia98():
+def cumulus_ndgd_ltia98():
     """This pipeline handles download and processing for \n
     URL Dir - https://www.ncei.noaa.gov/data/national-digital-guidance-database/access/
     Files matching LTIA98_KWBR_YYYYMMDDHHMM
@@ -65,4 +65,4 @@ def download_and_process_ltia98():
 
     notify_cumulus(download_raw_ltia98())
 
-ltia98_dag = download_and_process_ltia98()
+ltia98_dag = cumulus_ndgd_ltia98()

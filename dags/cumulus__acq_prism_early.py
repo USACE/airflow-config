@@ -31,7 +31,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='30 12 * * *', tags=['cumulus'])
-def download_and_process_prism_early():
+def cumulus_prism_early():
     """This pipeline handles download, processing, and derivative product creation for \n
     PRISM: Min Temp (tmin) early, Max Temp (tmax) early and Precip (ppt) early
     URL Dir - ftp://prism.nacse.org/daily/tmin/YYYY/
@@ -96,4 +96,4 @@ def download_and_process_prism_early():
     notify_cumulus(download_raw_tmax_early())
     notify_cumulus(download_raw_ppt_early())
 
-prism_dag = download_and_process_prism_early()
+prism_dag = cumulus_prism_early()

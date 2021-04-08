@@ -31,7 +31,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'precip'])
-def cumulus_download_mrms_v12():
+def cumulus_mrms_v12_qpe_pass1_pass2():
     """This pipeline handles download, processing, and derivative product creation for \n
     MultiRadar MultiSensor_QPE_01H Pass1 and Pass2\n
     URL Dir - https://mrms.ncep.noaa.gov/data/2D\n
@@ -86,4 +86,4 @@ def cumulus_download_mrms_v12():
     notify_cumulus(download_mrms_v12_qpe_pass1())
     notify_cumulus(download_mrms_v12_qpe_pass2())
 
-mrms_v12_qpe_dag = cumulus_download_mrms_v12()
+mrms_v12_qpe_dag = cumulus_mrms_v12_qpe_pass1_pass2()

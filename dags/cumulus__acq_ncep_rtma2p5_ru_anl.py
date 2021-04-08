@@ -31,7 +31,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='00,15,30,45 * * * *', tags=['cumulus'])
-def download_and_process_rtma_ru_anl_airtemp():
+def cumulus_rtma_ru_anl_airtemp():
     """This pipeline handles download, processing, and derivative product creation for \n
     NCEP Real-Time Mesoscale Analysis (RTMA) 2.5km Rapid Update (RU) ANL - Observed CONUS Air Temperatures
     URL Dir - https://nomads.ncep.noaa.gov/pub/data/nccf/com/rtma/prod/rtma2p5_ru.YYYYMMDD/
@@ -91,4 +91,4 @@ def download_and_process_rtma_ru_anl_airtemp():
 
     notify_cumulus(download_raw_data())
 
-airtemp_dag = download_and_process_rtma_ru_anl_airtemp()
+airtemp_dag = cumulus_rtma_ru_anl_airtemp()
