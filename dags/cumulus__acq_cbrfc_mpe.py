@@ -16,8 +16,8 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    # "start_date": (datetime.utcnow()-timedelta(hours=36)).replace(minute=0, second=0),
-    "start_date": datetime(2021, 4, 3),
+    "start_date": (datetime.utcnow()-timedelta(hours=48)).replace(minute=0, second=0),
+    # "start_date": datetime(2021, 4, 4),
     "catchup_by_default": False,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
@@ -27,7 +27,7 @@ default_args = {
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    'end_date': datetime(2021, 4, 4),
+    # 'end_date': datetime(2021, 4, 4),
 }
 
 @dag(default_args=default_args, schedule_interval='15 * * * *', tags=['cumulus', 'precip'])
