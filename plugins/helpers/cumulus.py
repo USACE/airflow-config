@@ -7,6 +7,7 @@ S3_ACQUIRABLE_PREFIX = 'cumulus/acquirables'
 
 acquirables = {
     'cbrfc-mpe': '2429db9a-9872-488a-b7e3-de37afc52ca4',
+    'hrrr-total-precip': 'd4e67bee-2320-4281-b6ef-a040cdeafeb8',
     'nohrsc-snodas-unmasked': '87819ceb-72ee-496d-87db-70eb302302dc',
     'ncep-rtma-ru-anl': '22678c3d-8ac0-4060-b750-6d27a91d0fb3',
     'ncep-mrms-v12-multisensor-qpe-01h-pass1': '87a8efb7-af6f-4ece-a97f-53272d1a151d',
