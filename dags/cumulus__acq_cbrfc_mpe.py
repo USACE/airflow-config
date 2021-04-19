@@ -47,7 +47,7 @@ def cumulus_cbrfc_mpe():
         filename = f'xmrg{execution_date.strftime("%m%d%Y%H")}z.grb'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='corpsmap-data', s3_key=s3_key)
+        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
 

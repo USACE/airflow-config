@@ -74,7 +74,7 @@ def download_and_process_wpc_qpf_backfill():
 
         for hour in fcst_hrs[forecast_hour]:
             filename = f'p06m_{forecast_datetime}f{hour}.grb'
-            output = trigger_download(url=f'{URL_ROOT}/{PROD_SOURCE_DIR}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'cumulus/wpc_{PROD_SOURCE_DIR}/{filename}')
+            output = trigger_download(url=f'{URL_ROOT}/{PROD_SOURCE_DIR}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'cumulus/acquirables/wpc_{PROD_SOURCE_DIR}/{filename}')
       
         return
 

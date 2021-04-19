@@ -40,7 +40,7 @@ def cumulus_wpc_qpf():
 
     URL_ROOT = f'https://ftp.wpc.ncep.noaa.gov'
     PRODUCT_SLUG = 'wpc-qpf-2p5km'
-    S3_BUCKET = 'corpsmap-data'
+    S3_BUCKET = 'cwbi-data-develop'
     
     STATUS_SOURCE = f'{URL_ROOT}/pqpf/pqpf_status.txt'
     # S3_KEY_DIR = f'cumulus/wpc_qpf_2p5km'

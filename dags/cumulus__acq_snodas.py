@@ -50,7 +50,7 @@ def cumulus_snodas_unmasked():
         URL_ROOT = f'ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/unmasked/{execution_date.year}/{execution_date.strftime("%m_%b")}'        
         filename = f'SNODAS_unmasked_{execution_date.strftime("%Y%m%d")}.tar'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
-        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='corpsmap-data', s3_key=s3_key)
+        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
         
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
     

@@ -47,7 +47,7 @@ def cumulus_historic_ndgd_leia98():
         filename = f'LEIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data', s3_key=s3_key)
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
     

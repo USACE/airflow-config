@@ -39,7 +39,7 @@ def cumulus_mrms_v12_qpe_pass1_pass2():
     """
 
     URL_ROOT = f'https://mrms.ncep.noaa.gov/data/2D'
-    S3_BUCKET = 'corpsmap-data'
+    S3_BUCKET = 'cwbi-data-develop'
 
     # Download Tasks
     #################################################

@@ -73,7 +73,7 @@ def cumulus_rtma_ru_anl_airtemp():
             filename = f'rtma2p5_ru.t{dt.strftime("%H%M")}z.2dvaranl_ndfd.grb2'
             s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
             print(f'Downloading {filename}')
-            output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data', s3_key=s3_key)
+            output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
             return json.dumps({"datetime":dt.isoformat(), "s3_key":s3_key})
 

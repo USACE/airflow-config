@@ -44,7 +44,7 @@ def cumulus_prism_stable():
         file_dir = f'{URL_ROOT}/tmin/{execution_date.strftime("%Y")}'
         filename = f'PRISM_tmin_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'{s3_key_dir}/{filename}')
 
     @task()
     def download_raw_tmax_stable():
@@ -53,7 +53,7 @@ def cumulus_prism_stable():
         file_dir = f'{URL_ROOT}/tmax/{execution_date.strftime("%Y")}'
         filename = f'PRISM_tmax_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'{s3_key_dir}/{filename}')
 
     @task()
     def download_raw_ppt_stable():
@@ -62,7 +62,7 @@ def cumulus_prism_stable():
         file_dir = f'{URL_ROOT}/ppt/{execution_date.strftime("%Y")}'
         filename = f'PRISM_ppt_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'{s3_key_dir}/{filename}')
 
     
     download_raw_tmin_stable()

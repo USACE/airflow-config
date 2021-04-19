@@ -39,7 +39,7 @@ def cumulus_prism_early():
     """
 
     URL_ROOT = f'ftp://prism.nacse.org/daily'
-    S3_BUCKET = 'corpsmap-data'
+    S3_BUCKET = 'cwbi-data-develop'
 
     # Download Tasks
     #################################################

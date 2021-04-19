@@ -49,7 +49,7 @@ with DAG(
     """
 
     URL_ROOT = f'https://noaa-hrrr-bdp-pds.s3.amazonaws.com'
-    S3_BUCKET = 'corpsmap-data'
+    S3_BUCKET = 'cwbi-data-develop'
     PRODUCT_SLUG = 'hrrr-total-precip'
     ##############################################################################
     def download_precip_fcst_hour(hour):

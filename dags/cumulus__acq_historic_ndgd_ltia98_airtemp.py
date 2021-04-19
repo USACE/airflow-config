@@ -43,7 +43,7 @@ def cumulus_historic_ndgd_ltia98():
         file_dir = f'{URL_ROOT}/historical/{execution_date.strftime("%Y%m")}/{execution_date.strftime("%Y%m%d")}'
         filename = f'LTIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'{s3_key_dir}/{filename}')
 
     download_raw_ltia98()
 
