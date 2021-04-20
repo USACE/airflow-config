@@ -28,7 +28,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='0 12 * * *', tags=['cumulus', 'historic'])
-def download_and_process_prism_stable():
+def cumulus_prism_stable():
     """This pipeline handles download, processing, and derivative product creation for \n
     PRISM: Min Temp (tmin) stable, Max Temp (tmax) stable and Precip (ppt) stable
     URL Dir - ftp://prism.nacse.org/daily/
@@ -44,7 +44,7 @@ def download_and_process_prism_stable():
         file_dir = f'{URL_ROOT}/tmin/{execution_date.strftime("%Y")}'
         filename = f'PRISM_tmin_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'{s3_key_dir}/{filename}')
 
     @task()
     def download_raw_tmax_stable():
@@ -53,7 +53,7 @@ def download_and_process_prism_stable():
         file_dir = f'{URL_ROOT}/tmax/{execution_date.strftime("%Y")}'
         filename = f'PRISM_tmax_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'{s3_key_dir}/{filename}')
 
     @task()
     def download_raw_ppt_stable():
@@ -62,11 +62,11 @@ def download_and_process_prism_stable():
         file_dir = f'{URL_ROOT}/ppt/{execution_date.strftime("%Y")}'
         filename = f'PRISM_ppt_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{s3_key_dir}/{filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=f'{s3_key_dir}/{filename}')
 
     
     download_raw_tmin_stable()
     download_raw_tmax_stable()
     download_raw_ppt_stable()
 
-prism_dag = download_and_process_prism_stable()
+prism_dag = cumulus_prism_stable()

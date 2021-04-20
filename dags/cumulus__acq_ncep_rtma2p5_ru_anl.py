@@ -9,13 +9,15 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.decorators import dag, task
-from airflow.operators.python import task, get_current_context
+from airflow.operators.python import get_current_context
 from helpers.downloads import trigger_download, read_s3_file
+
+import helpers.cumulus as cumulus
 
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow()-timedelta(hours=2)).replace(minute=0, second=0),
     "catchup_by_default": False,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
@@ -29,7 +31,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='00,15,30,45 * * * *', tags=['cumulus'])
-def download_and_process_rtma_ru_anl_airtemp():
+def cumulus_rtma_ru_anl_airtemp():
     """This pipeline handles download, processing, and derivative product creation for \n
     NCEP Real-Time Mesoscale Analysis (RTMA) 2.5km Rapid Update (RU) ANL - Observed CONUS Air Temperatures
     URL Dir - https://nomads.ncep.noaa.gov/pub/data/nccf/com/rtma/prod/rtma2p5_ru.YYYYMMDD/
@@ -41,7 +43,8 @@ def download_and_process_rtma_ru_anl_airtemp():
     """
 
     URL_ROOT = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/rtma/prod'
-    S3_KEY_DIR = f'cumulus/ncep_rtma_ru_anl'
+    PRODUCT_SLUG = 'ncep-rtma-ru-anl-airtemp'
+    # S3_KEY_DIR = f'cumulus/ncep_rtma_ru_anl'
     SCHED_INTERVAL = 15
     LOOKBACK_INTERVALS = 0
 
@@ -68,9 +71,24 @@ def download_and_process_rtma_ru_anl_airtemp():
         for dt in sorted(datetimes):
             file_dir = f'{URL_ROOT}/rtma2p5_ru.{dt.strftime("%Y%m%d")}'
             filename = f'rtma2p5_ru.t{dt.strftime("%H%M")}z.2dvaranl_ndfd.grb2'
+            s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
             print(f'Downloading {filename}')
-            output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='corpsmap-data-incoming', s3_key=f'{S3_KEY_DIR}/{filename}')
+            output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
-    download_raw_data()
+            return json.dumps({"datetime":dt.isoformat(), "s3_key":s3_key})
 
-obs_airtemp_dag = download_and_process_rtma_ru_anl_airtemp()
+    @task()
+    def notify_cumulus(payload):
+        
+        # Airflow will convert the parameter to a string, convert it back
+        payload = json.loads(payload)
+    
+        cumulus.notify_acquirablefile(
+            acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
+            datetime=payload['datetime'], 
+            s3_key=payload['s3_key']
+            )
+
+    notify_cumulus(download_raw_data())
+
+airtemp_dag = cumulus_rtma_ru_anl_airtemp()
