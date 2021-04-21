@@ -30,8 +30,8 @@ default_args = {
     # 'end_date': datetime(2016, 1, 1),
 }
 
-@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'precip'])
-def cumulus_mrms_v12_qpe_pass1_pass2():
+@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'precip', 'develop'])
+def develop_cumulus_mrms_v12_qpe_pass1_pass2():
     """This pipeline handles download, processing, and derivative product creation for \n
     MultiRadar MultiSensor_QPE_01H Pass1 and Pass2\n
     URL Dir - https://mrms.ncep.noaa.gov/data/2D\n
@@ -39,7 +39,7 @@ def cumulus_mrms_v12_qpe_pass1_pass2():
     """
 
     URL_ROOT = f'https://mrms.ncep.noaa.gov/data/2D'
-    S3_BUCKET = 'cwbi-data-stable'
+    S3_BUCKET = 'cwbi-data-develop'
 
     # Download Tasks
     #################################################
@@ -81,10 +81,10 @@ def cumulus_mrms_v12_qpe_pass1_pass2():
             acquirable_id=cumulus.acquirables[payload['product_slug']], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )
 
     notify_cumulus(download_mrms_v12_qpe_pass1())
     notify_cumulus(download_mrms_v12_qpe_pass2())
 
-mrms_v12_qpe_dag = cumulus_mrms_v12_qpe_pass1_pass2()
+mrms_v12_qpe_dag = develop_cumulus_mrms_v12_qpe_pass1_pass2()

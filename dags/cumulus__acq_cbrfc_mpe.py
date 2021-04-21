@@ -18,7 +18,7 @@ default_args = {
     "depends_on_past": False,
     "start_date": (datetime.utcnow()-timedelta(hours=48)).replace(minute=0, second=0),
     # "start_date": datetime(2021, 4, 4),
-    "catchup_by_default": False,
+    "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -47,7 +47,7 @@ def cumulus_cbrfc_mpe():
         filename = f'xmrg{execution_date.strftime("%m%d%Y%H")}z.grb'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
+        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='cwbi-data-stable', s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
 
@@ -60,7 +60,8 @@ def cumulus_cbrfc_mpe():
         cumulus.notify_acquirablefile(
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
-            s3_key=payload['s3_key']
+            s3_key=payload['s3_key'],
+            conn_type='stable'
             )
 
     notify_cumulus(download_raw_cbrfc_mpe())

@@ -16,7 +16,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2020, 10, 1),
+    "start_date": datetime(2021, 4, 1),
     "catchup_by_default": False,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
@@ -47,7 +47,7 @@ def cumulus_ndgd_leia98():
         filename = f'LEIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-stable', s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
 
@@ -60,7 +60,8 @@ def cumulus_ndgd_leia98():
         cumulus.notify_acquirablefile(
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
-            s3_key=payload['s3_key']
+            s3_key=payload['s3_key'],
+            conn_type='stable'
             )
 
     notify_cumulus(download_raw_leia98())

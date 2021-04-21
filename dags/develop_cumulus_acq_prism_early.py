@@ -1,5 +1,5 @@
 """
-ACQUIRE MRMS V12 Raw Data and Save to S3;
+Acquire and Process PRISM Early
 """
 
 import os, json, logging
@@ -16,9 +16,9 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow()-timedelta(hours=24)).replace(minute=0, second=0),
-    # "start_date": datetime(2021, 4, 1),
-    "catchup_by_default": False,
+    # "start_date": (datetime.utcnow()-timedelta(hours=36)).replace(minute=0, second=0),
+    "start_date": datetime(2021, 4, 10),
+    "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -30,40 +30,49 @@ default_args = {
     # 'end_date': datetime(2016, 1, 1),
 }
 
-@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'precip'])
-def cumulus_mrms_v12_qpe_pass1_pass2():
+@dag(default_args=default_args, schedule_interval='30 12 * * *', tags=['cumulus', 'develop'])
+def develop_cumulus_prism_early():
     """This pipeline handles download, processing, and derivative product creation for \n
-    MultiRadar MultiSensor_QPE_01H Pass1 and Pass2\n
-    URL Dir - https://mrms.ncep.noaa.gov/data/2D\n
-    Files matching MRMS_MultiSensor_QPE_01H_Pass1_00.00_YYYYMMDD-HH0000.grib2.gz (Hourly data)
+    PRISM: Min Temp (tmin) early, Max Temp (tmax) early and Precip (ppt) early
+    URL Dir - ftp://prism.nacse.org/daily/tmin/YYYY/
+    Files matching PRISM_tmin_early_4kmD2_YYYYMMDD_bil.zip - Daily around 12:30-14:30 UTC
     """
 
-    URL_ROOT = f'https://mrms.ncep.noaa.gov/data/2D'
-    S3_BUCKET = 'cwbi-data-stable'
+    URL_ROOT = f'ftp://prism.nacse.org/daily'
+    S3_BUCKET = 'cwbi-data-develop'
 
     # Download Tasks
     #################################################
     @task()
-    def download_mrms_v12_qpe_pass1():
-        product_slug = 'ncep-mrms-v12-multisensor-qpe-01h-pass1'
+    def download_raw_tmin_early():
+        product_slug = 'prism-tmin-early'
         execution_date = get_current_context()['execution_date']
-        file_dir = f'{URL_ROOT}/MultiSensor_QPE_01H_Pass1'        
-        # filename = f'PRISM_tmin_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
-        filename = f'MRMS_MultiSensor_QPE_01H_Pass1_00.00_{execution_date.strftime("%Y%m%d-%H0000")}.grib2.gz'        
+        file_dir = f'{URL_ROOT}/tmin/{execution_date.strftime("%Y")}'
+        filename = f'PRISM_tmin_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}'
         print(f'Downloading {filename}')
         output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket=S3_BUCKET, s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key, "product_slug":product_slug})
 
+    @task()
+    def download_raw_tmax_early():
+        product_slug = 'prism-tmax-early'
+        execution_date = get_current_context()['execution_date']
+        file_dir = f'{URL_ROOT}/tmax/{execution_date.strftime("%Y")}'
+        filename = f'PRISM_tmax_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
+        s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}'
+        print(f'Downloading {filename}')
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket=S3_BUCKET, s3_key=s3_key)
+
+        return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key, "product_slug":product_slug})
 
     @task()
-    def download_mrms_v12_qpe_pass2():
-        product_slug = 'ncep-mrms-v12-multisensor-qpe-01h-pass2'
+    def download_raw_ppt_early():
+        product_slug = 'prism-ppt-early'
         execution_date = get_current_context()['execution_date']
-        file_dir = f'{URL_ROOT}/MultiSensor_QPE_01H_Pass2'        
-        # filename = f'PRISM_tmin_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
-        filename = f'MRMS_MultiSensor_QPE_01H_Pass2_00.00_{execution_date.strftime("%Y%m%d-%H0000")}.grib2.gz'        
+        file_dir = f'{URL_ROOT}/ppt/{execution_date.strftime("%Y")}'
+        filename = f'PRISM_ppt_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}'
         print(f'Downloading {filename}')
         output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket=S3_BUCKET, s3_key=s3_key)
@@ -81,10 +90,11 @@ def cumulus_mrms_v12_qpe_pass1_pass2():
             acquirable_id=cumulus.acquirables[payload['product_slug']], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )
+    
+    notify_cumulus(download_raw_tmin_early())
+    notify_cumulus(download_raw_tmax_early())
+    notify_cumulus(download_raw_ppt_early())
 
-    notify_cumulus(download_mrms_v12_qpe_pass1())
-    notify_cumulus(download_mrms_v12_qpe_pass2())
-
-mrms_v12_qpe_dag = cumulus_mrms_v12_qpe_pass1_pass2()
+prism_dag = develop_cumulus_prism_early()

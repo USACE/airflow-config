@@ -33,8 +33,8 @@ default_args = {
 }
 
 # An Example Using the Taskflow API
-@dag(default_args=default_args, schedule_interval='20 8 * * *', tags=['cumulus', 'snow'])
-def cumulus_snodas_unmasked():
+@dag(default_args=default_args, schedule_interval='20 8 * * *', tags=['cumulus', 'snow', 'develop'])
+def develop_cumulus_snodas_unmasked():
     """This pipeline handles download, processing, and derivative product creation for NOHRSC SNODAS Products\n
     Product timestamp is usually around 0320 AM EST (0820 UTC), but may not be actual time published to FTP site.
     """
@@ -50,7 +50,7 @@ def cumulus_snodas_unmasked():
         URL_ROOT = f'ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/unmasked/{execution_date.year}/{execution_date.strftime("%m_%b")}'        
         filename = f'SNODAS_unmasked_{execution_date.strftime("%Y%m%d")}.tar'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
-        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='cwbi-data-stable', s3_key=s3_key)
+        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
         
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
     
@@ -64,10 +64,10 @@ def cumulus_snodas_unmasked():
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )
 
 
     snodas_unmasked_notify_cumulus(snodas_download_unmasked())
 
-snodas_dag = cumulus_snodas_unmasked()
+snodas_dag = develop_cumulus_snodas_unmasked()
