@@ -28,12 +28,12 @@ default_args = {
     'retry_delay': timedelta(minutes=10)
 }
 with DAG(
-    'cumulus_hrrr_precip',
+    'develop_cumulus_hrrr_precip',
     default_args=default_args,
     description='HRRR Forecast Precip',
     # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
     start_date=(datetime.utcnow()-timedelta(hours=2)).replace(minute=0, second=0),
-    tags=['cumulus', 'precip'],    
+    tags=['cumulus', 'precip', 'develop'],    
     # schedule_interval='*/15 * * * *'
     schedule_interval='@hourly',
     catchup=False
@@ -49,7 +49,7 @@ with DAG(
     """
 
     URL_ROOT = f'https://noaa-hrrr-bdp-pds.s3.amazonaws.com'
-    S3_BUCKET = 'cwbi-data-stable'
+    S3_BUCKET = 'cwbi-data-develop'
     PRODUCT_SLUG = 'hrrr-total-precip'
     ##############################################################################
     def download_precip_fcst_hour(hour):
@@ -75,7 +75,7 @@ with DAG(
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )        
 
         return

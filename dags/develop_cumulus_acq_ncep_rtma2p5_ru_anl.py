@@ -30,8 +30,8 @@ default_args = {
     # 'end_date': datetime(2016, 1, 1),
 }
 
-@dag(default_args=default_args, schedule_interval='00,15,30,45 * * * *', tags=['cumulus'])
-def cumulus_rtma_ru_anl_airtemp():
+@dag(default_args=default_args, schedule_interval='00,15,30,45 * * * *', tags=['cumulus', 'develop'])
+def develop_cumulus_rtma_ru_anl_airtemp():
     """This pipeline handles download, processing, and derivative product creation for \n
     NCEP Real-Time Mesoscale Analysis (RTMA) 2.5km Rapid Update (RU) ANL - Observed CONUS Air Temperatures
     URL Dir - https://nomads.ncep.noaa.gov/pub/data/nccf/com/rtma/prod/rtma2p5_ru.YYYYMMDD/
@@ -72,7 +72,7 @@ def cumulus_rtma_ru_anl_airtemp():
             filename = f'rtma2p5_ru.t{dt.strftime("%H%M")}z.2dvaranl_ndfd.grb2'
             s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
             print(f'Downloading {filename}')
-            output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-stable', s3_key=s3_key)
+            output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
             return json.dumps({"datetime":dt.isoformat(), "s3_key":s3_key})
 
@@ -86,9 +86,9 @@ def cumulus_rtma_ru_anl_airtemp():
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )
 
     notify_cumulus(download_raw_data())
 
-airtemp_dag = cumulus_rtma_ru_anl_airtemp()
+airtemp_dag = develop_cumulus_rtma_ru_anl_airtemp()

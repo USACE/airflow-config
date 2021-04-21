@@ -1,5 +1,5 @@
 """
-Acquire and Process Historic NDGD LTIA98 Temps
+Acquire and Process CBRFC MPE (for SPL)
 """
 
 import os, json, logging
@@ -16,38 +16,38 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2021, 4, 1),
-    "catchup_by_default": False,
+    "start_date": (datetime.utcnow()-timedelta(hours=48)).replace(minute=0, second=0),
+    # "start_date": datetime(2021, 4, 4),
+    "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 12,
-    "retry_delay": timedelta(minutes=120),
+    "retries": 24,
+    "retry_delay": timedelta(minutes=60),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    # 'end_date': datetime(2021, 3, 14),
+    # 'end_date': datetime(2021, 4, 4),
 }
 
-@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'airtemp'])
-def cumulus_ndgd_ltia98():
-    """This pipeline handles download and processing for \n
-    URL Dir - https://www.ncei.noaa.gov/data/national-digital-guidance-database/access/
-    Files matching LTIA98_KWBR_YYYYMMDDHHMM
+@dag(default_args=default_args, schedule_interval='15 * * * *', tags=['cumulus', 'precip', 'develop'])
+def develop_cumulus_cbrfc_mpe():
+    """This pipeline handles download, processing, and derivative product creation for \n
+    CBRFC Multisensor Precipitation Estimates (MPE)\n
+    URL Dir - https://www.cbrfc.noaa.gov/outgoing/usace_la/\n
+    Files matching xmrgMMDDYYYYHHz.grb - Hourly
     """
 
-    URL_ROOT = f'https://www.ncei.noaa.gov/data/national-digital-guidance-database/access'
-    PRODUCT_SLUG = 'ndgd-ltia98-airtemp'
+    URL_ROOT = f'https://www.cbrfc.noaa.gov/outgoing/usace_la'
+    PRODUCT_SLUG = 'cbrfc-mpe'
 
     @task()
-    def download_raw_ltia98():
-
+    def download_raw_cbrfc_mpe():
         execution_date = get_current_context()['execution_date']
-        file_dir = f'{URL_ROOT}/{execution_date.strftime("%Y%m")}/{execution_date.strftime("%Y%m%d")}'
-        filename = f'LTIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
+        filename = f'xmrg{execution_date.strftime("%m%d%Y%H")}z.grb'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-stable', s3_key=s3_key)
+        output = trigger_download(url=f'{URL_ROOT}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
 
@@ -61,9 +61,9 @@ def cumulus_ndgd_ltia98():
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )
 
-    notify_cumulus(download_raw_ltia98())
+    notify_cumulus(download_raw_cbrfc_mpe())
 
-ltia98_dag = cumulus_ndgd_ltia98()
+cbrfc_dag = develop_cumulus_cbrfc_mpe()

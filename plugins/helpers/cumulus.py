@@ -19,18 +19,23 @@ acquirables = {
     'prism-tmin-early': '11e87d14-ec54-4550-bd95-bc6eba0eba08',
     'wpc-qpf-2p5km': '0c725458-deb7-45bb-84c6-e98083874c0e'
 }
-
-def get_connection():
-    
-    conn = BaseHook.get_connection('CUMULUS')
-    return conn
 ################################################################ 
-def notify_acquirablefile(acquirable_id, datetime, s3_key):
+def get_develop_connection():    
+    return BaseHook.get_connection('CUMULUS_DEVELOP')
+################################################################ 
+def get_connection():    
+    return BaseHook.get_connection('CUMULUS_STABLE')
+################################################################ 
+def notify_acquirablefile(acquirable_id, datetime, s3_key, conn_type):
     
     payload = {"datetime": datetime, "file": s3_key, "acquirable_id": acquirable_id}
     print(f'Sending payload: {payload}')
 
-    conn = get_connection()
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+
     h = HttpHook(http_conn_id=conn.conn_id, method='POST')
     endpoint = f"/acquirablefiles?key={conn.password}"
     headers = {"Content-Type": "application/json"}

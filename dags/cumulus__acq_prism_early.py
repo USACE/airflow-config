@@ -17,8 +17,8 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     # "start_date": (datetime.utcnow()-timedelta(hours=36)).replace(minute=0, second=0),
-    "start_date": datetime(2021, 4, 1),
-    "catchup_by_default": False,
+    "start_date": datetime(2021, 4, 10),
+    "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -39,7 +39,7 @@ def cumulus_prism_early():
     """
 
     URL_ROOT = f'ftp://prism.nacse.org/daily'
-    S3_BUCKET = 'cwbi-data-develop'
+    S3_BUCKET = 'cwbi-data-stable'
 
     # Download Tasks
     #################################################
@@ -89,7 +89,8 @@ def cumulus_prism_early():
         cumulus.notify_acquirablefile(
             acquirable_id=cumulus.acquirables[payload['product_slug']], 
             datetime=payload['datetime'], 
-            s3_key=payload['s3_key']
+            s3_key=payload['s3_key'],
+            conn_type='stable'
             )
     
     notify_cumulus(download_raw_tmin_early())

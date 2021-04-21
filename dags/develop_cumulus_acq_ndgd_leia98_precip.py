@@ -1,5 +1,5 @@
 """
-Acquire and Process Historic NDGD LTIA98 Temps
+Acquire and Process Historic NDGD LEIA98 Precip
 """
 
 import os, json, logging
@@ -29,25 +29,25 @@ default_args = {
     # 'end_date': datetime(2021, 3, 14),
 }
 
-@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'airtemp'])
-def cumulus_ndgd_ltia98():
+@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'precip', 'develop'])
+def develop_cumulus_ndgd_leia98():
     """This pipeline handles download and processing for \n
     URL Dir - https://www.ncei.noaa.gov/data/national-digital-guidance-database/access/
-    Files matching LTIA98_KWBR_YYYYMMDDHHMM
+    Files matching LEIA98_KWBR_YYYYMMDDHHMM
     """
 
     URL_ROOT = f'https://www.ncei.noaa.gov/data/national-digital-guidance-database/access'
-    PRODUCT_SLUG = 'ndgd-ltia98-airtemp'
+    PRODUCT_SLUG = 'ndgd-leia98-precip'
 
     @task()
-    def download_raw_ltia98():
-
+    def download_raw_leia98():
+        
         execution_date = get_current_context()['execution_date']
         file_dir = f'{URL_ROOT}/{execution_date.strftime("%Y%m")}/{execution_date.strftime("%Y%m%d")}'
-        filename = f'LTIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
+        filename = f'LEIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-stable', s3_key=s3_key)
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
 
@@ -61,9 +61,9 @@ def cumulus_ndgd_ltia98():
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )
 
-    notify_cumulus(download_raw_ltia98())
+    notify_cumulus(download_raw_leia98())
 
-ltia98_dag = cumulus_ndgd_ltia98()
+leia98_dag = develop_cumulus_ndgd_leia98()

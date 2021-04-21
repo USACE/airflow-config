@@ -29,8 +29,8 @@ default_args = {
     # 'end_date': datetime(2021, 3, 14),
 }
 
-@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'airtemp'])
-def cumulus_ndgd_ltia98():
+@dag(default_args=default_args, schedule_interval='0 * * * *', tags=['cumulus', 'airtemp', 'develop'])
+def develop_cumulus_ndgd_ltia98():
     """This pipeline handles download and processing for \n
     URL Dir - https://www.ncei.noaa.gov/data/national-digital-guidance-database/access/
     Files matching LTIA98_KWBR_YYYYMMDDHHMM
@@ -47,7 +47,7 @@ def cumulus_ndgd_ltia98():
         filename = f'LTIA98_KWBR_{execution_date.strftime("%Y%m%d%H%M")}'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}'
         print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-stable', s3_key=s3_key)
+        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
 
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
 
@@ -61,9 +61,9 @@ def cumulus_ndgd_ltia98():
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='stable'
+            conn_type='develop'
             )
 
     notify_cumulus(download_raw_ltia98())
 
-ltia98_dag = cumulus_ndgd_ltia98()
+ltia98_dag = develop_cumulus_ndgd_ltia98()
