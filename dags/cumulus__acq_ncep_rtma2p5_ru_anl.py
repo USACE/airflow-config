@@ -17,8 +17,8 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow()-timedelta(hours=2)).replace(minute=0, second=0),
-    "catchup_by_default": False,
+    "start_date": (datetime.utcnow()-timedelta(hours=24)).replace(minute=0, second=0),
+    "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -44,7 +44,6 @@ def cumulus_rtma_ru_anl_airtemp():
 
     URL_ROOT = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/rtma/prod'
     PRODUCT_SLUG = 'ncep-rtma-ru-anl-airtemp'
-    # S3_KEY_DIR = f'cumulus/ncep_rtma_ru_anl'
     SCHED_INTERVAL = 15
     LOOKBACK_INTERVALS = 0
 
