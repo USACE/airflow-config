@@ -122,7 +122,7 @@ with DAG(
                         conn = midas.get_develop_connection()
                         h = HttpHook(http_conn_id=conn.conn_id, method='PUT')    
                         # endpoint = f'/projects/{midas_project_id}/instruments/{midas_instrument_id}/geometry?key_id={conn.login}&key={conn.password}'
-                        endpoint = f'/instruments/{midas_instrument_id}/geometry?key={conn.password}'
+                        endpoint = f'/projects/{midas_project_id}/instruments/{midas_instrument_id}/geometry?key={conn.password}'
                         headers = {"Content-Type": "application/json"}
                         r = h.run(endpoint=endpoint, json=update_payload, headers=headers)
                     else:
