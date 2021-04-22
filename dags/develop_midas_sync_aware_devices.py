@@ -21,11 +21,11 @@ default_args = {
     'owner': 'airflow',
 }
 with DAG(
-    'aware_sync_devices_to_midas',
+    'develop_midas_sync_aware_devices',
     default_args=default_args,
     description='Synchronize AWARE Devices to MIDAS Instruments',
     start_date=(datetime.utcnow()-timedelta(days=1)).replace(hour=18, minute=0, second=0),
-    tags=['midas'],
+    tags=['midas', 'develop'],
     # schedule_interval='@daily',
     schedule_interval='0 19 * * *'
     
@@ -119,9 +119,10 @@ with DAG(
                     if int(lat) != 0 and int(lon) != 0:
                         update_payload = {"type":"Point","coordinates":[round(float(lon),4), round(float(lat),4)]}
                     
-                        conn = midas.get_connection()
+                        conn = midas.get_develop_connection()
                         h = HttpHook(http_conn_id=conn.conn_id, method='PUT')    
-                        endpoint = f'/projects/{midas_project_id}/instruments/{midas_instrument_id}/geometry?key_id={conn.login}&key={conn.password}'
+                        # endpoint = f'/projects/{midas_project_id}/instruments/{midas_instrument_id}/geometry?key_id={conn.login}&key={conn.password}'
+                        endpoint = f'/instruments/{midas_instrument_id}/geometry?key={conn.password}'
                         headers = {"Content-Type": "application/json"}
                         r = h.run(endpoint=endpoint, json=update_payload, headers=headers)
                     else:
@@ -134,9 +135,10 @@ with DAG(
         print(json.dumps(insert_payload)) 
 
         if len(insert_payload) > 0:
-            conn = midas.get_connection()
+            conn = midas.get_develop_connection()
             h = HttpHook(http_conn_id=conn.conn_id, method='POST')    
-            endpoint = f'/projects/{project_id}/instruments?key_id={conn.login}&key={conn.password}'
+            # endpoint = f'/projects/{project_id}/instruments?key_id={conn.login}&key={conn.password}'
+            endpoint = f'/instruments?key={conn.password}'
             headers = {"Content-Type": "application/json"}
             r = h.run(endpoint=endpoint, json=insert_payload, headers=headers)
 
@@ -190,12 +192,18 @@ with DAG(
 
     get_midas_aware_instruments_task = PythonOperator(
             task_id='get_midas_aware_instruments',
-            python_callable=midas.get_aware_instruments           
+            python_callable=midas.get_aware_instruments,
+            op_kwargs={
+                'conn_type': "develop",
+            }           
         )
 
     get_midas_aware_param_config_task = PythonOperator(
             task_id='get_midas_aware_param_config',
-            python_callable=midas.get_aware_param_config           
+            python_callable=midas.get_aware_param_config,
+            op_kwargs={
+                'conn_type': "develop",
+            }          
         )
 
     get_aware_devices_metadata_task = PythonOperator(
