@@ -29,12 +29,12 @@ default_args = {
     'retry_delay': timedelta(minutes=5)
 }
 with DAG(
-    'aware_ts_to_midas',
+    'develop_midas_sync_aware_ts',
     default_args=default_args,
     description='AWARE Timeseries to MIDAS',
-    # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
-    start_date=datetime(2021, 3, 27),
-    tags=['midas'],    
+    start_date=(datetime.utcnow()-timedelta(hours=6)).replace(minute=0, second=0),
+    # start_date=datetime(2021, 3, 27),
+    tags=['midas', 'develop'],    
     # schedule_interval='*/15 * * * *'
     schedule_interval='@hourly',
     catchup=True
@@ -127,9 +127,10 @@ with DAG(
         print(f'payload: {json.dumps(payload)}')
         
               
-        conn = midas.get_connection()
+        conn = midas.get_develop_connection()
         h = HttpHook(http_conn_id=conn.conn_id, method='POST')    
-        endpoint = f"/projects/{instrument['project_id']}/timeseries_measurements?key_id={conn.login}&key={conn.password}"
+        # endpoint = f"/projects/{instrument['project_id']}/timeseries_measurements?key_id={conn.login}&key={conn.password}"
+        endpoint = f"/timeseries_measurements?key={conn.password}"
         headers = {"Content-Type": "application/json"}
         r = h.run(endpoint=endpoint, json=payload, headers=headers)           
 
@@ -138,6 +139,9 @@ with DAG(
     get_midas_task = PythonOperator(
         task_id='midas_query',
         python_callable=midas.get_aware_param_config,
+        op_kwargs={
+                'conn_type': "develop",
+            }
     )    
 
     flashflood_authenticate_task = PythonOperator(
@@ -145,7 +149,7 @@ with DAG(
         python_callable=aware.flashfloodinfo_authenticate
     )
 
-    instruments = json.loads(midas.get_aware_param_config()) 
+    instruments = json.loads(midas.get_aware_param_config(conn_type='develop')) 
 
     for i in instruments:
         
