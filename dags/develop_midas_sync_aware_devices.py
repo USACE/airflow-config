@@ -138,7 +138,7 @@ with DAG(
             conn = midas.get_develop_connection()
             h = HttpHook(http_conn_id=conn.conn_id, method='POST')    
             # endpoint = f'/projects/{project_id}/instruments?key_id={conn.login}&key={conn.password}'
-            endpoint = f'/instruments?key={conn.password}'
+            endpoint = f'/projects/{project_id}/instruments?key={conn.password}'
             headers = {"Content-Type": "application/json"}
             r = h.run(endpoint=endpoint, json=insert_payload, headers=headers)
 
