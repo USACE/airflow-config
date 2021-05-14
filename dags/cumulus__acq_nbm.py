@@ -28,37 +28,38 @@ default_args = {
     'retry_delay': timedelta(minutes=10)
 }
 with DAG(
-    'develop_cumulus_hrrr_precip',
+    'cumulus_nbm',
     default_args=default_args,
-    description='HRRR Forecast Precip',
+    description='National Blend of Models',
     # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
     start_date=(datetime.utcnow()-timedelta(hours=2)).replace(minute=0, second=0),
-    tags=['cumulus', 'precip', 'develop', 'forecast'],    
+    tags=['cumulus', 'precip', 'forecast'],    
     # schedule_interval='*/15 * * * *'
     schedule_interval='@hourly',
     catchup=False
     
 ) as dag:
-    dag.doc_md = """This pipeline handles download and API notification for HRRR hourly forecast products. \n
-    High-Resolution Rapid Refresh (HRRR) \n
-    Info: https://rapidrefresh.noaa.gov/hrrr/\n
-    Multiple sources:\n
-    - https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/\n
-    - https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.20210414/conus/\n
-    Files matching hrrr.t{HH}z.wrfsfcf{HH}.grib2 - Multiple hourly files (second variable) per forecast file (first variable)
+    dag.doc_md = """This pipeline handles download and API notification for NBM hourly forecast products. \n
+    National Blend of Models (NBM) \n
+    Info: https://vlab.ncep.noaa.gov/web/mdl/nbm-download\n
+    Source:\n
+    - https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod/\n
+
+    Files matching blend.t{HH}z.core.f{HHH}.co.grib2 - Multiple forecast hours (second variable) per forecast time (first variable)\n
+    Note: Hourly files from 01-36, 3hr from 38-188, then 6hr
     """
 
-    URL_ROOT = f'https://noaa-hrrr-bdp-pds.s3.amazonaws.com'
-    S3_BUCKET = 'cwbi-data-develop'
-    PRODUCT_SLUG = 'hrrr-total-precip'
+    URL_ROOT = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod'
+    S3_BUCKET = 'cwbi-data-stable'
+    PRODUCT_SLUG = 'nbm-conus-01h'
     ##############################################################################
     def download_precip_fcst_hour(hour):
 
         exec_dt = get_current_context()['execution_date']
 
-        directory = f'hrrr.{exec_dt.strftime("%Y%m%d")}/conus'
-        src_filename = f'hrrr.t{exec_dt.strftime("%H")}z.wrfsfcf{str(hour).zfill(2)}.grib2'
-        dst_filename = f'hrrr.{exec_dt.strftime("%Y%m%d")}.t{exec_dt.strftime("%H")}z.wrfsfcf{str(hour).zfill(2)}.grib2'
+        directory = f'blend.{exec_dt.strftime("%Y%m%d")}/{exec_dt.strftime("%H")}/core'
+        src_filename = f'blend.t{exec_dt.strftime("%H")}z.core.f{str(hour).zfill(3)}.co.grib2'
+        dst_filename = f'blend.{exec_dt.strftime("%Y%m%d")}.t{exec_dt.strftime("%H")}z.core.f{str(hour).zfill(3)}.co.grib2'
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{dst_filename}'
         print(f'Downloading {src_filename}')
         output = trigger_download(url=f'{URL_ROOT}/{directory}/{src_filename}', s3_bucket=S3_BUCKET, s3_key=s3_key)
@@ -75,27 +76,27 @@ with DAG(
             acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
             datetime=payload['datetime'], 
             s3_key=payload['s3_key'],
-            conn_type='develop'
+            conn_type='stable'
             )        
 
         return
     ##############################################################################
-    for fcst_hour in range(0, 19):
+    for fcst_hour in range(1, 37):
         
         print(f"Forecast Hour: {fcst_hour}")
         
-        download_task_id = f"download_fcst_hr_{str(fcst_hour).zfill(2)}"
+        download_task_id = f"download_fcst_hr_{str(fcst_hour).zfill(3)}"
         
         download_task = PythonOperator(
             task_id=download_task_id, 
             python_callable=download_precip_fcst_hour, 
             op_kwargs={
-                'hour': str(fcst_hour).zfill(2),
+                'hour': str(fcst_hour).zfill(3),
             }
         )
 
         notify_api_task = PythonOperator(
-            task_id=f"notify_api_fcst_hr_{str(fcst_hour).zfill(2)}",           
+            task_id=f"notify_api_fcst_hr_{str(fcst_hour).zfill(3)}",           
             python_callable=notify_api,
             op_kwargs={               
                 'payload': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(download_task_id)
