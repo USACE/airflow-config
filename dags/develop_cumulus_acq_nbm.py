@@ -28,7 +28,7 @@ default_args = {
     'retry_delay': timedelta(minutes=10)
 }
 with DAG(
-    'cumulus_nbm',
+    'develop_cumulus_nbm',
     default_args=default_args,
     description='National Blend of Models',
     # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
