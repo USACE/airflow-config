@@ -33,7 +33,7 @@ with DAG(
     description='HRRR Forecast Precip',
     # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
     start_date=(datetime.utcnow()-timedelta(hours=2)).replace(minute=0, second=0),
-    tags=['cumulus', 'precip', 'develop'],    
+    tags=['cumulus', 'precip', 'develop', 'forecast'],    
     # schedule_interval='*/15 * * * *'
     schedule_interval='@hourly',
     catchup=False
