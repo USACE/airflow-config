@@ -14,8 +14,8 @@ services:
       - ./database/sql/init.sql:/docker-entrypoint-initdb.d/z_init.sql
     environment:
       - POSTGRES_PASSWORD=postgres
-    ports:
-      - '5432:5432'
+    # ports:
+    #   - '5432:5432'
 
   airflow_init:
     env_file:
