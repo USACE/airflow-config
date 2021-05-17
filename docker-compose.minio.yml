@@ -26,9 +26,9 @@ services:
       echo 'sleeping for 10 seconds while minio starts...';
       sleep 10;
       /usr/bin/mc config host add minio http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY;
-      /usr/bin/mc mb   minio/corpsmap-data-incoming   minio/corpsmap-data;
-      /usr/bin/mc policy set public minio/corpsmap-data;
-      /usr/bin/mc cp --recursive /media/ minio/corpsmap-data/cumulus/;
+      /usr/bin/mc mb minio/cwbi-data-develop minio/cwbi-data-stable;
+      /usr/bin/mc policy set public minio/cwbi-data-develop;
+      /usr/bin/mc policy set public minio/cwbi-data-stable;
       exit 0;
       "
     volumes:
