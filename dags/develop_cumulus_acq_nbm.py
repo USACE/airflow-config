@@ -51,7 +51,7 @@ with DAG(
 
     URL_ROOT = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod'
     S3_BUCKET = 'cwbi-data-develop'
-    PRODUCT_SLUG = 'nbm-conus-01h'
+    PRODUCT_SLUG = 'nbm-co-01h'
     ##############################################################################
     def download_precip_fcst_hour(hour):
 
