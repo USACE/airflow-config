@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 
 networks:
   default:
@@ -15,12 +15,12 @@ services:
     environment:
       - POSTGRES_PASSWORD=postgres
     # ports:
-    #   - "5432:5432"
+    #   - '5432:5432'
 
   airflow_init:
     env_file:
       - ./airflow.env
-    image: apache/airflow:master-python3.8
+    image: apache/airflow:main-python3.8
     depends_on:
       - airflowdb
     entrypoint: >
@@ -33,7 +33,7 @@ services:
   airflow_scheduler:
     env_file:
       - ./airflow.env
-    image: apache/airflow:master-python3.8
+    image: apache/airflow:main-python3.8
     depends_on:
       - airflow_init
     restart: always
@@ -45,12 +45,12 @@ services:
   airflow_ui:
     env_file:
       - ./airflow.env
-    image: apache/airflow:master-python3.8
+    image: apache/airflow:main-python3.8
     depends_on:
       - airflow_init
       - airflow_scheduler
     restart: always
     # environment:
     ports:
-      - "8000:8080"
+      - '8000:8080'
     command: webserver
