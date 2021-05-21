@@ -13,6 +13,8 @@ acquirables = {
     'ncep-rtma-ru-anl-airtemp': '22678c3d-8ac0-4060-b750-6d27a91d0fb3',
     'ncep-mrms-v12-multisensor-qpe-01h-pass1': '87a8efb7-af6f-4ece-a97f-53272d1a151d',
     'ncep-mrms-v12-multisensor-qpe-01h-pass2': 'ccc252f9-defc-4b25-817b-2e14c87073a0',
+    'ndfd-conus-qpf-06h': 'f2fee5df-c51f-4774-bd41-8ded1eed6a64',
+    'ndfd-conus-airtemp': '5c0f1cfa-bcf8-4587-9513-88cb197ec863',
     'ndgd-ltia98-airtemp': 'b27a8724-d34d-4045-aa87-c6d88f9858d0',
     'ndgd-leia98-precip': '4d5eb062-5726-4822-9962-f531d9c6caef',
     'prism-ppt-early': '099916d1-83af-48ed-85d7-6688ae96023d',
