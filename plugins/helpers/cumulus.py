@@ -20,6 +20,7 @@ acquirables = {
     'prism-ppt-early': '099916d1-83af-48ed-85d7-6688ae96023d',
     'prism-tmax-early': '97064e4d-453b-4761-8c9a-4a1b979d359e',
     'prism-tmin-early': '11e87d14-ec54-4550-bd95-bc6eba0eba08',
+    'wrf-columbia-precip': 'ec926de8-6872-4d2b-b7ce-6002221babcd',
     'wpc-qpf-2p5km': '0c725458-deb7-45bb-84c6-e98083874c0e'
 }
 ################################################################ 
