@@ -1,5 +1,5 @@
 """
-Acquire and Process CBRFC MPE (for SPL)
+Copy and Process Columbia WRF Data
 """
 
 import os, json, logging
