@@ -90,4 +90,4 @@ def develop_cumulus_copy_columbia_wrf():
     notify_cumulus(copy_precip_w())
 
 
-wrf_dag = cumulus_copy_columbia_wrf()
+wrf_dag = develop_cumulus_copy_columbia_wrf()
