@@ -23,6 +23,12 @@ def upload_file(file_name, bucket, object_name=None):
     load_file = hook.load_file(file_name, object_name, bucket, replace=True)
     return load_file
 
+def copy_s3_file(src_bucket, src_key, dst_bucket, dst_key):
+    """Copy S3 file from one location to another"""
+    hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)        
+    h = hook.copy_object(src_key, dst_key, source_bucket_name=src_bucket, dest_bucket_name=dst_bucket, source_version_id=None)
+    return
+
 def read_s3_file(file_name, bucket, object_name=None):
     """Download a file from S3 bucket, return text contents"""
     hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
