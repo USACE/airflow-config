@@ -32,7 +32,7 @@ default_args = {
     'end_date': datetime(1941, 1, 1)
 }
 
-@dag(default_args=default_args, schedule_interval='@yearly', tags=['cumulus', 'precip', 'develop'], concurrency=2, max_active_runs=2)
+@dag(default_args=default_args, schedule_interval='@yearly', tags=['cumulus', 'precip', 'develop'], concurrency=4, max_active_runs=4)
 def develop_cumulus_copy_columbia_wrf():
     """This pipeline handles download, processing, and derivative product creation for \n
     Columbia WRF\n
