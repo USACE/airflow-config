@@ -33,7 +33,7 @@ default_args = {
 }
 
 @dag(default_args=default_args, schedule_interval='@yearly', tags=['cumulus', 'precip', 'develop'], concurrency=2, max_active_runs=2)
-def cumulus_copy_columbia_wrf():
+def develop_cumulus_copy_columbia_wrf():
     """This pipeline handles download, processing, and derivative product creation for \n
     Columbia WRF\n
     Existing in S3 bucket.  Will be copied to Cumulus and Processed
