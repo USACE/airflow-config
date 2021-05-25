@@ -68,8 +68,6 @@ def cumulus_copy_columbia_wrf():
         print(f'Copying {src_s3_key} to {dst_s3_key}')
         copy_s3_file(S3_SRC_BUCKET, src_s3_key, S3_DST_BUCKET, dst_s3_key) 
 
-        time.sleep(1800)
-
         return json.dumps({"datetime":execution_date.isoformat(), "s3_key":dst_s3_key})
 
     @task()
