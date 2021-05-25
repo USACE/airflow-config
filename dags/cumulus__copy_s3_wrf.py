@@ -29,10 +29,10 @@ default_args = {
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    'end_date': datetime(1941, 1, 1)
+    'end_date': datetime(2018, 1, 1)
 }
 
-@dag(default_args=default_args, schedule_interval='@yearly', tags=['cumulus', 'precip'], concurrency=2, max_active_runs=2)
+@dag(default_args=default_args, schedule_interval='@yearly', tags=['cumulus', 'precip'])
 def cumulus_copy_columbia_wrf():
     """This pipeline handles download, processing, and derivative product creation for \n
     Columbia WRF\n
