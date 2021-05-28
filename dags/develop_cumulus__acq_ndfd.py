@@ -94,7 +94,7 @@ with DAG(
         else:
             return src_file_datetime.timestamp()     
     ##############################################################################  
-    def download_product(cumulus_slug, src_file_url, s3_key_prefix, dst_filename, file_datetime):        
+    def download_product(cumulus_slug, name, src_file_url, s3_key_prefix, dst_filename, file_datetime):        
 
         # Convert the execution date which comes in a string back to a datetime obj
         # Ex: 2021-05-20T01:00:00+00:00
@@ -113,7 +113,7 @@ with DAG(
         output = trigger_download(url=src_file_url, s3_bucket=S3_BUCKET, s3_key=s3_key)
 
         # Replace/Update the status file with new datetime contents
-        output = trigger_download(url=f'{os.path.dirname(src_file_url)}/ls-l', s3_bucket=S3_BUCKET, s3_key=f'{s3_key_prefix}/_status/ls-l')
+        output = trigger_download(url=f'{os.path.dirname(src_file_url)}/ls-l', s3_bucket=S3_BUCKET, s3_key=f'{s3_key_prefix}/_status/{name}/ls-l')
         
         return json.dumps({"datetime":file_datetime.isoformat(), "s3_key":s3_key, "product_slug":cumulus_slug})
     ##############################################################################
@@ -162,7 +162,7 @@ with DAG(
                 task_id=check_new_forecast_task_id,
                 python_callable=check_new_forecast,
                 op_kwargs={
-                    'status_s3_key': f"{cumulus.S3_ACQUIRABLE_PREFIX}/{p['cumulus_slug']}/_status/ls-l",
+                    'status_s3_key': f"{cumulus.S3_ACQUIRABLE_PREFIX}/{p['cumulus_slug']}/_status/{p['name']}/ls-l",
                     'src_status_filepath': f"{p['src_dir']}/ls-l",
                     'src_filename': p['src_filename']
                 }
@@ -176,7 +176,8 @@ with DAG(
                     'src_file_url': f"{p['src_dir']}/{p['src_filename']}",
                     's3_key_prefix': f"{cumulus.S3_ACQUIRABLE_PREFIX}/{p['cumulus_slug']}",
                     'dst_filename': p['dst_filename'],
-                    'cumulus_slug': p['cumulus_slug'],               
+                    'cumulus_slug': p['cumulus_slug'],
+                    'name': p['name'],               
                     # 'ex_date': "{{execution_date}}",
                     'file_datetime': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(check_new_forecast_task_id)
                 }

@@ -8,7 +8,7 @@ networks:
 
 services:
   airflowdb:
-    image: mdillon/postgis
+    image: postgres:13
     volumes:
       - ./database/sql:/sql
       - ./database/sql/init.sql:/docker-entrypoint-initdb.d/z_init.sql
@@ -20,7 +20,7 @@ services:
   airflow_init:
     env_file:
       - ./airflow.env
-    image: apache/airflow:main-python3.8
+    image: apache/airflow:master-python3.8
     depends_on:
       - airflowdb
     entrypoint: >
@@ -33,7 +33,7 @@ services:
   airflow_scheduler:
     env_file:
       - ./airflow.env
-    image: apache/airflow:main-python3.8
+    image: apache/airflow:master-python3.8
     depends_on:
       - airflow_init
     restart: always
@@ -45,7 +45,7 @@ services:
   airflow_ui:
     env_file:
       - ./airflow.env
-    image: apache/airflow:main-python3.8
+    image: apache/airflow:master-python3.8
     depends_on:
       - airflow_init
       - airflow_scheduler
