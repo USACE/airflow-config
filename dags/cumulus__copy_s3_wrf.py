@@ -112,8 +112,8 @@ def cumulus_copy_columbia_wrf():
             conn_type='stable'
             )
 
-    notify_cumulus(copy_precip_s())
-    notify_cumulus(copy_precip_w())
+    # notify_cumulus(copy_precip_s())
+    # notify_cumulus(copy_precip_w())
 
     notify_cumulus(copy_airtemp_s())
     notify_cumulus(copy_airtemp_w())
