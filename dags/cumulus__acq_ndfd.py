@@ -94,7 +94,7 @@ with DAG(
         else:
             return src_file_datetime.timestamp()      
     ##############################################################################  
-    def download_product(cumulus_slug, src_file_url, s3_key_prefix, dst_filename, ex_date):        
+    def download_product(cumulus_slug, src_file_url, s3_key_prefix, dst_filename, file_datetime):        
 
         # Convert the execution date which comes in a string back to a datetime obj
         # Ex: 2021-05-20T01:00:00+00:00
