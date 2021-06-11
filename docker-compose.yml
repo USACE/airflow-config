@@ -20,7 +20,7 @@ services:
   airflow_init:
     env_file:
       - ./airflow.env
-    image: apache/airflow:master-python3.8
+    image: apache/airflow:2.0.2-python3.8
     depends_on:
       - airflowdb
     entrypoint: >
@@ -33,7 +33,7 @@ services:
   airflow_scheduler:
     env_file:
       - ./airflow.env
-    image: apache/airflow:master-python3.8
+    image: apache/airflow:2.0.2-python3.8
     depends_on:
       - airflow_init
     restart: always
@@ -45,7 +45,7 @@ services:
   airflow_ui:
     env_file:
       - ./airflow.env
-    image: apache/airflow:master-python3.8
+    image: apache/airflow:2.0.2-python3.8
     depends_on:
       - airflow_init
       - airflow_scheduler
