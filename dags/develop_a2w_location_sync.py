@@ -1,8 +1,13 @@
+"""
+This pipeline handles location sync between CWMS RADAR API and A2W Locations.\n
+Info: http://cwms-data.usace.army.mil/cwms-data/locations
+"""
 
+import re
 import json
+from typing import Any, Dict, List
 import requests
-import logging
-import pprint
+from textwrap import dedent
 
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
@@ -19,6 +24,9 @@ from airflow.operators.python import PythonOperator
 
 import helpers.sharedApi as sharedApi
 import helpers.radar as radar
+import helpers.water as water
+
+
 
 # These args will get passed on to each operator
 # You can override them on a per-task basis during operator initialization
@@ -39,62 +47,103 @@ with DAG(
     catchup=False
 
 ) as dag:
-    dag.doc_md = """This pipeline handles location sync between CWMS RADAR API and A2W Locations. \n
-    Info: http://cwms-data.usace.army.mil/cwms-data/locations
-    """
+    dag.doc_md = dedent(__doc__)
 
-    ##############################################################################
-    def get_radar_locations(office):
-        print(f'getting data for {office}')
+    offices = sharedApi.get_offices()
+    # Convert the returned string to an object
+    offices = json.loads(offices)
+    # Get location kind from water-api
+    location_kinds = json.loads(water.get_location_kind())
+
+    def get_radar_locations(office: str) -> str:
+        print(f'Getting data for {office}')
 
         # Make a call to RADAR API for single office
         url = f'{radar.RADAR_API_ROOT}/locations?office={office}&name=@&format=json'
         print(f'Requesting URL: {url}')
         r = requests.get(url)
-        payload = r.json()
-
-       
-        return json.dumps(payload)
-    ##############################################################################
-    def post_a2w_locations(office, payload):
-        
-        print(f'******** posting data for {office} ********')
+        resp_text = r.text
+        payload = resp_text.translate(resp_text.maketrans("", "", "\n\r\t"))
         print(payload)
-        
-        return
-    ##############################################################################
-    #  
-    offices = sharedApi.get_offices()
-    # Convert the returned string to an object
-    offices = json.loads(offices)
-    
+
+        return payload
+
+    def post_a2w_locations(office: radar.Office, payload: str):
+        print(f'******** posting data for {office.symbol} ********')
+
+        payload_json = json.loads(payload)
+
+        locations = payload_json["locations"]["locations"]
+
+        post_locations = list()
+        for location in locations:
+            # Get the kind_id from the location-kind list
+            kind_id = [
+                kind["id"]
+                for kind in location_kinds
+                if kind["name"] == location["classification"]["location-kind"]
+            ]
+            loc = radar.Location(
+                office_id = office.id,
+                name = location["identity"]["name"],
+                public_name = location["label"]["public-name"],
+                kind_id = kind_id[0]
+            )
+            geo = radar.Geometry()
+            lat = location["geolocation"]["latitude"]
+            lon  = location["geolocation"]["longitude"]
+            if isinstance(lat, float): geo.latitude = lat
+            if isinstance(lon, float): geo.longitude = lon
+
+            post_locations.append(
+                json.dumps({
+                        "office_id": loc.office_id,
+                        "name": loc.name,
+                        "public_name": loc.public_name,
+                        "kind_id": loc.kind_id,
+                        "geometry" : {
+                            "type": geo.type,
+                            "coordinates": [
+                                geo.latitude,
+                                geo.longitude
+                            ]
+                        }
+                })
+                )
+
+        water.post_locations(
+            payload=post_locations,
+            conn_type="develop"
+        )
+
     check_radar_task = PythonOperator(
         task_id='check_radar_service', 
         python_callable=radar.check_service
         )
-    
-    for office in offices:
 
-        if office['symbol'] is not None:
+    for office in offices:
+        _office = radar.Office(**office)
+        
+        if _office.symbol == "LRH":
 
             # Build dymanic task name
-            fetch_office_task_id = f"get_radar_locations_{office['symbol']}"
+            fetch_office_task_id = f"get_radar_locations_{_office.symbol}"
             
             fetch_task = PythonOperator(
             task_id=fetch_office_task_id, 
             python_callable=get_radar_locations, 
             op_kwargs={
-                'office': office['symbol'],
+                'office': _office.symbol,
             })
 
             # Build dymanic task name
-            post_office_task_id = f"post_a2w_locations_{office['symbol']}"
+            post_office_task_id = f"post_a2w_locations_{_office.symbol}"
             
             post_task = PythonOperator(
             task_id=post_office_task_id, 
             python_callable=post_a2w_locations, 
             op_kwargs={
-                'office': office['symbol'],
+                'office': _office,
                 'payload': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(fetch_office_task_id)
             })
 
