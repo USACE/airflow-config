@@ -64,7 +64,7 @@ with DAG(
         r = requests.get(url)
         resp_text = r.text
         payload = resp_text.translate(resp_text.maketrans("", "", "\n\r\t"))
-        print(payload)
+        payload = payload.replace("None", "")
 
         return payload
 
@@ -96,21 +96,20 @@ with DAG(
             if isinstance(lon, float): geo.longitude = lon
 
             post_locations.append(
-                json.dumps({
-                        "office_id": loc.office_id,
-                        "name": loc.name,
-                        "public_name": loc.public_name,
-                        "kind_id": loc.kind_id,
-                        "geometry" : {
-                            "type": geo.type,
-                            "coordinates": [
-                                geo.latitude,
-                                geo.longitude
-                            ]
-                        }
-                })
-                )
-
+                {
+                    "office_id": loc.office_id,
+                    "name": loc.name,
+                    "public_name": loc.public_name,
+                    "kind_id": loc.kind_id,
+                    "geometry" : {
+                        "type": geo.type,
+                        "coordinates": [
+                            geo.latitude,
+                            geo.longitude
+                        ]
+                    }
+                }
+            )
         water.post_locations(
             payload=post_locations,
             conn_type="develop"
@@ -123,12 +122,12 @@ with DAG(
 
     for office in offices:
         _office = radar.Office(**office)
-        
-        if _office.symbol == "LRH":
+
+        if _office.symbol is not None:
 
             # Build dymanic task name
             fetch_office_task_id = f"get_radar_locations_{_office.symbol}"
-            
+
             fetch_task = PythonOperator(
             task_id=fetch_office_task_id, 
             python_callable=get_radar_locations, 
@@ -138,7 +137,7 @@ with DAG(
 
             # Build dymanic task name
             post_office_task_id = f"post_a2w_locations_{_office.symbol}"
-            
+
             post_task = PythonOperator(
             task_id=post_office_task_id, 
             python_callable=post_a2w_locations, 

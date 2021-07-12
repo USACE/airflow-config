@@ -2,6 +2,7 @@ import json
 import requests
 from typing import Dict, List
 from airflow.hooks.base_hook import BaseHook
+from sqlalchemy.util.langhelpers import public_factory
 from airflow.providers.http.hooks.http import HttpHook
 from airflow import AirflowException
 
