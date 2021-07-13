@@ -35,8 +35,8 @@ with DAG(
     start_date=(datetime.utcnow()-timedelta(hours=6)).replace(minute=0, second=0),
     # start_date=datetime(2021, 3, 27),
     tags=['midas', 'develop'],    
-    # schedule_interval='*/15 * * * *'
-    schedule_interval='@hourly',
+    schedule_interval='15 * * * *',
+    #schedule_interval='@hourly',
     catchup=True
     
 ) as dag:
