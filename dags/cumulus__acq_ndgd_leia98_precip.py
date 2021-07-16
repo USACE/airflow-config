@@ -1,5 +1,5 @@
 """
-Acquire and Process Historic NDGD RTMA Precip
+Acquire and Process NDGD RTMA Precip
 """
 
 import os, json, logging
