@@ -1,7 +1,12 @@
 import json
 from airflow.hooks.base_hook import BaseHook
+from requests.structures import CaseInsensitiveDict
 from airflow.providers.http.hooks.http import HttpHook
 from airflow import AirflowException
+
+import socket
+import requests
+import xml.etree.ElementTree as ET
 
 S3_ACQUIRABLE_PREFIX = 'cumulus/acquirables'
 
@@ -22,7 +27,8 @@ acquirables = {
     'prism-tmin-early': '11e87d14-ec54-4550-bd95-bc6eba0eba08',
     'wrf-columbia-precip': 'ec926de8-6872-4d2b-b7ce-6002221babcd',
     'wrf-columbia-airtemp': '552bf762-449f-4983-bbdc-9d89daada260',
-    'wpc-qpf-2p5km': '0c725458-deb7-45bb-84c6-e98083874c0e'
+    'wpc-qpf-2p5km': '0c725458-deb7-45bb-84c6-e98083874c0e',
+    'nsidc_ua_swe_sd_v1': '4b0f8d9c-1be4-4605-8265-a076aa6aa555',
 }
 ################################################################ 
 def get_develop_connection():    
@@ -32,7 +38,7 @@ def get_connection():
     return BaseHook.get_connection('CUMULUS_STABLE')
 ################################################################ 
 def notify_acquirablefile(acquirable_id, datetime, s3_key, conn_type):
-    
+
     payload = {"datetime": datetime, "file": s3_key, "acquirable_id": acquirable_id}
     print(f'Sending payload: {payload}')
 
@@ -48,3 +54,27 @@ def notify_acquirablefile(acquirable_id, datetime, s3_key, conn_type):
 
     return json.dumps(r.json())
 ################################################################
+
+def nsidc_token() -> str:
+    url = "https://cmr.earthdata.nasa.gov/legacy-services/rest/tokens"
+
+    hostname = socket.gethostname()
+    ip = socket.gethostbyname(hostname)
+    headers = CaseInsensitiveDict()
+    headers["Content-Type"] = "application/xml"
+
+    payload = f"""
+    <token>
+    <username>USERNAME</username>
+    <password>PASSWORD</password>
+    <client_id>NSIDC_client_id</client_id>
+    <user_ip_address>{ip}</user_ip_address>
+    </token>"""
+
+    req = requests.post(url, data=payload, headers=headers)
+    if req.status_code == 201:
+        root = ET.fromstring(req.text)
+        for child in root:
+            if child.tag == "id": return child.text
+        else:
+            return None
