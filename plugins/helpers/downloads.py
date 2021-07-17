@@ -29,6 +29,12 @@ def copy_s3_file(src_bucket, src_key, dst_bucket, dst_key):
     h = hook.copy_object(src_key, dst_key, source_bucket_name=src_bucket, dest_bucket_name=dst_bucket, source_version_id=None)
     return
 
+def s3_file_exists(bucket, key):
+    """Check for S3 file"""
+    hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
+    h = hook.check_for_key(key=key, bucket_name=bucket)
+    return h
+
 def read_s3_file(file_name, bucket, object_name=None):
     """Download a file from S3 bucket, return text contents"""
     hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
