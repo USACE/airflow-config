@@ -120,31 +120,32 @@ with DAG(
         python_callable=radar.check_service
         )
 
-    for office in offices:
-        _office = radar.Office(**office)
+    # Commented out due to error being produced in airflow
+    # for office in offices:
+    #     _office = radar.Office(**office)
 
-        if _office.symbol is not None:
+    #     if _office.symbol is not None:
 
-            # Build dymanic task name
-            fetch_office_task_id = f"get_radar_locations_{_office.symbol}"
+    #         # Build dymanic task name
+    #         fetch_office_task_id = f"get_radar_locations_{_office.symbol}"
 
-            fetch_task = PythonOperator(
-            task_id=fetch_office_task_id, 
-            python_callable=get_radar_locations, 
-            op_kwargs={
-                'office': _office.symbol,
-            })
+    #         fetch_task = PythonOperator(
+    #         task_id=fetch_office_task_id, 
+    #         python_callable=get_radar_locations, 
+    #         op_kwargs={
+    #             'office': _office.symbol,
+    #         })
 
-            # Build dymanic task name
-            post_office_task_id = f"post_a2w_locations_{_office.symbol}"
+    #         # Build dymanic task name
+    #         post_office_task_id = f"post_a2w_locations_{_office.symbol}"
 
-            post_task = PythonOperator(
-            task_id=post_office_task_id, 
-            python_callable=post_a2w_locations, 
-            op_kwargs={
-                'office': _office,
-                'payload': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(fetch_office_task_id)
-            })
+    #         post_task = PythonOperator(
+    #         task_id=post_office_task_id, 
+    #         python_callable=post_a2w_locations, 
+    #         op_kwargs={
+    #             'office': _office,
+    #             'payload': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(fetch_office_task_id)
+    #         })
 
-            # Call the tasks
-            check_radar_task >> fetch_task >> post_task
+    #         # Call the tasks
+    #         check_radar_task >> fetch_task >> post_task
