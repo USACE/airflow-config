@@ -49,12 +49,6 @@ with DAG(
 ) as dag:
     dag.doc_md = dedent(__doc__)
 
-    offices = sharedApi.get_offices()
-    # Convert the returned string to an object
-    offices = json.loads(offices)
-    # Get location kind from water-api
-    location_kinds = json.loads(water.get_location_kind())
-
     def get_radar_locations(office: str) -> str:
         print(f'Getting data for {office}')
 
@@ -121,6 +115,12 @@ with DAG(
         )
 
     # Commented out due to error being produced in airflow
+    # offices = sharedApi.get_offices()
+    # # Convert the returned string to an object
+    # offices = json.loads(offices)
+    # # Get location kind from water-api
+    # location_kinds = json.loads(water.get_location_kind())
+
     # for office in offices:
     #     _office = radar.Office(**office)
 
