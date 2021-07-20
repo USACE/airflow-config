@@ -17,10 +17,16 @@ DOWNLOAD_OPERATOR_USE_LAMBDA_NAME = os.getenv("DOWNLOAD_OPERATOR_USE_LAMBDA_NAME
 DOWNLOAD_OPERATOR_USE_LAMBDA_REGION = os.getenv("DOWNLOAD_OPERATOR_USE_LAMBDA_REGION", default=None)
 
 
-def upload_file(file_name, bucket, object_name=None):
+def upload_string_s3(data, bucket, key, replace=True):
+    """Upload a file with a string inside to S3 bucket"""
+    hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
+    load_str = hook.load_string(string_data=data, key=key, bucket_name=bucket, replace=True)
+    return load_str
+
+def upload_file(filename, bucket, key):
     """Upload a file to an S3 bucket"""
     hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
-    load_file = hook.load_file(file_name, object_name, bucket, replace=True)
+    load_file = hook.load_file(filename=filename, key=key, bucket_name=bucket, replace=True)
     return load_file
 
 def copy_s3_file(src_bucket, src_key, dst_bucket, dst_key):
