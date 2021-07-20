@@ -1,8 +1,10 @@
-
+import os
 import json
 import requests
 import logging
-import pprint
+# import pprint
+import inspect
+from tempfile import TemporaryDirectory
 
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
@@ -19,6 +21,7 @@ from airflow.utils.dates import days_ago
 
 import helpers.aware as aware
 import helpers.midas as midas
+from helpers.downloads import upload_file, upload_string_s3, read_s3_file
 
 
 # These args will get passed on to each operator
@@ -32,7 +35,7 @@ with DAG(
     'develop_midas_sync_aware_ts',
     default_args=default_args,
     description='AWARE Timeseries to MIDAS',
-    start_date=(datetime.utcnow()-timedelta(hours=6)).replace(minute=0, second=0),
+    start_date=(datetime.utcnow()-timedelta(hours=2)).replace(minute=0, second=0),
     # start_date=datetime(2021, 3, 27),
     tags=['midas', 'develop'],    
     schedule_interval='15 * * * *',
@@ -80,10 +83,22 @@ with DAG(
 
         if len(keys) > 0:
             # Query AWARE API for the timeseries)
-            r = aware.get_device_ts_data(token, instrument['aware_id'], startTs, endTs, keys, limit)
-            return json.dumps(r.json()) 
+            r = aware.get_device_ts_data(token, instrument['aware_id'], startTs, endTs, keys, limit)                      
+            
+            # _exec_dt = get_current_context()['execution_date']
+            # _frame = inspect.currentframe()
+            # _funct = inspect.getframeinfo(_frame).function
+            # _filename = f'{_funct}_{_exec_dt}.json'
+            # upload_string_s3(data=r.text, bucket='cwbi-data-develop', key=f"airflow/{dag.dag_id}/{instrument['instrument_id']}/{_filename}")
+
+           
+            # contents = read_s3_file(f"airflow/{dag.dag_id}/{instrument['instrument_id']}/{_filename}", 'cwbi-data-develop')
+            # print(contents)            
+            
+            # return json.dumps(r.json()) 
+            write_to_midas(instrument, r.json())
         else:
-            logging.info('Instrument has not timeseries enabled')
+            logging.info('Instrument has no timeseries enabled')
             return json.dumps({})
     ##############################################################################
     def write_to_midas(instrument, aware_data):
@@ -95,14 +110,15 @@ with DAG(
         """
 
         # Convert string to dict
-        aware_response = json.loads(aware_data)
+        # aware_response = json.loads(aware_data)
+        aware_response = aware_data
 
         # Return from function if aware data not present
         if len(aware_response) == 0:
             return
 
         logging.info(f'instrument: {instrument}')
-        logging.debug(f'aware_data: {aware_data}')       
+        logging.info(f'aware_data: {aware_data}') 
 
         payload = []
 
@@ -155,7 +171,7 @@ with DAG(
         
         print(f"MIDAS Instrument UUID: {i['instrument_id']}")
         
-        fetch_task_id = f"fetch_{i['instrument_id']}"
+        fetch_task_id = f"fetch_and_write_{i['instrument_id']}"
         
         fetch_task = PythonOperator(
             task_id=fetch_task_id, 
@@ -168,16 +184,16 @@ with DAG(
             }
         )
 
-        write_midas_task = PythonOperator(
-            task_id=f"write_midas_{i['instrument_id']}",            
-            python_callable=write_to_midas,
-            op_kwargs={
-                'instrument': i, 
-                'aware_data': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(fetch_task_id)
-                }
-        )
+        # write_midas_task = PythonOperator(
+        #     task_id=f"write_midas_{i['instrument_id']}",            
+        #     python_callable=write_to_midas,
+        #     op_kwargs={
+        #         'instrument': i, 
+        #         'aware_data': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(fetch_task_id)
+        #         }
+        # )
 
-        flashflood_authenticate_task >> fetch_task >> write_midas_task
+        flashflood_authenticate_task >> fetch_task# >> write_midas_task
            
 
     get_midas_task >> flashflood_authenticate_task
