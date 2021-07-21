@@ -1,0 +1,2 @@
+# ignore dags in the _save subdir
+_save/*
