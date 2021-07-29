@@ -26,7 +26,7 @@ def post_locations(payload: List[Dict], conn_type: str):
         h = HttpHook(http_conn_id=conn.conn_id, method='POST')
         endpoint = f"/sync/locations?key={conn.password}"
         headers = {"Content-Type": "application/json"}
-        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        r = h.run(endpoint=endpoint, data=payload, headers=headers)
         print(r.status_code)
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
