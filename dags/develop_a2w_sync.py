@@ -21,7 +21,10 @@ base_key = 'airflow/data_exchange'
 
 default_args = {
     'owner': 'airflow',
-    'start_date': datetime.utcnow()-timedelta(hours=1)
+    'start_date': datetime.utcnow()-timedelta(minutes=1),
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+    'schedule_interval': '@hourly',
 }
 
 def radar_locations(ti, *, office: str, format: str = 'json'):
@@ -37,45 +40,45 @@ def parse_locations(ti, office: str):
     loc_str = ti.xcom_pull(key='radar_locations', task_ids='radar_locations')
     location_kinds = json.loads(water.get_location_kind())
 
-    _loc_str = loc_str.translate(loc_str.maketrans("", "", "\n\r\t")).replace("None", "")
+    _loc_str = loc_str.translate(loc_str.maketrans('', '', '\n\r\t')).replace('None', '')
     loc_json = json.loads(_loc_str)
-    locations = loc_json["locations"]["locations"]
+    locations = loc_json['locations']['locations']
     
     post_locations = list()
     for location in locations:
         # Get the kind_id from the location-kind list
         kind_id = [
-            kind["id"]
+            kind['id']
             for kind in location_kinds
-            if kind["name"] == location["classification"]["location-kind"]
+            if kind['name'] == location['classification']['location-kind']
         ]
         # Create a Location dataclass
         loc = radar.Location(
             office_id = office,
-            name = location["identity"]["name"],
-            public_name = location["label"]["public-name"],
+            name = location['identity']['name'],
+            public_name = location['label']['public-name'],
             kind_id = kind_id[0]
         )
         # Create a Geometry dataclass with middle of North America as defaults
         geo = radar.Geometry()
-        lat = location["geolocation"]["latitude"]
-        lon  = location["geolocation"]["longitude"]
+        lat = location['geolocation']['latitude']
+        lon  = location['geolocation']['longitude']
         if isinstance(lat, float): geo.latitude = lat
         if isinstance(lon, float): geo.longitude = lon
         # Create a Political dataclass to get the bounding office
         political = radar.Political()
-        political.bounding_office = location["political"]["bounding-office"]
+        political.bounding_office = location['political']['bounding-office']
 
         # Appending dictionary to post
         post_locations.append(
             {
-                "office_id": loc.office_id,
-                "name": loc.name,
-                "public_name": loc.public_name,
-                "kind_id": loc.kind_id,
-                "geometry" : {
-                    "type": geo.type,
-                    "coordinates": [
+                'office_id': loc.office_id,
+                'name': loc.name,
+                'public_name': loc.public_name,
+                'kind_id': loc.kind_id,
+                'geometry' : {
+                    'type': geo.type,
+                    'coordinates': [
                         geo.latitude,
                         geo.longitude
                     ]
@@ -88,7 +91,7 @@ def parse_locations(ti, office: str):
     ti.xcom_push(key='parse_locations', value=f'{bucket}/{key}')
 
 def post_locations(ti, conn_type: str='develop'):
-    bucket, key = ti.xcom_pull(key='parse_locations', task_ids='parse_locations').split("/", maxsplit=1)
+    bucket, key = ti.xcom_pull(key='parse_locations', task_ids='parse_locations').split('/', maxsplit=1)
     payload = downloads.read_s3key(key, bucket)
     water.post_locations(payload, conn_type)
 
@@ -129,13 +132,14 @@ def create_dag(
 offices = json.loads(sharedApi.get_offices())
 for _office in offices:
     office = radar.Office(**_office)
-    dag_prefix = "radar_locations"
-    dag_id = f"{dag_prefix}_{office.symbol}"
+    dag_prefix = 'radar_locations'
+    dag_id = f'{dag_prefix}_{office.symbol}'
 
-    globals()[dag_id] = create_dag(
-            dag_id, 
-            default_args,
-            office.symbol,
-            office.id,
-            [dag_prefix],
-        )
+    if office.symbol is not None:
+        globals()[dag_id] = create_dag(
+                dag_id, 
+                default_args,
+                office.symbol,
+                office.id,
+                [dag_prefix],
+            )
