@@ -16,9 +16,7 @@ from textwrap import dedent
 from airflow.models.dag import DAG
 from airflow.models.variable import Variable
 
-bucket = 'cwbi-data-develop'
-base_key = 'airflow/data_exchange'
-
+# Default arguments
 default_args = {
     'owner': 'airflow',
     'start_date': datetime.utcnow()-timedelta(minutes=1),
@@ -26,22 +24,20 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
     'schedule_interval': '@hourly',
 }
-
-def radar_locations(ti, *, office: str, format: str = 'json'):
-    url = Variable.get('CWMSDATA') + f'/locations?office={office}&format={format}'
-    key=f'{base_key}/{ti.dag_id}/{ti.task_id}'
-    with requests.session() as s:
+# Get RADAR Locations
+def radar_locations(ti, office, format: str = 'json'):
+    url = Variable.get('CWMSDATA') + f'/locations?office={office.symbol}&format={format}'
+    with requests.Session() as s:
         r = s.get(url)
         t = r.text
-        ti.xcom_push(key='radar_locations', value=t)
+    return t
 
 def parse_locations(ti, office: str):
-    key=f'{base_key}/{ti.dag_id}/{ti.task_id}'
-    loc_str = ti.xcom_pull(key='radar_locations', task_ids='radar_locations')
     location_kinds = json.loads(water.get_location_kind())
 
-    _loc_str = loc_str.translate(loc_str.maketrans('', '', '\n\r\t')).replace('None', '')
-    loc_json = json.loads(_loc_str)
+    radar_locations_str = ti.xcom_pull()
+    _radar_locations_str = radar_locations_str.translate(radar_locations_str.maketrans('', '', '\n\r\t')).replace('None', '')
+    loc_json = json.loads(_radar_locations_str)
     locations = loc_json['locations']['locations']
     
     post_locations = list()
@@ -54,7 +50,7 @@ def parse_locations(ti, office: str):
         ]
         # Create a Location dataclass
         loc = radar.Location(
-            office_id = office,
+            office_id = office.id,
             name = location['identity']['name'],
             public_name = location['label']['public-name'],
             kind_id = kind_id[0]
@@ -86,60 +82,38 @@ def parse_locations(ti, office: str):
             }
         )
     
-    downloads.upload_string_s3(json.dumps(post_locations), bucket, key)
-
-    ti.xcom_push(key='parse_locations', value=f'{bucket}/{key}')
+    return json.dumps(post_locations)
 
 def post_locations(ti, conn_type: str='develop'):
-    bucket, key = ti.xcom_pull(key='parse_locations', task_ids='parse_locations').split('/', maxsplit=1)
-    payload = downloads.read_s3key(key, bucket)
+    payload = ti.xcom_pull()
     water.post_locations(payload, conn_type)
 
-def create_dag(
-    dag_id: str, 
-    default_args: Dict[str, Any],
-    office_symbol: str, 
-    office_id: str,
-    tags: List[str]
-    ):
-    with DAG(default_args=default_args, dag_id=dag_id, tags=tags) as dag:
-
-        task_get_radar_locations = PythonOperator(
-            task_id='radar_locations',
-            python_callable=radar_locations,
-            op_kwargs={
-                'office': office_symbol,
-            }
-        )
-
-        task_parse_radar_locations = PythonOperator(
-            task_id='parse_locations',
-            python_callable=parse_locations,
-            op_kwargs={
-                'office': office_id,
-            }
-        )
-
-        task_post_locations = PythonOperator(
-            task_id='post_locations',
-            python_callable=post_locations,
-        )
-
-        task_get_radar_locations >> task_parse_radar_locations >> task_post_locations
-
-    return dag
-
-offices = json.loads(sharedApi.get_offices())
-for _office in offices:
-    office = radar.Office(**_office)
-    dag_prefix = 'radar_locations'
-    dag_id = f'{dag_prefix}_{office.symbol}'
-
-    if office.symbol is not None:
-        globals()[dag_id] = create_dag(
-                dag_id, 
-                default_args,
-                office.symbol,
-                office.id,
-                [dag_prefix],
+# Assign result to variable 'dag'
+with DAG(default_args=default_args, dag_id='RADAR_SYNC', tags=['RADAR-SYNC']) as dag:
+    offices = json.loads(sharedApi.get_offices())
+    for _office in offices:
+        office = radar.Office(**_office)
+        if office.symbol is not None and office.symbol == 'LRH':
+            # Get the RADAR locations task to XCOM
+            task_get_radar_locations = PythonOperator(
+                task_id=f'radar_locations_{office.symbol}',
+                python_callable=radar_locations,
+                op_kwargs={
+                    'office': office,
+                }
             )
+            # Parse the XCOM return_value returning a list of payloads
+            task_parse_radar_locations = PythonOperator(
+                task_id=f'parse_locations_{office.symbol}',
+                python_callable=parse_locations,
+                op_kwargs={
+                    'office': office,
+                }
+            )
+            # Post resulting parse to water-api
+            task_post_radar_locations = PythonOperator(
+                task_id=f'post_locations_{office.symbol}',
+                python_callable=post_locations,
+            )
+
+            task_get_radar_locations >> task_parse_radar_locations >> task_post_radar_locations
