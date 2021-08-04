@@ -16,7 +16,7 @@ def get_connection():
     return BaseHook.get_connection('WATER_STABLE')
 ################################################################ 
 
-def post_locations(payload: List[Dict], conn_type: str):
+def post_locations(payload, conn_type: str):
     if conn_type.lower() == 'develop':
         conn = get_develop_connection()
     else:
@@ -26,7 +26,7 @@ def post_locations(payload: List[Dict], conn_type: str):
         h = HttpHook(http_conn_id=conn.conn_id, method='POST')
         endpoint = f"/sync/locations?key={conn.password}"
         headers = {"Content-Type": "application/json"}
-        r = h.run(endpoint=endpoint, data=payload, headers=headers)
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
         print(r.status_code)
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
