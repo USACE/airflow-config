@@ -85,13 +85,19 @@ def parse_locations(ti, office: str):
                     }
                 }
             )
-    
     return json.dumps(post_locations)
 
 def post_locations(ti, conn_type: str='develop'):
     payload = json.loads(ti.xcom_pull())
     for p in payload:
-        water.post_locations(p, conn_type)
+        try:
+            water.post_locations(
+                payload=p,
+                conn_type=conn_type,
+            )
+        except Exception as err:
+            print(err, '\n', p)
+            continue
 
 @provide_session
 def cleanup_xcom(context, session=None):
