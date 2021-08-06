@@ -59,6 +59,12 @@ def read_s3_file(file_name, bucket, object_name=None):
     # returns a list of strings
     return contents
 
+def read_s3key(key: str, bucket: str) -> str:
+    """
+    """
+    hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
+    return hook.read_key(key=key, bucket_name=bucket)
+
 def download(url, outfile):
     local_filename, headers = urlretrieve(url, outfile)
     return os.path.abspath(local_filename)

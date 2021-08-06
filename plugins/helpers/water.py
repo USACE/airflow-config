@@ -16,7 +16,7 @@ def get_connection():
     return BaseHook.get_connection('WATER_STABLE')
 ################################################################ 
 
-def post_locations(payload: List[Dict], conn_type: str):
+def post_locations(payload, conn_type: str):
     if conn_type.lower() == 'develop':
         conn = get_develop_connection()
     else:

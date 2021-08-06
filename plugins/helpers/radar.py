@@ -26,7 +26,14 @@ class Geometry:
     type: str = "Point"
     latitude: float = 47
     longitude: float = 101
-    
+@dataclass
+class Political:
+    nation: str = None
+    state: str = None
+    county: str = None
+    timezone: str = None
+    nearest_city: str = None
+    bounding_office: str = None
     
 def check_service():
     r = requests.get(f'{RADAR_API_ROOT}/offices?format=json')
