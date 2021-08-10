@@ -35,8 +35,8 @@ default_args = {
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 5,
-    "retry_delay": timedelta(minutes=30),
+    "retries": 1,
+    "retry_delay": timedelta(minutes=15),
 }
 
 @dag(default_args=default_args,
