@@ -59,6 +59,12 @@ def read_s3_file(file_name, bucket, object_name=None):
     # returns a list of strings
     return contents
 
+def check_key_exists(key, bucket_name):
+    """
+    """
+    hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
+    return hook.check_for_key(key=key, bucket_name=bucket_name)
+
 def read_s3key(key: str, bucket: str) -> str:
     """
     """
