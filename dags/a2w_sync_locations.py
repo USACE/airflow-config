@@ -17,6 +17,18 @@ from airflow.models.dag import DAG
 from airflow.models.variable import Variable
 from airflow import AirflowException
 
+implementation = {
+    'stable': {
+        'bucket': 'cwbi-data-stable',
+        'dag_id': 'A2W-SYNC-LOCATIONS',
+        'tags': ['stable', 'A2W'],
+    },
+    'develop': {
+        'bucket': 'cwbi-data-stable',
+        'dag_id': 'DEVELOP-A2W-SYNC-LOCATIONS',
+        'tags': ['develop', 'A2W'],
+    }
+}
 
 # Default arguments
 default_args = {
@@ -24,7 +36,6 @@ default_args = {
     'start_date': datetime.utcnow()-timedelta(minutes=1),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'schedule_interval': '@hourly',
 }
 # Get RADAR Locations
 def radar_locations(ti, office, format: str = 'json'):
@@ -98,27 +109,44 @@ def post_locations(ti, conn_type: str='develop'):
             print(err, '\n', p)
             continue
 
-# Assign result to variable 'dag'
-with DAG(
-    default_args=default_args, dag_id='RADAR_SYNC_LOCATIONS',
-    tags=['RADAR-SYNC-LOCATIONS'],
-) as dag:
-    offices = json.loads(sharedApi.get_offices())
-    for _office in offices:
-        office = radar.Office(**_office)
-        if office.symbol is not None:
-            # Get the RADAR locations task to XCOM
-            task_get_radar_locations = PythonOperator(
-                task_id=f'radar_locations_{office.symbol}',
-                python_callable=radar_locations,
-                op_kwargs={
-                    'office': office,
-                }
-            )
-            # Post resulting parse to water-api
-            task_post_radar_locations = PythonOperator(
-                task_id=f'post_locations_{office.symbol}',
-                python_callable=post_locations,
-            )
+def create_dag(dag_id, tags, schedule_interval):
 
-            task_get_radar_locations >> task_post_radar_locations
+    # Assign result to variable 'dag'
+    with DAG(
+        default_args=default_args, 
+        dag_id=dag_id,
+        tags=tags,
+        schedule_interval=schedule_interval,
+    ) as dag:
+        offices = json.loads(sharedApi.get_offices())
+        for _office in offices:
+            office = radar.Office(**_office)
+            if office.symbol is not None:
+                # Get the RADAR locations task to XCOM
+                task_get_radar_locations = PythonOperator(
+                    task_id=f'radar_locations_{office.symbol}',
+                    python_callable=radar_locations,
+                    op_kwargs={
+                        'office': office,
+                    }
+                )
+                # Post resulting parse to water-api
+                task_post_radar_locations = PythonOperator(
+                    task_id=f'post_locations_{office.symbol}',
+                    python_callable=post_locations,
+                )
+
+                task_get_radar_locations >> task_post_radar_locations
+
+        return dag
+
+# Expose to the global() allowing airflow to add to the DagBag
+for key, val in implementation.items():
+    d_id = val['dag_id']
+    d_tags = val['tags']
+    d_bucket=val['bucket']
+    globals()[d_id] = create_dag(
+        dag_id=d_id,
+        tags=d_tags,
+        schedule_interval='@hourly'
+    )
