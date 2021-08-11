@@ -42,6 +42,7 @@ default_args = {
 @dag(default_args=default_args,
      dag_id='CUMULUS-SERFC-PRECIP',
      tags=['cumulus','precip', 'SERFC'],
+     schedule_interval='@hourly',
      doc_md=dedent(__doc__),
      )
 def cumulus_acq_serfc_precip():
