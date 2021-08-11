@@ -75,9 +75,9 @@ def cumulus_acq_serfc_precip():
     def s3_keys(slugs):
         needed = {
             slug: [
-                f'{key_prefix}/{slug}/{f}'
+                key
                 for f in files
-                if not downloads.check_key_exists(f, s3_bucket)
+                if not downloads.check_key_exists((key := f'{key_prefix}/{slug}/{f}'), s3_bucket)
             ]
             for slug, files in slugs.items()
         }
