@@ -50,7 +50,6 @@ default_args = {
 # ALR QPF filename generator
 def alr_qpf_filenames(edate):
     d = edate.strftime('%Y%m%d')
-    print(type(edate))
     exe_hr = edate.hour
     if 0 >= exe_hr < 12:
         hh = 0
@@ -66,7 +65,7 @@ def create_dag(dag_id, tags, s3_bucket, conn_type):
     @dag(default_args=default_args,
         dag_id=dag_id,
         tags=tags,
-        schedule_interval='@hourly',
+        schedule_interval='45 * * * *',
         doc_md=dedent(__doc__),
         )
     def cumulus_acq_serfc_precip():
@@ -141,7 +140,7 @@ def create_dag(dag_id, tags, s3_bucket, conn_type):
                     s3_key=item['s3_key'],
                     conn_type=conn_type,
                 )
-            
+
         # Task 1: Get dictionary of QPE and QPF files available
         _download_serfc_qpe = download_serfc_qpe()
         _download_serfc_qpf = download_serfc_qpf()
