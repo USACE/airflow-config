@@ -26,6 +26,8 @@ acquirables = {
     'wrf-columbia-airtemp': '552bf762-449f-4983-bbdc-9d89daada260',
     'wpc-qpf-2p5km': '0c725458-deb7-45bb-84c6-e98083874c0e',
     'nsidc-ua-swe-sd-v1': '4b0f8d9c-1be4-4605-8265-a076aa6aa555',
+    'serfc-qpe-01h': '5365399a-7aa6-4df8-a91a-369ca87c8bd9',
+    'serfc-qpf-06h': '355d8d9b-1eb4-4f1d-93b7-d77054c5c267',
 }
 ################################################################ 
 def get_develop_connection():    
