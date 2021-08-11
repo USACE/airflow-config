@@ -60,12 +60,15 @@ def alr_qpf_filenames(edate):
     for fff in range(6,78,6):
         yield f'ALR_QPF_SFC_{d}{hh:02d}_{fff:03d}.grb.gz'
 
-def create_dag(dag_id, tags, s3_bucket, conn_type):
-
+def create_dag(**kwargs):
+    
+    s3_bucket = kwargs['s3_bucket']
+    conn_type = kwargs['conn_type']
+    
     @dag(default_args=default_args,
-        dag_id=dag_id,
-        tags=tags,
-        schedule_interval='45 * * * *',
+        dag_id=kwargs['dag_id'],
+        tags=kwargs['tags'],
+        schedule_interval=kwargs['schedule_interval'],
         doc_md=dedent(__doc__),
         )
     def cumulus_acq_serfc_precip():
@@ -159,4 +162,5 @@ for key, val in implementation.items():
         tags=d_tags,
         s3_bucket=d_bucket,
         conn_type=key,
+        schedule_interval='45 * * * *'
     )
