@@ -34,6 +34,24 @@ def post_locations(payload, conn_type: str):
 
     return
 
+def sync_usgs_sites(payload, conn_type: str):
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method='POST')
+        endpoint = f"/sync/usgs_sites?key={conn.password}"
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        print(r.status_code)
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        raise
+
+    return
+
 def get_location_kind() -> str:
     r = requests.get(WATER_API_ROOT + "/location_kind")
     if r.status_code == 200:
