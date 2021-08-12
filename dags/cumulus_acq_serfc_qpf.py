@@ -10,17 +10,15 @@ QPE --> xmrgMMDDYYYYHHz.grb.gz
 QPF --> ALR_QPF_SFC_YYYYMMDDHH_FFF.grb.gz, where FFF is the forecast hour
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from textwrap import dedent
 
 import helpers.cumulus as cumulus
-import helpers.downloads as downloads
 from helpers.downloads import trigger_download
 
-
-from airflow.exceptions import AirflowException
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
+from airflow.utils.dates import days_ago
 
 implementation = {
     'stable': {
@@ -39,7 +37,7 @@ implementation = {
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': (datetime.utcnow()-timedelta(days=5)).replace(minute=0, second=0),
+    'start_date': days_ago(5),
     'catchup_by_default': False,
     'email_on_failure': False,
     'email_on_retry': False,
@@ -96,7 +94,7 @@ def create_dag(**kwargs):
                 })
             return return_list
         @task()
-        def notify_cumulus_qpf(download_result):
+        def notify_cumulus(download_result):
             for item in  download_result:
                 result = cumulus.notify_acquirablefile(
                     acquirable_id=cumulus.acquirables[item['slug']],
@@ -108,7 +106,9 @@ def create_dag(**kwargs):
         # Task 1: Get dictionary of QPE and QPF files available
         _download_serfc = download_serfc()
         # Task 2: Use that list and compare what is in the S3 Bucket
-        _notify_cumulus_qpf = notify_cumulus_qpf(_download_serfc)
+        _notify_cumulus = notify_cumulus(_download_serfc)
+        
+        _download_serfc >> _notify_cumulus
 
     return cumulus_acq_serfc()
 # Expose to the global() allowing airflow to add to the DagBag
