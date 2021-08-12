@@ -20,12 +20,12 @@ from airflow import AirflowException
 implementation = {
     'stable': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'A2W-SYNC-LOCATIONS',
+        'dag_id': 'a2w_sync_locations',
         'tags': ['stable', 'A2W'],
     },
     'develop': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'A2W-SYNC-LOCATIONS-DEVELOP',
+        'dag_id': 'develop_a2w_sync_locations',
         'tags': ['develop', 'A2W'],
     }
 }
