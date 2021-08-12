@@ -30,7 +30,7 @@ implementation = {
     },
     'develop': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'DEVELOP-CUMULUS-SERFC-PRECIP',
+        'dag_id': 'CUMULUS-SERFC-PRECIP-DEVELOP',
         'tags': ['develop', 'cumulus','precip', 'SERFC', 'QPE', 'QPF'],
     }
 }
