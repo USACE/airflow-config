@@ -25,7 +25,7 @@ implementation = {
     },
     'develop': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'DEVELOP-A2W-SYNC-LOCATIONS',
+        'dag_id': 'A2W-SYNC-LOCATIONS-DEVELOP',
         'tags': ['develop', 'A2W'],
     }
 }
