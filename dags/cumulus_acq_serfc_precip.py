@@ -29,7 +29,7 @@ implementation = {
         'tags': ['stable', 'cumulus','precip', 'SERFC', 'QPE', 'QPF'],
     },
     'develop': {
-        'bucket': 'cwbi-data-stable',
+        'bucket': 'cwbi-data-develop',
         'dag_id': 'CUMULUS-SERFC-PRECIP-DEVELOP',
         'tags': ['develop', 'cumulus','precip', 'SERFC', 'QPE', 'QPF'],
     }
