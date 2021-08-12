@@ -25,12 +25,12 @@ from airflow.operators.python import get_current_context
 implementation = {
     'stable': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'CUMULUS-SERFC-PRECIP',
+        'dag_id': 'cumulus_serfc_precip',
         'tags': ['stable', 'cumulus','precip', 'SERFC', 'QPE', 'QPF'],
     },
     'develop': {
-        'bucket': 'cwbi-data-stable',
-        'dag_id': 'DEVELOP-CUMULUS-SERFC-PRECIP',
+        'bucket': 'cwbi-data-develop',
+        'dag_id': 'develop_cumulus_serfc_precip',
         'tags': ['develop', 'cumulus','precip', 'SERFC', 'QPE', 'QPF'],
     }
 }
