@@ -54,7 +54,9 @@ default_args = {
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=30),
+    'retry_delay': timedelta(minutes=10),
+    # 'max_active_runs':1,
+    # 'concurrency':4,
 }
 
 def create_dag(**kwargs):
@@ -143,14 +145,8 @@ def create_dag(**kwargs):
         
                 state_sites.append(site)
             
-                # POST to the water API
-                water.sync_usgs_sites(state_sites, conn_type)
-                # r = requests.post(
-                # "http://water-api_api_1/sync/usgs_sites?key=appkey",
-                # json=state_sites,
-                # headers={"Content-Type": "application/json"},    
-                # )
-                # print(r.status_code)
+            # POST to the water API                            
+            water.sync_usgs_sites(state_sites, conn_type)
 
             return
         ########################################
