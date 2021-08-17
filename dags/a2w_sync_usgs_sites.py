@@ -130,7 +130,7 @@ def create_dag(**kwargs):
                     site['horizontal_datum_id'] = horizontal_datum[line['dec_coord_datum_cd']]
                 except:
                     site['horizontal_datum_id'] = 4269
-                huc = f"'{line['huc_cd'].strip()}'" if line['huc_cd'].strip() != '' else None
+                site['huc'] = f"{line['huc_cd'].strip()}" if line['huc_cd'].strip() != '' else None
                 try:
                     site['vertical_datum_id'] = vertical_datum[line['alt_datum_cd']]
                 except:
