@@ -1,14 +1,37 @@
 """
-### Documentation
+## Sync Water database with RADAR Locations
+
+RADAR Locations retrieved as JSON string
+
+### Parse:
+
+Extract schema needed for posting to Water API
+
+### Post:
+
+Water API endpoint `/sync/locations`
+
+```{
+    'office_id',
+    'name',
+    'public_name',
+    'kind_id',
+    'geometry' : {
+        'type',
+        'coordinates': [
+            101, 47
+        ]
+    }
+}```
+
+__North America centriod default for missing coordinates__
 """
 
 from airflow.operators.python import PythonOperator
 import helpers.sharedApi as sharedApi
 import helpers.radar as radar
 import helpers.water as water
-import helpers.downloads as downloads
 import json
-from typing import Any, Dict, List
 import requests
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -124,6 +147,7 @@ def create_dag(**kwargs):
         dag_id=dag_id,
         tags=tags,
         schedule_interval=schedule_interval,
+        doc_md=__doc__
     ) as dag:
         for office_symbol in offices.keys():
             # Get the RADAR locations task to XCOM
