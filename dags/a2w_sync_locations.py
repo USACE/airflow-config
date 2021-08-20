@@ -62,7 +62,7 @@ default_args = {
 }
 # Get RADAR Locations
 def radar_locations(ti, office, offices, format: str = 'json'):
-    cwms_data = Variable.get('CWMSDATA')
+    cwms_data = 'https://cwms-data.usace.army.mil/cwms-data'
     url = f'{cwms_data}/locations?office={office}&name=@&format={format}'
     location_kinds = json.loads(water.get_location_kind())
     with requests.Session() as s:
