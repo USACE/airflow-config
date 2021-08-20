@@ -56,7 +56,7 @@ implementation = {
 # Default arguments
 default_args = {
     'owner': 'airflow',
-    'start_date': datetime.utcnow()-timedelta(hours=1),
+    'start_date': (datetime.utcnow()-timedelta(hours=6)).replace(minute=15, second=0),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
