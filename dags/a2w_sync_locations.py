@@ -56,7 +56,7 @@ implementation = {
 # Default arguments
 default_args = {
     'owner': 'airflow',
-    'start_date': datetime.utcnow()-timedelta(minutes=1),
+    'start_date': datetime.utcnow()-timedelta(hours=1),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
@@ -194,7 +194,7 @@ for key, val in implementation.items():
     globals()[d_id] = create_dag(
         dag_id=d_id,
         tags=d_tags,
-        schedule_interval='@hourly',
+        schedule_interval='15 */6 * * *',
         conn_type=key,
         offices=offices_dict,
     )
