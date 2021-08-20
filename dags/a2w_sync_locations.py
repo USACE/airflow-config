@@ -47,7 +47,7 @@ implementation = {
         'tags': ['stable', 'a2w'],
     },
     'develop': {
-        'bucket': 'cwbi-data-stable',
+        'bucket': 'cwbi-data-develop',
         'dag_id': 'develop_a2w_sync_locations',
         'tags': ['develop', 'a2w'],
     }
