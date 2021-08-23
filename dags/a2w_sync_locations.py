@@ -61,10 +61,10 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 # Get RADAR Locations
-def radar_locations(ti, office, offices, format: str = 'json'):
+def radar_locations(ti, office, offices, conn_type, format: str = 'json'):
     cwms_data = 'https://cwms-data.usace.army.mil/cwms-data'
     url = f'{cwms_data}/locations?office={office}&name=@&format={format}'
-    location_kinds = json.loads(water.get_location_kind())
+    location_kinds = json.loads(water.get_location_kind(conn_type=conn_type))
     with requests.Session() as s:
         r = s.get(url)
         radar_locations_str = r.text
@@ -157,6 +157,7 @@ def create_dag(**kwargs):
                 op_kwargs={
                     'office': office_symbol,
                     'offices': offices,
+                    'conn_type': conn_type,
                 }
             )
             # Post resulting parse to water-api
