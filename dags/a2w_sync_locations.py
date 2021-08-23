@@ -150,14 +150,15 @@ def create_dag(**kwargs):
                             }
                         )
 
+                return post_locations
+
 # Task to post the resulting parsed RADAR returned text
             @task(task_id=f'post_locations_{office_symbol}')
             def post_locations(conn_type: str='develop'):
                 context = get_current_context()
                 ti = context['ti']
 
-                payload = json.loads(ti.xcom_pull())
-                for p in payload:
+                for p in ti.xcom_pull():
                     try:
                         water.post_locations(
                             payload=p,
