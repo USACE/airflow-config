@@ -52,9 +52,18 @@ def sync_usgs_sites(payload, conn_type: str):
 
     return
 
-def get_location_kind() -> str:
-    r = requests.get(WATER_API_ROOT + "/location_kind")
-    if r.status_code == 200:
-        return r.text
+def get_location_kind(conn_type='develop'):
+    # Offices endpoint returns a list of objects
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
     else:
-        raise AirflowException
+        conn = get_connection()
+
+    h = HttpHook(http_conn_id=conn.conn_id, method='GET')
+    endpoint = '/location_kind'
+    headers = {"Content-Type": "application/json"}
+    r = h.run(endpoint=endpoint, headers=headers)
+    
+    # Don't bother converting the string to list or obj, airflow will
+    # convert to a string to pass across xcomms
+    return r.text

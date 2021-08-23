@@ -27,3 +27,4 @@ def get_offices(conn_type='develop'):
     # Don't bother converting the string to list or obj, airflow will
     # convert to a string to pass across xcomms
     return r.text
+
