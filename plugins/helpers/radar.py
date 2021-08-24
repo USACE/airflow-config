@@ -24,8 +24,8 @@ class Location:
 @dataclass
 class Geometry:
     type: str = "Point"
-    latitude: float = 47
-    longitude: float = 101
+    latitude: float = 0
+    longitude: float = 0
 @dataclass
 class Political:
     nation: str = None
