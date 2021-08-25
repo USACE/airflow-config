@@ -129,7 +129,8 @@ def create_dag(**kwargs):
                         # Create a Geometry dataclass with middle of North America as defaults
                         geo = radar.Geometry()
                         lat = location['geolocation']['latitude']
-                        lon  = location['geolocation']['longitude']
+                        lon = location['geolocation']['longitude']
+
                         if isinstance(lat, float): geo.latitude = lat
                         if isinstance(lon, float): geo.longitude = lon
 
@@ -143,8 +144,8 @@ def create_dag(**kwargs):
                                 'geometry' : {
                                     'type': geo.type,
                                     'coordinates': [
+                                        geo.longitude,
                                         geo.latitude,
-                                        geo.longitude
                                     ]
                                 }
                             }
