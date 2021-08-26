@@ -122,7 +122,7 @@ def create_dag(**kwargs):
             for line in result:
 
                 site = {}
-                site['usgs_id'] = line['site_no'].strip()
+                site['site_number'] = line['site_no'].strip()
                 site['name'] = line['station_nm'].replace("'", "").strip()
                 site['state_abbrev'] = state_abbrev
                 site['elevation'] = float(line['alt_va'].strip()) if line['alt_va'].strip() != '' else None
@@ -153,11 +153,7 @@ def create_dag(**kwargs):
 
         # Build two DAGSs
         # ----------------
-        states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA", 
-          "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
-          "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", 
-          "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", 
-          "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
+        states = water.get_states()
 
         for state in states:
             fetch_task_id = f"fetch_and_write_{state}"
