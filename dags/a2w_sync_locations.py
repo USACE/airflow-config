@@ -222,9 +222,10 @@ def create_dag(**kwargs):
                 ]
 
                 # This returns locations in RADAR not in Water, i.e. POST
-                join_outer = pd.concat([df_water, df_radar], keys=['water', 'radar'], axis=1, join='outer')
-                radar_only = join_outer.radar
-                post_json = radar_only.to_json(orient='records')
+                common = df_radar.merge(df_water, on=['office_id', 'name'])
+                missing = df_radar[~df_radar.isin(df_water)].dropna()
+
+                post_json = missing.to_json(orient='records')
                 post_json = post_json.replace('null', 'None')
                 post_json = eval(post_json)
                 post_list_new = [
@@ -267,14 +268,15 @@ def create_dag(**kwargs):
             @task(task_id=f'post_locations_{office_symbol}')
             def post_locations(locations, conn_type: str='develop'):
                 for loc in locations['post']:
-                    try:
-                        water.post_location(
-                            payload=json.loads(loc),
-                            conn_type=conn_type,
-                        )
-                    except Exception as err:
-                        print(err, '\n', loc)
-                        continue
+                    print(loc)
+                #     try:
+                #         water.post_location(
+                #             payload=json.loads(loc),
+                #             conn_type=conn_type,
+                #         )
+                #     except Exception as err:
+                #         print(err, '\n', loc)
+                #         continue
 
 # Tasks as objects
             _check_radar_service = check_radar_service()
