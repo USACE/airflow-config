@@ -41,13 +41,20 @@ default_args = {
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 2,
-    'retry_delay': timedelta(minutes=60),
+    'retry_delay': timedelta(minutes=30),
 }
 
 # ALR QPF filename generator
 def qpf_filenames(edate):
-    d = edate.strftime('%Y%m%d')
     hh = edate.hour
+    print(hh)
+    if 0 >= hh < 12:
+        hh = 0
+    elif 12 >= hh < 18:
+        hh = 12
+    else:
+        hh = 18
+    d = edate.strftime('%Y%m%d')
     for fff in range(6,240,6):
         forecast_date = (edate + timedelta(hours=fff)).strftime('%Y%m%d%H')
         yield f'ORN_QPF_SFC_{d}{hh:02d}_{fff:03d}_{forecast_date}f{fff:03d}.grb.gz'
@@ -122,5 +129,5 @@ for key, val in implementation.items():
         tags=d_tags,
         s3_bucket=d_bucket,
         conn_type=key,
-        schedule_interval='55 0,12,18 * * *'
+        schedule_interval='5 */3 * * *'
     )
