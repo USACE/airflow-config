@@ -27,16 +27,20 @@ Water API endpoint `/sync/locations`
 __North America centriod default for missing coordinates__
 """
 
-from airflow.operators.python import get_current_context
+import json
+import requests
+import pandas as pd
+from datetime import datetime, timedelta
+
+from sqlalchemy.sql.operators import is_
+
 import helpers.sharedApi as sharedApi
 import helpers.radar as radar
 import helpers.water as water
-import json
-import requests
-from datetime import datetime, timedelta
 
-from airflow.decorators import dag, task
 from airflow import AirflowException
+from airflow.decorators import dag, task
+from airflow.operators.python import get_current_context
 
 implementation = {
     'stable': {
@@ -50,6 +54,14 @@ implementation = {
         'tags': ['develop', 'a2w'],
     }
 }
+
+pandas_columns = [
+    'office_id',
+    'name',
+    'public_name',
+    'kind_id',
+    'geometry',
+]
 
 # Default arguments
 default_args = {
@@ -85,7 +97,6 @@ def create_dag(**kwargs):
         @task
         def check_radar_service():
             radar.check_service()
-        _check_radar_service = check_radar_service()
 
 # Looping through each office to create a task for each
         for office_symbol in offices.keys():
@@ -124,7 +135,8 @@ def create_dag(**kwargs):
                             office_id = office_id,
                             name = location['identity']['name'],
                             public_name = location['label']['public-name'],
-                            kind_id = kind_id[0]
+                            kind_id = kind_id[0],
+                            kind = location['classification']['location-kind']
                         )
                         # Create a Geometry dataclass with middle of North America as defaults
                         geo = radar.Geometry()
@@ -141,6 +153,7 @@ def create_dag(**kwargs):
                                 'name': loc.name,
                                 'public_name': loc.public_name,
                                 'kind_id': loc.kind_id,
+                                'kind': loc.kind,
                                 'geometry' : {
                                     'type': geo.type,
                                     'coordinates': [
@@ -153,26 +166,124 @@ def create_dag(**kwargs):
 
                 return post_locations
 
-# Task to post the resulting parsed RADAR returned text
-            @task(task_id=f'post_locations_{office_symbol}')
-            def post_locations(conn_type: str='develop'):
-                context = get_current_context()
-                ti = context['ti']
+# Task to get the water locations, compare to RADAR locations and only get differences
+            @task(task_id=f'water_locations_{office_symbol}')
+            def water_locations(office_id, locations, conn_type: str='develop'):
+                # context = get_current_context()
+                # ti = context['ti']
+                df_radar = pd.json_normalize(
+                    # ti.xcom_pull()
+                    locations
+                )
+                df_water = pd.json_normalize(
+                    water.get_location_office_id(office_id, conn_type),
+                )
+                # These are the ones that are in both, i.e. PUT
+                # Append the water.slug column to radar DataFrame
+                join_inner = pd.concat([df_water, df_radar], keys=['water', 'radar'], axis=1, join='inner')
+                to_update = join_inner.water[[
+                        'id',
+                        # 'office_id',
+                        'state_id',
+                        'name',
+                        'slug',
+                    ]]
+                to_update = to_update.join(
+                    [
+                        join_inner.radar.public_name,
+                        join_inner.radar.kind_id,
+                        join_inner.radar.kind,
+                        join_inner.radar.office_id,
+                        join_inner.radar['geometry.type'],
+                        join_inner.radar['geometry.coordinates'],
+                    ])
+                to_update = to_update[to_update['id'].notna()]
+                put_json = to_update.to_json(orient='records')
+                put_json = put_json.replace('null', 'None')
+                put_list = eval(put_json)
 
-                for p in ti.xcom_pull():
+                is_empty = lambda v: 'no value' if v is None else v
+
+                put_list_new = [
+                    json.dumps({
+                        "id": item["id"],
+                        "office_id": item["office_id"],
+                        "name": item["name"],
+                        "public_name": is_empty(item["public_name"]),
+                        "slug": item["slug"],
+                        "kind_id": item["kind_id"],
+                        "kind": item["kind"],
+                        "geometry": {
+                            "type": item["geometry.type"],
+                            "coordinates": item["geometry.coordinates"]
+                        }
+                     })
+                    for item in put_list
+                ]
+
+                # This returns locations in RADAR not in Water, i.e. POST
+                join_outer = pd.concat([df_water, df_radar], keys=['water', 'radar'], axis=1, join='outer')
+                radar_only = join_outer.radar
+                post_json = radar_only.to_json(orient='records')
+                post_json = post_json.replace('null', 'None')
+                post_json = eval(post_json)
+                post_list_new = [
+                    json.dumps({
+                        "office_id": item["office_id"],
+                        "name": item["name"],
+                        "public_name": is_empty(item["public_name"]),
+                        "kind_id": item["kind_id"],
+                        "geometry": {
+                            "type": item["geometry.type"],
+                            "coordinates": item["geometry.coordinates"]
+                        }
+                     })
+                    for item in post_json
+                ]
+
+                result = {
+                    'put': put_list_new,
+                    'post': post_list_new,
+                }
+
+                return result
+
+# Task to post the resulting parsed RADAR returned text
+            @task(task_id=f'put_locations_{office_symbol}')
+            def put_locations(locations, conn_type: str='develop'):
+                for loc in locations['put']:
+                    _loc = json.loads(loc)
                     try:
-                        water.post_locations(
-                            payload=p,
+                        water.put_location(
+                            id=_loc['id'],
+                            payload=_loc,
                             conn_type=conn_type,
                         )
                     except Exception as err:
-                        print(err, '\n', p)
+                        print(err, '\n', loc)
                         continue
+
+# Task to post the resulting parsed RADAR returned text
+            @task(task_id=f'post_locations_{office_symbol}')
+            def post_locations(locations, conn_type: str='develop'):
+                for loc in locations['post']:
+                    try:
+                        water.post_location(
+                            payload=json.loads(loc),
+                            conn_type=conn_type,
+                        )
+                    except Exception as err:
+                        print(err, '\n', loc)
+                        continue
+
 # Tasks as objects
+            _check_radar_service = check_radar_service()
             _radar_locations = radar_locations(office_symbol, offices, conn_type)
-            _post_locations = post_locations(conn_type)
+            _water_locations = water_locations(offices[office_symbol]['id'], _radar_locations, conn_type)
+            _put_locations = put_locations(_water_locations, conn_type)
+            _post_locations = post_locations(_water_locations, conn_type)
 # Order task objects with checking RADAR a single task for all other tasks
-            _check_radar_service >> _radar_locations >> _post_locations
+            _check_radar_service >> _radar_locations >> _water_locations >> [_post_locations, _put_locations]
 
 # Return the created DAG to the global scope
     return sync_locations()
@@ -182,15 +293,15 @@ offices_json = json.loads(sharedApi.get_offices())
 offices_dict = {
     d['symbol']: d
     for d in offices_json
-    if d['symbol'] is not None
+    if d['symbol'] is not None and d['symbol'] == 'LRH'
 }
 # Add NWDM and NWDP to the dictionary
-for nwd in ['NWDP', 'NWDM']:
-    if nwd == 'NWDM':
-        offices_dict[nwd] = offices_dict['NWD']
-    else:
-        offices_dict[nwd] = offices_dict['NWP']
-    offices_dict[nwd]['symbol'] = nwd
+# for nwd in ['NWDP', 'NWDM']:
+#     if nwd == 'NWDM':
+#         offices_dict[nwd] = offices_dict['NWD']
+#     else:
+#         offices_dict[nwd] = offices_dict['NWP']
+#     offices_dict[nwd]['symbol'] = nwd
 
 # Expose to the global() allowing airflow to add to the DagBag
 for key, val in implementation.items():

@@ -21,6 +21,7 @@ class Location:
     name: str = None
     public_name: str = None
     kind_id: str = None
+    kind: str = None
 @dataclass
 class Geometry:
     type: str = "Point"
