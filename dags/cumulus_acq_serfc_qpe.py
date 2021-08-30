@@ -1,16 +1,14 @@
 """
-Cumulus acquriable for SERFC QPE and QPF
+## Cumulus acquriable for SERFC QPE
 
 URL Dir - https://tgftp.nws.noaa.gov/data/rfc/serfc/misc/
 
 File matching for:
 
 QPE --> xmrgMMDDYYYYHHz.grb.gz
-
-QPF --> ALR_QPF_SFC_YYYYMMDDHH_FFF.grb.gz, where FFF is the forecast hour
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from textwrap import dedent
 
 import helpers.cumulus as cumulus
@@ -18,7 +16,6 @@ from helpers.downloads import trigger_download
 
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
-from airflow.utils.dates import days_ago
 
 implementation = {
     'stable': {
@@ -37,7 +34,7 @@ implementation = {
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': days_ago(5),
+    'start_date': (datetime.utcnow()-timedelta(days=5)).replace(minute=0, second=0),
     'catchup_by_default': False,
     'email_on_failure': False,
     'email_on_retry': False,

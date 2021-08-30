@@ -1,11 +1,11 @@
 """
-## Cumulus acquriable for SERFC QPF
+## Cumulus acquriable for LMRFC QPF
 
-URL Dir - https://tgftp.nws.noaa.gov/data/rfc/serfc/misc/
+URL Dir - https://tgftp.nws.noaa.gov/data/rfc/lmrfc/xmrg_qpf/
 
 File matching for:
 
-QPF --> ALR_QPF_SFC_YYYYMMDDHH_FFF.grb.gz, where FFF is the forecast hour
+QPE --> yyyyMMddHHz.grib.gz
 """
 
 from datetime import datetime, timedelta
@@ -20,13 +20,13 @@ from airflow.operators.python import get_current_context
 implementation = {
     'stable': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'cumulus_serfc_qpf',
-        'tags': ['stable', 'cumulus','precip', 'SERFC', 'QPF'],
+        'dag_id': 'cumulus_lmrfc_qpe',
+        'tags': ['stable', 'cumulus','precip', 'LMRFC', 'QPE'],
     },
     'develop': {
         'bucket': 'cwbi-data-develop',
-        'dag_id': 'develop_cumulus_serfc_qpf',
-        'tags': ['develop', 'cumulus','precip', 'SERFC', 'QPF'],
+        'dag_id': 'develop_cumulus_lmrfc_qpe',
+        'tags': ['develop', 'cumulus','precip', 'LMRFC', 'QPE'],
     }
 }
 
@@ -38,26 +38,12 @@ default_args = {
     'catchup_by_default': False,
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 2,
-    'retry_delay': timedelta(minutes=30),
+    'retries': 4,
+    'retry_delay': timedelta(minutes=10),
 }
 
-# ALR QPF filename generator
-def alr_qpf_filenames(edate):
-    hh = edate.hour
-    print(hh)
-    if 0 >= hh < 12:
-        hh = 0
-    elif 12 >= hh < 18:
-        hh = 12
-    else:
-        hh = 18
-    d = edate.strftime('%Y%m%d')
-    for fff in range(6,78,6):
-        yield f'ALR_QPF_SFC_{d}{hh:02d}_{fff:03d}.grb.gz'
-
 def create_dag(**kwargs):
-
+    
     s3_bucket = kwargs['s3_bucket']
     conn_type = kwargs['conn_type']
     
@@ -65,38 +51,35 @@ def create_dag(**kwargs):
         dag_id=kwargs['dag_id'],
         tags=kwargs['tags'],
         schedule_interval=kwargs['schedule_interval'],
-        doc_md=dedent(__doc__),
+        doc_md=__doc__,
         )
-    def cumulus_acq_serfc():
+    def cumulus_acq_rfc():
         key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
 
-        base_url = 'https://tgftp.nws.noaa.gov/data/rfc/serfc/misc'
+        base_url = 'https://tgftp.nws.noaa.gov/data/rfc/lmrfc/xmrg_qpe'
 
-        slug = 'serfc-qpf-06h'
+        slug = 'lmrfc-qpe-01h'
 
         @task()
-        def download_serfc():
+        def download_rfc():
             context = get_current_context()
             ti = context['ti']
             execution_date = ti.execution_date
-
-            return_list = list()
-            for filename in alr_qpf_filenames(execution_date):
-                url=f'{base_url}/{filename}'
-                s3_key=f'{key_prefix}/{slug}/{filename}'
-                result = trigger_download(
-                    url=url,
-                    s3_bucket=s3_bucket,
-                    s3_key=s3_key
-                    )
-                return_list.append({
-                    'execution': execution_date.isoformat(),
-                    'url': url,
-                    's3_key': s3_key,
-                    's3_bucket': s3_bucket,
-                    'slug': slug,
-                })
-            return return_list
+            filename = f'{execution_date.strftime("%Y%m%d%H")}z.grib.gz'
+            url=f'{base_url}/{filename}'
+            s3_key=f'{key_prefix}/{slug}/{filename}'
+            result = trigger_download(
+                url=url,
+                s3_bucket=s3_bucket,
+                s3_key=s3_key
+                )
+            return [{
+                'execution': execution_date.isoformat(),
+                'url': url,
+                's3_key': s3_key,
+                's3_bucket': s3_bucket,
+                'slug': slug,
+            }]
 
         @task()
         def notify_cumulus(download_result):
@@ -109,13 +92,13 @@ def create_dag(**kwargs):
                 )
 
         # Task 1: Get dictionary of QPE and QPF files available
-        _download_serfc = download_serfc()
+        _download_rfc = download_rfc()
         # Task 2: Use that list and compare what is in the S3 Bucket
-        _notify_cumulus = notify_cumulus(_download_serfc)
-        
-        _download_serfc >> _notify_cumulus
+        _notify_cumulus = notify_cumulus(_download_rfc)
 
-    return cumulus_acq_serfc()
+        _download_rfc >> _notify_cumulus
+
+    return cumulus_acq_rfc()
 # Expose to the global() allowing airflow to add to the DagBag
 for key, val in implementation.items():
     d_id = val['dag_id']
@@ -126,5 +109,5 @@ for key, val in implementation.items():
         tags=d_tags,
         s3_bucket=d_bucket,
         conn_type=key,
-        schedule_interval='5 */3 * * *'
+        schedule_interval='5 * * * *'
     )
