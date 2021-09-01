@@ -62,14 +62,14 @@ def update_radar_locations(id, payload, conn_type: str='develop'):
         print(f"Airflow Exception: {error}")
         raise
 
-def post_radar_locations(payload, conn_type: str='develop'):
+def sync_radar_locations(payload, conn_type: str='develop'):
     if conn_type.lower() == 'develop':
         conn = get_develop_connection()
     else:
         conn = get_connection()
     try:
         h = HttpHook(http_conn_id=conn.conn_id, method='POST')
-        endpoint = f"/locations?key={conn.password}"
+        endpoint = f"/sync/locations?key={conn.password}"
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
