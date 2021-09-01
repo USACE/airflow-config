@@ -26,7 +26,7 @@ Water API endpoint `/sync/locations`
 
 __North America centriod default for missing coordinates__
 """
-
+import pprint
 import json
 import requests
 import pandas as pd
@@ -42,26 +42,21 @@ from airflow import AirflowException
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
 
+
+pp = pprint.PrettyPrinter(indent=4)
+
 implementation = {
     'stable': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'a2w_sync_locations',
-        'tags': ['stable', 'a2w'],
+        'dag_id': 'a2w_sync_',
+        'tags': ['stable', 'a2w', 'TESTING'],
     },
     'develop': {
         'bucket': 'cwbi-data-develop',
-        'dag_id': 'develop_a2w_sync_locations',
-        'tags': ['develop', 'a2w'],
+        'dag_id': 'develop_a2w_sync_',
+        'tags': ['develop', 'a2w', 'TESTING'],
     }
 }
-
-pandas_columns = [
-    'office_id',
-    'name',
-    'public_name',
-    'kind_id',
-    'geometry',
-]
 
 # Default arguments
 default_args = {
@@ -97,195 +92,178 @@ def create_dag(**kwargs):
         @task
         def check_radar_service():
             radar.check_service()
+        _check_radar_service = check_radar_service()
 
 # Looping through each office to create a task for each
         for office_symbol in offices.keys():
-# Task to download and parse RADAR Locations
-            @task(task_id=f'radar_locations_{office_symbol}')
-            def radar_locations(office, offices, conn_type, format: str = 'json'):
+    # Task to download and parse RADAR Locations
+            @task(task_id=f'fetch_merge_write_{office_symbol}')
+            def fetch_merge_write(office, offices, conn_type, format: str = 'json'):
+# Acquire the locations from RADAR
                 cwms_data = 'https://cwms-data.usace.army.mil/cwms-data'
                 url = f'{cwms_data}/locations?office={office}&name=@&format={format}'
                 location_kinds = json.loads(water.get_location_kind(conn_type=conn_type))
                 with requests.Session() as s:
-                    r = s.get(url)
+                    r = s.get(url, headers={'Content-Type': 'application/json'})
                     radar_locations_str = r.text
+                # Check to see if it is html
+                if 'DOCTYPE html' in radar_locations_str: raise AirflowException
 
-                if 'DOCTYPE html' in radar_locations_str:
-                    raise AirflowException
-                else:
-                    _radar_locations_str = radar_locations_str.translate(radar_locations_str.maketrans('', '', '\n\r\t')).replace('None', '')
-                    loc_json = json.loads(_radar_locations_str)
-                    locations = loc_json['locations']['locations']
+                _radar_locations_str = radar_locations_str.translate(radar_locations_str.maketrans('', '', '\n\r\t')).replace('None', '')
+                loc_json = json.loads(_radar_locations_str)
+                locations = loc_json['locations']['locations']
 
-                    post_locations = list()
-                    for location in locations:
-                        # Get the kind_id from the location-kind list
-                        kind_id = [
-                            kind['id']
-                            for kind in location_kinds
-                            if kind['name'] == location['classification']['location-kind']
-                        ]
-                        office_id = offices[office]['id']
-                        if (bounding_office := location['political']['bounding-office']) is not None:
-                            if bounding_office in offices:
-                                office_id = offices[bounding_office]['id']
-                        
-                        # Create a Location dataclass
-                        loc = radar.Location(
-                            office_id = office_id,
-                            name = location['identity']['name'],
-                            public_name = location['label']['public-name'],
-                            kind_id = kind_id[0],
-                            kind = location['classification']['location-kind']
-                        )
-                        # Create a Geometry dataclass with middle of North America as defaults
-                        geo = radar.Geometry()
-                        lat = location['geolocation']['latitude']
-                        lon = location['geolocation']['longitude']
+                radar_locations = list()
+                for location in locations:
+                    # Get the kind_id from the location-kind list
+                    kind_id = [
+                        kind['id']
+                        for kind in location_kinds
+                        if kind['name'] == location['classification']['location-kind']
+                    ]
+                    office_id = offices[office]['id']
+                    if (bounding_office := location['political']['bounding-office']) is not None:
+                        if bounding_office in offices:
+                            office_id = offices[bounding_office]['id']
+                    
+                    # Create a Location dataclass
+                    loc = radar.Location(
+                        office_id = office_id,
+                        name = location['identity']['name'],
+                        public_name = location['label']['public-name'],
+                        kind_id = kind_id[0],
+                        kind = location['classification']['location-kind']
+                    )
+                    # Create a Geometry dataclass with middle of North America as defaults
+                    geo = radar.Geometry()
+                    lat = location['geolocation']['latitude']
+                    lon = location['geolocation']['longitude']
 
-                        if isinstance(lat, float): geo.latitude = lat
-                        if isinstance(lon, float): geo.longitude = lon
+                    if isinstance(lat, float): geo.latitude = lat
+                    if isinstance(lon, float): geo.longitude = lon
 
-                        # Appending dictionary to post
-                        post_locations.append(
-                            {
-                                'office_id': loc.office_id,
-                                'name': loc.name,
-                                'public_name': loc.public_name,
-                                'kind_id': loc.kind_id,
-                                'kind': loc.kind,
-                                'geometry' : {
-                                    'type': geo.type,
-                                    'coordinates': [
-                                        geo.longitude,
-                                        geo.latitude,
-                                    ]
-                                }
+                    # Appending dictionary to post
+                    radar_locations.append(
+                        {
+                            'office_id': loc.office_id,
+                            'name': loc.name,
+                            'public_name': loc.public_name,
+                            'kind_id': loc.kind_id,
+                            'kind': loc.kind,
+                            'geometry' : {
+                                'type': geo.type,
+                                'coordinates': [
+                                    geo.longitude,
+                                    geo.latitude,
+                                ]
                             }
-                        )
+                        }
+                    )
 
-                return post_locations
 
-# Task to get the water locations, compare to RADAR locations and only get differences
-            @task(task_id=f'water_locations_{office_symbol}')
-            def water_locations(office_id, locations, conn_type: str='develop'):
-                # context = get_current_context()
-                # ti = context['ti']
-                df_radar = pd.json_normalize(
-                    # ti.xcom_pull()
-                    locations
+# Acquire the locations from the Water API
+                stat_code, water_locations = water.get_location_office_id(offices[office]['id'], conn_type)
+                if stat_code != 200: raise AirflowException
+
+
+# Need to merge the two in a Pandas DataFrame to get locations either for PUT or POST
+                is_empty = lambda v: 'no value' if v is None else v
+                
+                radar_locations_df = pd.json_normalize(
+                    radar_locations
                 )
-                df_water = pd.json_normalize(
-                    water.get_location_office_id(office_id, conn_type),
+                water_locations_df = pd.json_normalize(
+                    water_locations
                 )
-                # These are the ones that are in both, i.e. PUT
-                # Append the water.slug column to radar DataFrame
-                join_inner = pd.concat([df_water, df_radar], keys=['water', 'radar'], axis=1, join='inner')
-                to_update = join_inner.water[[
+
+# Determine the locations in RADAR that are NOT in Water and POST them
+                post_locations = radar_locations_df[~radar_locations_df.isin(water_locations_df)].dropna()
+                post_locations_json = post_locations.to_json(orient='records').replace('null', 'None')
+                post_locations_json_list = [
+                    json.dumps({
+                        "office_id": item["office_id"],
+                        "name": item["name"],
+                        "public_name": is_empty(item["public_name"]),
+                        "kind_id": item["kind_id"],
+                        "geometry": {
+                            "type": item["geometry.type"],
+                            "coordinates": item["geometry.coordinates"]
+                        }
+                     })
+                    for item in eval(post_locations_json)
+                ]
+
+# Determine the locations in RADAR that are in Water and PUT them
+                if not water_locations_df.empty:
+                    merge_locations = pd.concat(
+                        [water_locations_df, radar_locations_df],
+                        keys=['water', 'radar'],
+                        axis=1,
+                        join='inner'
+                    )
+                    put_locations = merge_locations.water[[
                         'id',
-                        # 'office_id',
                         'state_id',
                         'name',
                         'slug',
                     ]]
-                to_update = to_update.join(
-                    [
-                        join_inner.radar.public_name,
-                        join_inner.radar.kind_id,
-                        join_inner.radar.kind,
-                        join_inner.radar.office_id,
-                        join_inner.radar['geometry.type'],
-                        join_inner.radar['geometry.coordinates'],
-                    ])
-                to_update = to_update[to_update['id'].notna()]
-                put_json = to_update.to_json(orient='records')
-                put_json = put_json.replace('null', 'None')
-                put_list = eval(put_json)
+                    put_locations = put_locations.join(
+                        [
+                            merge_locations.radar.public_name,
+                            merge_locations.radar.kind_id,
+                            merge_locations.radar.kind,
+                            merge_locations.radar.office_id,
+                            merge_locations.radar['geometry.type'],
+                            merge_locations.radar['geometry.coordinates'],
+                        ])
+                    put_locations = put_locations[put_locations['id'].notna()]
+                    put_locations_json = put_locations.to_json(orient='records').replace('null', 'None')
 
-                is_empty = lambda v: 'no value' if v is None else v
+                    put_locations_json_list = [
+                        json.dumps({
+                            "id": item["id"],
+                            "office_id": item["office_id"],
+                            "name": item["name"],
+                            "public_name": is_empty(item["public_name"]),
+                            "slug": item["slug"],
+                            "kind_id": item["kind_id"],
+                            "kind": item["kind"],
+                            "geometry": {
+                                "type": item["geometry.type"],
+                                "coordinates": item["geometry.coordinates"]
+                            }
+                        })
+                        for item in eval(put_locations_json)
+                    ]
 
-                put_list_new = [
-                    json.dumps({
-                        "id": item["id"],
-                        "office_id": item["office_id"],
-                        "name": item["name"],
-                        "public_name": is_empty(item["public_name"]),
-                        "slug": item["slug"],
-                        "kind_id": item["kind_id"],
-                        "kind": item["kind"],
-                        "geometry": {
-                            "type": item["geometry.type"],
-                            "coordinates": item["geometry.coordinates"]
-                        }
-                     })
-                    for item in put_list
-                ]
+                    # PUT
+                    for loc in put_locations_json_list:
+                        _loc = json.loads(loc)
+                        try:
+                            water.update_radar_locations(
+                                id=_loc['id'],
+                                payload=_loc,
+                                conn_type=conn_type,
+                            )
+                        except Exception as err:
+                            print(err, '\n', loc)
+                            continue
 
-                # This returns locations in RADAR not in Water, i.e. POST
-                common = df_radar.merge(df_water, on=['office_id', 'name'])
-                missing = df_radar[~df_radar.isin(df_water)].dropna()
-
-                post_json = missing.to_json(orient='records')
-                post_json = post_json.replace('null', 'None')
-                post_json = eval(post_json)
-                post_list_new = [
-                    json.dumps({
-                        "office_id": item["office_id"],
-                        "name": item["name"],
-                        "public_name": is_empty(item["public_name"]),
-                        "kind_id": item["kind_id"],
-                        "geometry": {
-                            "type": item["geometry.type"],
-                            "coordinates": item["geometry.coordinates"]
-                        }
-                     })
-                    for item in post_json
-                ]
-
-                result = {
-                    'put': put_list_new,
-                    'post': post_list_new,
-                }
-
-                return result
-
-# Task to post the resulting parsed RADAR returned text
-            @task(task_id=f'put_locations_{office_symbol}')
-            def put_locations(locations, conn_type: str='develop'):
-                for loc in locations['put']:
-                    _loc = json.loads(loc)
+                # POST
+                for loc in post_locations_json_list:
                     try:
-                        water.put_location(
-                            id=_loc['id'],
-                            payload=_loc,
+                        water.post_radar_locations(
+                            payload=json.loads(loc),
                             conn_type=conn_type,
                         )
                     except Exception as err:
                         print(err, '\n', loc)
                         continue
 
-# Task to post the resulting parsed RADAR returned text
-            @task(task_id=f'post_locations_{office_symbol}')
-            def post_locations(locations, conn_type: str='develop'):
-                for loc in locations['post']:
-                    print(loc)
-                #     try:
-                #         water.post_location(
-                #             payload=json.loads(loc),
-                #             conn_type=conn_type,
-                #         )
-                #     except Exception as err:
-                #         print(err, '\n', loc)
-                #         continue
-
 # Tasks as objects
-            _check_radar_service = check_radar_service()
-            _radar_locations = radar_locations(office_symbol, offices, conn_type)
-            _water_locations = water_locations(offices[office_symbol]['id'], _radar_locations, conn_type)
-            _put_locations = put_locations(_water_locations, conn_type)
-            _post_locations = post_locations(_water_locations, conn_type)
-# Order task objects with checking RADAR a single task for all other tasks
-            _check_radar_service >> _radar_locations >> _water_locations >> [_post_locations, _put_locations]
+            _fetch_merge_write = fetch_merge_write(office_symbol, offices, conn_type)
+            
+            _check_radar_service >> _fetch_merge_write
 
 # Return the created DAG to the global scope
     return sync_locations()
@@ -295,15 +273,15 @@ offices_json = json.loads(sharedApi.get_offices())
 offices_dict = {
     d['symbol']: d
     for d in offices_json
-    if d['symbol'] is not None and d['symbol'] == 'LRH'
+    if d['symbol'] is not None
 }
 # Add NWDM and NWDP to the dictionary
-# for nwd in ['NWDP', 'NWDM']:
-#     if nwd == 'NWDM':
-#         offices_dict[nwd] = offices_dict['NWD']
-#     else:
-#         offices_dict[nwd] = offices_dict['NWP']
-#     offices_dict[nwd]['symbol'] = nwd
+for nwd in ['NWDP', 'NWDM']:
+    if nwd == 'NWDM':
+        offices_dict[nwd] = offices_dict['NWD']
+    else:
+        offices_dict[nwd] = offices_dict['NWP']
+    offices_dict[nwd]['symbol'] = nwd
 
 # Expose to the global() allowing airflow to add to the DagBag
 for key, val in implementation.items():
@@ -313,7 +291,7 @@ for key, val in implementation.items():
     globals()[d_id] = create_dag(
         dag_id=d_id,
         tags=d_tags,
-        schedule_interval='15 */6 * * *',
+        schedule_interval='15 */3 * * *',
         conn_type=key,
         offices=offices_dict,
     )

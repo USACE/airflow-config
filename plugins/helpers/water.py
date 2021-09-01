@@ -43,7 +43,7 @@ def post_location(payload, conn_type: str):
 
     return
 
-def put_location(id, payload, conn_type: str):
+def update_radar_locations(id, payload, conn_type: str='develop'):
     if conn_type.lower() == 'develop':
         conn = get_develop_connection()
     else:
@@ -61,6 +61,25 @@ def put_location(id, payload, conn_type: str):
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
         raise
+
+def post_radar_locations(payload, conn_type: str='develop'):
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method='POST')
+        endpoint = f"/locations?key={conn.password}"
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        print(r.status_code)
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        raise
+    
 
 
 def sync_usgs_sites(payload, conn_type: str):
@@ -97,6 +116,38 @@ def get_location_kind(conn_type='develop'):
     # Don't bother converting the string to list or obj, airflow will
     # convert to a string to pass across xcomms
     return r.text
+
+def get_location_office_id(office_id, conn_type='develop'):
+    # Offices endpoint returns a list of objects
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+
+    h = HttpHook(http_conn_id=conn.conn_id, method='GET')
+    endpoint = f'/locations?office_id={office_id}'
+    headers = {"Content-Type": "application/json"}
+    r = h.run(endpoint=endpoint, headers=headers)
+
+    # Don't bother converting the string to list or obj, airflow will
+    # convert to a string to pass across xcomms
+    return (r.status_code, r.json())
+
+def get_locations(conn_type='develop'):
+    # Offices endpoint returns a list of objects
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+
+    h = HttpHook(http_conn_id=conn.conn_id, method='GET')
+    endpoint = f'/locations'
+    headers = {"Content-Type": "application/json"}
+    r = h.run(endpoint=endpoint, headers=headers)
+    
+    # Don't bother converting the string to list or obj, airflow will
+    # convert to a string to pass across xcomms
+    return r.json()
 
 # Unique list of USGS parameter codes and descriptions
 # stores in the Water DB
