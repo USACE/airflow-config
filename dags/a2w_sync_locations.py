@@ -177,28 +177,23 @@ def create_dag(**kwargs):
             @task(task_id=f'sync_to_water_{office_symbol}')
             def sync_to_water(locations, conn_type):
                 is_empty = lambda v: 'no value' if v is None else v
-                
-                post_locations_json_gen = (
-                    {
-                        "office_id": item["office_id"],
-                        "name": item["name"],
-                        "public_name": is_empty(item["public_name"]),
-                        "kind_id": item["kind_id"],
-                        "geometry": {
-                            "type": item["geometry.type"],
-                            "coordinates": item["geometry.coordinates"]
-                        }
-                    }
-                    for item in eval(locations)
-                )
-                for loc in post_locations_json_gen:
+                for item in eval(locations):
                     try:
                         water.sync_radar_locations(
-                            payload=loc,
+                            payload={
+                                "office_id": item["office_id"],
+                                "name": item["name"],
+                                "public_name": is_empty(item["public_name"]),
+                                "kind_id": item["kind_id"],
+                                "geometry": {
+                                    "type": item["geometry.type"],
+                                    "coordinates": item["geometry.coordinates"]
+                                }
+                            },
                             conn_type=conn_type,
                         )
                     except Exception as err:
-                        print(err, '\n', loc)
+                        print(err, '\n', item)
                         continue
 
 # Tasks as objects
