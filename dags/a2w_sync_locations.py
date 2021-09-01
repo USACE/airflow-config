@@ -48,13 +48,13 @@ pp = pprint.PrettyPrinter(indent=4)
 implementation = {
     'stable': {
         'bucket': 'cwbi-data-stable',
-        'dag_id': 'a2w_sync_',
-        'tags': ['stable', 'a2w', 'TESTING'],
+        'dag_id': 'a2w_sync_locations',
+        'tags': ['stable', 'a2w'],
     },
     'develop': {
         'bucket': 'cwbi-data-develop',
-        'dag_id': 'develop_a2w_sync_',
-        'tags': ['develop', 'a2w', 'TESTING'],
+        'dag_id': 'develop_a2w_sync_locations',
+        'tags': ['develop', 'a2w'],
     }
 }
 
