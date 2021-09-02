@@ -28,7 +28,7 @@ __North America centriod default for missing coordinates__
 """
 import pprint
 import json
-from airflow.exceptions import AirflowFailException
+from airflow.exceptions import AirflowFailException, AirflowSkipException
 import numpy as np
 import requests
 import pandas as pd
@@ -110,7 +110,7 @@ def create_dag(**kwargs):
                     r = s.get(url, headers={'Content-Type': 'application/json'})
                     radar_locations_str = r.text
                 # Check to see if it is html
-                if 'DOCTYPE html' in radar_locations_str: raise AirflowFailException
+                if 'DOCTYPE html' in radar_locations_str: raise AirflowSkipException
 
                 _radar_locations_str = radar_locations_str.translate(radar_locations_str.maketrans('', '', '\n\r\t')).replace('None', '')
                 loc_json = json.loads(_radar_locations_str)
@@ -174,7 +174,7 @@ def create_dag(**kwargs):
 
 
 
-            @task(task_id=f'sync_to_water_{office_symbol}')
+            @task(task_id=f'sync_to_water_{office_symbol}', trigger_rule='none_failed_or_skipped')
             def sync_to_water(locations, conn_type):
                 is_empty = lambda v: 'no value' if v is None else v
                 for item in eval(locations):
