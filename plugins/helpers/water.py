@@ -175,7 +175,10 @@ def get_usgs_sites_by_state(state, conn_type='develop'):
         conn = get_connection()
 
     h = HttpHook(http_conn_id=conn.conn_id, method='GET')
-    endpoint = f'/usgs/sites?state={state}'
+    if state == 'all':
+        endpoint = f'/usgs/sites'
+    else:
+        endpoint = f'/usgs/sites?state={state}'
     headers = {"Content-Type": "application/json"}
     r = h.run(endpoint=endpoint, headers=headers)
     
@@ -195,6 +198,64 @@ def post_usgs_site_parameters(payload, conn_type='develop'):
         headers = {"Content-Type": "application/json"}
         r = h.run(endpoint=endpoint, json=payload, headers=headers)
         print(f'Response Code: {r.status_code}')
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        raise
+
+    return
+
+def get_nws_stages_by_site(site, conn_type='develop'):
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+
+    h = HttpHook(http_conn_id=conn.conn_id, method='GET')
+    if site == 'all':
+        endpoint = f'/nws/stages'
+    else:
+        endpoint = f'/nws/stages/{site}'
+    headers = {"Content-Type": "application/json"}
+    r = h.run(endpoint=endpoint, headers=headers)
+
+    # Don't bother converting the string to list or obj, airflow will
+    # convert to a string to pass across xcomms
+    return r.text
+
+def post_nws_stages(payload, conn_type='develop'):
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method='POST')
+        endpoint = f"/nws/stages?key={conn.password}"
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        if r.status_code != '201':
+            print(r.text)
+
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")        
+        raise
+
+    return
+
+def put_nws_stages(site, payload, conn_type='develop'):
+    if conn_type.lower() == 'develop':
+        conn = get_develop_connection()
+    else:
+        conn = get_connection()
+
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method='PUT')
+        endpoint = f"/nws/stages/{site}?key={conn.password}"
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        if r.status_code != '200':
+            print(r.text)
+
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
         raise
