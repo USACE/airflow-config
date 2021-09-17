@@ -1,12 +1,15 @@
-import json
-import requests
-from typing import Dict, List
+from typing import List
 from airflow.hooks.base_hook import BaseHook
-from sqlalchemy.util.langhelpers import public_factory
 from airflow.providers.http.hooks.http import HttpHook
 from airflow import AirflowException
 
 WATER_API_ROOT = "https://develop-water-api.rsgis.dev"
+
+basehook_connection = {
+    'develop': BaseHook.get_connection('WATER_DEVELOP'),
+    'stable':  BaseHook.get_connection('WATER_STABLE'),
+}
+
 
 ################################################################ 
 def get_develop_connection():    
@@ -15,6 +18,22 @@ def get_develop_connection():
 def get_connection():    
     return BaseHook.get_connection('WATER_STABLE')
 ################################################################ 
+
+def watersheds_usgs_sites(conn: str):
+    basehook = basehook_connection[conn]
+    try:
+        h = HttpHook(http_conn_id=basehook.conn_id, method='GET')
+        endpoint = f'/watersheds/usgs_sites'
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        r = h.run(endpoint=endpoint, headers=headers)
+        return r.json()
+    except AirflowException as err :
+        print(f'Airflow Exception: {err}')
+        raise
+
 def get_states():
     return ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA", 
           "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
@@ -200,3 +219,18 @@ def post_usgs_site_parameters(payload, conn_type='develop'):
         raise
 
     return
+
+def post_usgs_measurements(site: str, payload: List, conn: str):
+    basehook = basehook_connection[conn]
+    try:
+        h = HttpHook(http_conn_id=basehook.conn_id, method='POST')
+        endpoint = f'/usgs/sites/{site}/measurements?key={basehook.password}'
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        return r.text
+    except AirflowException as err:
+        print(f'Airflow Exception: {err}')
+        return err
