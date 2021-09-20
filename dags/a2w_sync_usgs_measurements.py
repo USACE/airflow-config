@@ -108,27 +108,29 @@ def create_dag(**kwargs):
         """Method defining the DAG
         Tasks will be defined withing the scope of this method"""
         
-        # _watershed_usgs_sites = watershed_usgs_sites(conn_type)
-        _watershed_usgs_sites = {
+        @task
+        def fetch_watershed_usgs_sites(conn):
+            return {
             st['state_abbrev'].upper(): st['sites']
-            for st in water.watersheds_usgs_sites(conn_type)
+            for st in water.watersheds_usgs_sites(conn)
         }
-
+        _fetch_watershed_usgs_sites = fetch_watershed_usgs_sites(conn_type)
+        
         # Loop through the list of states creating a task per state
-        for state in _watershed_usgs_sites.keys():
+        for state in water.get_states():
             @task(task_id=f'fetch_parse_post_{state}')
             def fetch_parse_post(sites_by_state: Dict, state: str):
                 state = state.upper()
-                # sites_by_state = json.loads(sites_by_state)
-                sites = sites_by_state[state]
-
+                # KeyError if state not in dictionary and will raise a skip exception
+                try:
+                    sites = sites_by_state[state]
+                except KeyError:
+                    raise AirflowSkipException
+                
                 # Task instance context
                 context = get_current_context()
                 ti = context['ti']
                 execution_date = ti.execution_date
-
-                # Sites for this state and skip if state not in list
-                if state not in sites_by_state.keys(): raise AirflowSkipException
 
                 # Site number to parameter codes dictionary
                 site_number_codes = {
@@ -174,7 +176,7 @@ def create_dag(**kwargs):
                 if isinstance(error, AirflowException): raise AirflowException
 
             # Create object for each task
-            _fetch_parse_post = fetch_parse_post(_watershed_usgs_sites, state)
+            _fetch_parse_post = fetch_parse_post(_fetch_watershed_usgs_sites, state)
 
     # Return the DAG object to expose to global()
     return sync_usgs_measurements()
