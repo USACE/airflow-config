@@ -45,6 +45,7 @@ query_dict = {
 # This is added to the 'startDT'
 tw_delta = -timedelta(hours=2)
 
+
 # Default arguments
 default_args = {
     'owner': 'airflow',
@@ -106,23 +107,19 @@ def create_dag(**kwargs):
     def sync_usgs_measurements():
         """Method defining the DAG
         Tasks will be defined withing the scope of this method"""
-
-        @task
-        def watershed_usgs_sites(conn: str):
-            # Translate watersheds/usgs_sites list to dictionary
-            return json.dumps({
-                st['state_abbrev'].upper(): st['sites']
-                for st in water.watersheds_usgs_sites(conn)
-            })
-        # Define object here so the following for...loop can see it
-        _watershed_usgs_sites = watershed_usgs_sites(conn_type)
+        
+        # _watershed_usgs_sites = watershed_usgs_sites(conn_type)
+        _watershed_usgs_sites = {
+            st['state_abbrev'].upper(): st['sites']
+            for st in water.watersheds_usgs_sites(conn_type)
+        }
 
         # Loop through the list of states creating a task per state
-        for state in water.get_states():
+        for state in _watershed_usgs_sites.keys():
             @task(task_id=f'fetch_parse_post_{state}')
             def fetch_parse_post(sites_by_state: Dict, state: str):
                 state = state.upper()
-                sites_by_state = json.loads(sites_by_state)
+                # sites_by_state = json.loads(sites_by_state)
                 sites = sites_by_state[state]
 
                 # Task instance context
@@ -178,9 +175,6 @@ def create_dag(**kwargs):
 
             # Create object for each task
             _fetch_parse_post = fetch_parse_post(_watershed_usgs_sites, state)
-
-        # Set the order of operations
-        _watershed_usgs_sites >> _fetch_parse_post
 
     # Return the DAG object to expose to global()
     return sync_usgs_measurements()
