@@ -2,8 +2,8 @@ version: '3'
 
 networks:
   default:
-    name: cumulus-api_default
-    # name: water-api_default
+    # name: cumulus-api_default
+    name: water-api_default
     # name: instrumentation-api_default
 
 services:
@@ -42,8 +42,12 @@ services:
     depends_on:
       airflowdb:
         condition: service_healthy
+      airflow-init:
+        condition: service_started
     restart: always
-    command: scheduler
+    # command: scheduler
+    entrypoint: >
+      /bin/sh -c "sleep 15 && airflow scheduler"
     volumes:
       - ./logs:/opt/airflow/logs
       - ./dags:/opt/airflow/dags
