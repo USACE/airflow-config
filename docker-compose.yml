@@ -2,26 +2,28 @@ version: '3'
 
 networks:
   default:
-    external:
-      # name: cumulus-api_default
-      name: water-api_default
-      # name: instrumentation-api_default
+    name: cumulus-api_default
+    # name: water-api_default
+    # name: instrumentation-api_default
 
 services:
   airflowdb:
     image: postgres:13
-    volumes:
-      - ./database/sql:/sql
-      - ./database/sql/init.sql:/docker-entrypoint-initdb.d/z_init.sql
     environment:
-      - POSTGRES_PASSWORD=postgres
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'airflow']
+      interval: 5s
+      retries: 5
     # ports:
     #   - '5432:5432'
 
   airflow_init:
     env_file:
       - ./airflow.env
-    image: apache/airflow:2.0.2-python3.8
+    image: apache/airflow:2.1.4-python3.8
     depends_on:
       - airflowdb
     entrypoint: >
@@ -29,14 +31,17 @@ services:
       /entrypoint db reset -y;
       /entrypoint db init;
       /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
-      exit 0
+      exit 0;
       "
   airflow_scheduler:
     env_file:
       - ./airflow.env
-    image: apache/airflow:2.0.2-python3.8
+    image: apache/airflow:2.1.4-python3.8
+    # depends_on:
+    #   - airflow_init
     depends_on:
-      - airflow_init
+      airflowdb:
+        condition: service_healthy
     restart: always
     command: scheduler
     volumes:
@@ -46,7 +51,7 @@ services:
   airflow_ui:
     env_file:
       - ./airflow.env
-    image: apache/airflow:2.0.2-python3.8
+    image: apache/airflow:2.1.4-python3.8
     depends_on:
       - airflow_init
       - airflow_scheduler

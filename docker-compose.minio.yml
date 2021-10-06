@@ -2,9 +2,8 @@ version: '3'
 
 networks:
   default:
-    external:
-      name: water-api_default
-      # name: cumulus-api_default
+    name: water-api_default
+    # name: cumulus-api_default
 
 services:
   minio:
