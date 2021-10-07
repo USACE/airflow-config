@@ -50,7 +50,6 @@ pp = pprint.PrettyPrinter(indent=4)
 
 implementation = {
     "stable": {
-        "bucket": "cwbi-data-stable",
         "dag_id": "a2w_sync_locations",
         "tags": ["a2w", "radar"],
     },
@@ -236,7 +235,6 @@ for nwd in ["NWDP", "NWDM"]:
 for key, val in implementation.items():
     d_id = val["dag_id"]
     d_tags = val["tags"]
-    d_bucket = val["bucket"]
     globals()[d_id] = create_dag(
         dag_id=d_id,
         tags=d_tags,
