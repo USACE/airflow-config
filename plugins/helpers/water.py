@@ -8,6 +8,21 @@ def get_connection():
     return BaseHook.get_connection("WATER")
 
 
+def get_offices():
+
+    # Offices endpoint returns a list of objects
+    conn = get_connection()
+
+    h = HttpHook(http_conn_id=conn.conn_id, method="GET")
+    endpoint = "/offices"
+    headers = {"Content-Type": "application/json"}
+    r = h.run(endpoint=endpoint, headers=headers)
+
+    # Don't bother converting the string to list or obj, airflow will
+    # convert to a string to pass across xcomms
+    return r.text
+
+
 def watersheds_usgs_sites():
     conn = get_connection()
     try:
@@ -69,6 +84,8 @@ def update_radar_locations(id, payload):
         print(f"Airflow Exception: {error}")
         raise
 
+    return
+
 
 def sync_radar_locations(payload):
 
@@ -85,6 +102,8 @@ def sync_radar_locations(payload):
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
         raise
+
+    return
 
 
 def sync_usgs_sites(payload):
