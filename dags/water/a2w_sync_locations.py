@@ -37,7 +37,7 @@ from requests.api import put
 
 from sqlalchemy.sql.operators import is_
 
-import helpers.sharedApi as sharedApi
+# import helpers.sharedApi as sharedApi
 import helpers.radar as radar
 import helpers.water as water
 
@@ -218,7 +218,7 @@ def create_dag(**kwargs):
 
 
 # Getting a list of offices, create a dictionary from the list, and add NWDM and NWDP
-offices_json = json.loads(sharedApi.get_offices())
+offices_json = json.loads(water.get_offices())
 offices_dict = {d["symbol"]: d for d in offices_json if d["symbol"] is not None}
 # Add NWDM and NWDP to the dictionary
 for nwd in ["NWDP", "NWDM"]:
