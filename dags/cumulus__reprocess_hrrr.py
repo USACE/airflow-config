@@ -50,7 +50,7 @@ with DAG(
     Files matching hrrr.t{HH}z.wrfsfcf{HH}.grib2 - Multiple hourly files (second variable) per forecast file (first variable)
     """
 
-    CONN_TYPE = 'develop'
+    CONN_TYPE = 'stable'
 
     S3_BUCKET = f'cwbi-data-{CONN_TYPE}'
     PRODUCT_SLUG = 'hrrr-total-precip'
