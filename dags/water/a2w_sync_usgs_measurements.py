@@ -38,7 +38,7 @@ base_url = "https://waterservices.usgs.gov/nwis/iv/?"
 query_dict = {
     "format": "json",
     # 'period': 'PT2H',
-    "modifiedSince": "P2D",
+    # "modifiedSince": "P2D",
     "siteType": "LK,ST",
     "siteStatus": "active",
 }
@@ -157,7 +157,9 @@ def create_dag(**kwargs):
                 )
                 # Set the execution date and time window for URL
                 query_dict["startDT"] = (execution_date + tw_delta).isoformat()
-                query_dict["endDT"] = execution_date.isoformat()
+                # Airflow only looks at the last period during an execution run,
+                # so to ensure the latest data is retrieved, add 1 hour to end date
+                query_dict["endDT"] = (execution_date + timedelta(hours=1)).isoformat()
                 query_dict["sites"] = ",".join(site_numbers)
                 query_dict["parameterCd"] = ",".join(parameter_codes)
                 url = f"{base_url}{urlencode(query_dict)}"
