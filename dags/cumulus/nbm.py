@@ -1,4 +1,3 @@
-
 import json
 import requests
 import logging
@@ -9,9 +8,7 @@ from airflow import DAG
 
 from airflow import AirflowException
 from datetime import datetime, timedelta
-from airflow.hooks.base_hook import BaseHook
-from airflow.providers.http.hooks.http import HttpHook
-from airflow.operators.python import task, get_current_context
+from airflow.operators.python import get_current_context
 
 # Operators; we need this to operate!
 from airflow.operators.python import PythonOperator
@@ -22,22 +19,16 @@ import helpers.cumulus as cumulus
 
 # These args will get passed on to each operator
 # You can override them on a per-task basis during operator initialization
-default_args = {
-    'owner': 'airflow',
-    'retries': 6,
-    'retry_delay': timedelta(minutes=10)
-}
+default_args = {"owner": "airflow", "retries": 6, "retry_delay": timedelta(minutes=10)}
 with DAG(
-    'cumulus_nbm',
+    "cumulus_nbm",
     default_args=default_args,
-    description='National Blend of Models',
-    # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
-    start_date=(datetime.utcnow()-timedelta(hours=2)).replace(minute=0, second=0),
-    tags=['cumulus', 'precip', 'forecast'],    
+    description="National Blend of Models",
+    start_date=(datetime.utcnow() - timedelta(hours=2)).replace(minute=0, second=0),
+    tags=["cumulus", "precip", "forecast"],
     # schedule_interval='*/15 * * * *'
-    schedule_interval='@hourly',
-    catchup=False
-    
+    schedule_interval="@hourly",
+    catchup=False,
 ) as dag:
     dag.doc_md = """This pipeline handles download and API notification for NBM hourly forecast products. \n
     National Blend of Models (NBM) \n
@@ -49,22 +40,28 @@ with DAG(
     Note: Hourly files from 01-36, 3hr from 38-188, then 6hr
     """
 
-    URL_ROOT = f'https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod'
-    S3_BUCKET = 'cwbi-data-stable'
-    PRODUCT_SLUG = 'nbm-co-01h'
+    URL_ROOT = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod"
+    PRODUCT_SLUG = "nbm-co-01h"
     ##############################################################################
     def download_precip_fcst_hour(hour):
 
-        exec_dt = get_current_context()['execution_date']
+        exec_dt = get_current_context()["execution_date"]
 
         directory = f'blend.{exec_dt.strftime("%Y%m%d")}/{exec_dt.strftime("%H")}/core'
-        src_filename = f'blend.t{exec_dt.strftime("%H")}z.core.f{str(hour).zfill(3)}.co.grib2'
+        src_filename = (
+            f'blend.t{exec_dt.strftime("%H")}z.core.f{str(hour).zfill(3)}.co.grib2'
+        )
         dst_filename = f'blend.{exec_dt.strftime("%Y%m%d")}.t{exec_dt.strftime("%H")}z.core.f{str(hour).zfill(3)}.co.grib2'
-        s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{dst_filename}'
-        print(f'Downloading {src_filename}')
-        output = trigger_download(url=f'{URL_ROOT}/{directory}/{src_filename}', s3_bucket=S3_BUCKET, s3_key=s3_key)
+        s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{dst_filename}"
+        print(f"Downloading {src_filename}")
+        output = trigger_download(
+            url=f"{URL_ROOT}/{directory}/{src_filename}",
+            s3_bucket=cumulus.S3_BUCKET,
+            s3_key=s3_key,
+        )
 
-        return json.dumps({"datetime":exec_dt.isoformat(), "s3_key":s3_key})
+        return json.dumps({"datetime": exec_dt.isoformat(), "s3_key": s3_key})
+
     ##############################################################################
     def notify_api(payload):
 
@@ -73,34 +70,36 @@ with DAG(
         # print(f'payload is: {payload}')
 
         cumulus.notify_acquirablefile(
-            acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
-            datetime=payload['datetime'], 
-            s3_key=payload['s3_key'],
-            conn_type='stable'
-            )        
+            acquirable_id=cumulus.acquirables[PRODUCT_SLUG],
+            datetime=payload["datetime"],
+            s3_key=payload["s3_key"],
+        )
 
         return
+
     ##############################################################################
     for fcst_hour in range(1, 37):
-        
+
         print(f"Forecast Hour: {fcst_hour}")
-        
+
         download_task_id = f"download_fcst_hr_{str(fcst_hour).zfill(3)}"
-        
+
         download_task = PythonOperator(
-            task_id=download_task_id, 
-            python_callable=download_precip_fcst_hour, 
+            task_id=download_task_id,
+            python_callable=download_precip_fcst_hour,
             op_kwargs={
-                'hour': str(fcst_hour).zfill(3),
-            }
+                "hour": str(fcst_hour).zfill(3),
+            },
         )
 
         notify_api_task = PythonOperator(
-            task_id=f"notify_api_fcst_hr_{str(fcst_hour).zfill(3)}",           
+            task_id=f"notify_api_fcst_hr_{str(fcst_hour).zfill(3)}",
             python_callable=notify_api,
-            op_kwargs={               
-                'payload': "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(download_task_id)
-                }
+            op_kwargs={
+                "payload": "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(
+                    download_task_id
+                )
+            },
         )
 
         download_task >> notify_api_task

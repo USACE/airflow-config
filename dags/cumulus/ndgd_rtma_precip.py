@@ -2,8 +2,7 @@
 Acquire and Process NDGD RTMA Precip
 """
 
-import os, json, logging
-import requests
+import json
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -16,7 +15,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2021, 7, 16),
+    "start_date": datetime(2021, 11, 9),
     "catchup_by_default": False,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
@@ -29,42 +28,48 @@ default_args = {
     # 'end_date': datetime(2021, 3, 14),
 }
 
-@dag(default_args=default_args, schedule_interval='5 * * * *', tags=['cumulus', 'precip', 'develop'])
-def develop_cumulus_ndgd_leia98():
+
+@dag(
+    default_args=default_args, schedule_interval="5 * * * *", tags=["cumulus", "precip"]
+)
+def cumulus_ndgd_rmta_precip():
     """This pipeline handles download and processing for \n
     URL Dir - https://tgftp.nws.noaa.gov/SL.us008001/ST.opnl/DF.gr2/DC.ndgd/GT.rtma/AR.conus/ \n
     Files matching RT.HH/ds.precipa.bin\n
-    Note: This source does not support prior day/month/year data
+    Note: This source does not support prior day/month/year data\n
+    Also known as LEIA98 in the past.
     """
 
-    URL_ROOT = f'https://tgftp.nws.noaa.gov/SL.us008001/ST.opnl/DF.gr2/DC.ndgd/GT.rtma/AR.conus'
-    PRODUCT_SLUG = 'ndgd-leia98-precip'
+    URL_ROOT = f"https://tgftp.nws.noaa.gov/SL.us008001/ST.opnl/DF.gr2/DC.ndgd/GT.rtma/AR.conus"
+    PRODUCT_SLUG = "ndgd-leia98-precip"
 
     @task()
-    def download_raw_leia98():
-        
-        execution_date = get_current_context()['execution_date']
-        file_dir = f'{URL_ROOT}/RT.{execution_date.strftime("%H")}'
-        filename = 'ds.precipa.bin'
-        s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/ds.precipa_{execution_date.strftime("%Y%m%d_%H")}.bin'
-        print(f'Downloading {filename}')
-        output = trigger_download(url=f'{file_dir}/{filename}', s3_bucket='cwbi-data-develop', s3_key=s3_key)
+    def download_raw_precip():
 
-        return json.dumps({"datetime":execution_date.isoformat(), "s3_key":s3_key})
+        execution_date = get_current_context()["execution_date"]
+        file_dir = f'{URL_ROOT}/RT.{execution_date.strftime("%H")}'
+        filename = "ds.precipa.bin"
+        s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/ds.precipa_{execution_date.strftime("%Y%m%d_%H")}.bin'
+        print(f"Downloading {filename}")
+        output = trigger_download(
+            url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key
+        )
+
+        return json.dumps({"datetime": execution_date.isoformat(), "s3_key": s3_key})
 
     @task()
     def notify_cumulus(payload):
-        
+
         # Airflow will convert the parameter to a string, convert it back
         payload = json.loads(payload)
-    
+
         cumulus.notify_acquirablefile(
-            acquirable_id=cumulus.acquirables[PRODUCT_SLUG], 
-            datetime=payload['datetime'], 
-            s3_key=payload['s3_key'],
-            conn_type='develop'
-            )
+            acquirable_id=cumulus.acquirables[PRODUCT_SLUG],
+            datetime=payload["datetime"],
+            s3_key=payload["s3_key"],
+        )
 
-    notify_cumulus(download_raw_leia98())
+    notify_cumulus(download_raw_precip())
 
-leia98_dag = develop_cumulus_ndgd_leia98()
+
+ndgd_rmta_precip_dag = cumulus_ndgd_rmta_precip()
