@@ -50,8 +50,8 @@ tw_delta = -timedelta(hours=2)
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    # "start_date": (datetime.utcnow() - timedelta(hours=4)).replace(minute=0, second=0),
-    "start_date": datetime(2021, 11, 11),
+    "start_date": (datetime.utcnow() - timedelta(hours=4)).replace(minute=0, second=0),
+    # "start_date": datetime(2021, 11, 11),
     "retries": 1,
     "retry_delay": timedelta(minutes=10),
 }
