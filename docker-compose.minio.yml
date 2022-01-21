@@ -23,13 +23,6 @@ services:
     depends_on:
       - minio
     entrypoint: >
-      /bin/sh -c "
-      echo 'sleeping for 10 seconds while minio starts...';
-      sleep 10;
-      /usr/bin/mc config host add minio http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY;
-      /usr/bin/mc mb minio/castle-data-develop minio/castle-data-stable;
-      /usr/bin/mc policy set public minio/castle-data-develop;
-      exit 0;
-      "
+      /bin/sh -c " echo 'sleeping for 10 seconds while minio starts...'; sleep 10; /usr/bin/mc config host add minio http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY; /usr/bin/mc mb minio/castle-data-develop minio/castle-data-stable; /usr/bin/mc policy set public minio/castle-data-develop; exit 0; "
     volumes:
       - ./data:/media

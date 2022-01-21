@@ -34,5 +34,8 @@
   "python.linting.pylintEnabled": true,
   "[python]": {
     "editor.defaultFormatter": "ms-python.python"
-  }
+  },
+  "python.analysis.extraPaths": [
+    "./plugins"
+  ]
 }

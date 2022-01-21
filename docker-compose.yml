@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'airflow']
+      test: [ 'CMD', 'pg_isready', '-U', 'airflow' ]
       interval: 5s
       retries: 5
     # ports:
@@ -25,12 +25,7 @@ services:
     depends_on:
       - airflowdb
     entrypoint: >
-      /bin/sh -c "
-      /entrypoint db reset -y;
-      /entrypoint db init;
-      /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
-      exit 0;
-      "
+      /bin/sh -c " /entrypoint db reset -y; /entrypoint db init; /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow; exit 0; "
   airflow_scheduler:
     env_file:
       - ./airflow.env

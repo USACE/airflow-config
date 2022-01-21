@@ -1,108 +1,165 @@
 """
-Download MRMS V12 Raw Data to S3, notify Cumulus API;
-URL Dir - https://mrms.ncep.noaa.gov/data/2D
+# Multi-Radar/Multi-Sensor V12
+
+This pipeline handles download, processing, and derivative product creation for MultiRadar MultiSensor QPE 1HR Pass1 and Pass2
+
+Raw data downloaded to S3 and notifies the Cumulus API of new product(s)
+
+URLs:
+- BASE - https://mrms.ncep.noaa.gov/data/2D
+- Conus - [___<BASE>___/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/MultiSensor_QPE_01H_Pass1/)
+- Alaska - [___<BASE>___/ALASKA/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/ALASKA/MultiSensor_QPE_01H_Pass1/)
+- Carib - [___<BASE>___/CARIB/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/CARIB/MultiSensor_QPE_01H_Pass1/)
+
+Filename Pattern:
+
+`MRMS_MultiSensor_QPE_01H_Pass1_00.00_YYYYMMDD-HH0000.grib2.gz`
 """
 
-import json
-import requests
-from datetime import datetime, timedelta
 
-from airflow import DAG
+from datetime import datetime, timedelta
+import json
+from string import Template
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
 from helpers.downloads import trigger_download
 
 import helpers.cumulus as cumulus
 
+implementation = {
+    "stable": {
+        "bucket": "castle-data-stable",
+        "dag_id": "mrms_v12",
+        "tags": ["stable", "cumulus", "precip", "MRMS"],
+    },
+    "develop": {
+        "bucket": "castle-data-develop",
+        "dag_id": "develop_mrms_v12",
+        "tags": ["develop", "cumulus", "precip", "MRMS"],
+    },
+}
+
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": (datetime.utcnow() - timedelta(hours=24)).replace(minute=0, second=0),
-    # "start_date": datetime(2021, 4, 1),
     "catchup_by_default": False,
-    # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 5,
     "retry_delay": timedelta(minutes=30),
-    # 'queue': 'bash_queue',
-    # 'pool': 'backfill',
-    # 'priority_weight': 10,
-    # 'end_date': datetime(2016, 1, 1),
 }
 
 
-@dag(
-    default_args=default_args, schedule_interval="0 * * * *", tags=["cumulus", "precip"]
-)
-def cumulus_mrms_v12_qpe_pass1_pass2():
-    """This pipeline handles download, processing, and derivative product creation for \n
-    MultiRadar MultiSensor_QPE_01H Pass1 and Pass2\n
-    URL Dir - https://mrms.ncep.noaa.gov/data/2D\n
-    Files matching MRMS_MultiSensor_QPE_01H_Pass1_00.00_YYYYMMDD-HH0000.grib2.gz (Hourly data)
-    """
+def create_dag(**kwargs):
+    @dag(
+        default_args=default_args,
+        dag_id=kwargs["dag_id"],
+        tags=kwargs["tags"],
+        schedule_interval=kwargs["schedule_interval"],
+        doc_md=__doc__,
+    )
+    def mrms():
 
-    URL_ROOT = f"https://mrms.ncep.noaa.gov/data/2D"
+        s3_bucket = kwargs["s3_bucket"]
+        key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
 
-    # Download Tasks
-    #################################################
-    @task()
-    def download_mrms_v12_qpe_pass1():
-        product_slug = "ncep-mrms-v12-multisensor-qpe-01h-pass1"
-        execution_date = get_current_context()["execution_date"]
-        file_dir = f"{URL_ROOT}/MultiSensor_QPE_01H_Pass1"
-        # filename = f'PRISM_tmin_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
-        filename = f'MRMS_MultiSensor_QPE_01H_Pass1_00.00_{execution_date.strftime("%Y%m%d-%H0000")}.grib2.gz'
-        s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
-        print(f"Downloading {filename}")
-        output = trigger_download(
-            url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key
+        filename_template = Template(
+            "MRMS_MultiSensor_QPE_01H_Pass${pass_}_00.00_${datetime_}.grib2.gz"
         )
 
-        return json.dumps(
-            {
-                "datetime": execution_date.isoformat(),
-                "s3_key": s3_key,
-                "product_slug": product_slug,
-            }
-        )
+        url_root = "https://mrms.ncep.noaa.gov/data/2D"
+        products = {
+            "conus_p1": {
+                "slug": "ncep-mrms-v12-multisensor-qpe-01h-pass1",
+                "suffix": "MultiSensor_QPE_01H_Pass1",
+                "pass": 1,
+            },
+            "conus_p2": {
+                "slug": "ncep-mrms-v12-multisensor-qpe-01h-pass2",
+                "suffix": "MultiSensor_QPE_01H_Pass2",
+                "pass": 2,
+            },
+            "alaska_p1": {
+                "slug": "ncep-mrms-v12-msqpe01h-p1-alaska",
+                "suffix": "ALASKA/MultiSensor_QPE_01H_Pass1",
+                "pass": 1,
+            },
+            "alaska_p2": {
+                "slug": "ncep-mrms-v12-msqpe01h-p2-alaska",
+                "suffix": "ALASKA/MultiSensor_QPE_01H_Pass2",
+                "pass": 2,
+            },
+            "carib_p1": {
+                "slug": "ncep-mrms-v12-msqpe01h-p1-carib",
+                "suffix": "CARIB/MultiSensor_QPE_01H_Pass1",
+                "pass": 1,
+            },
+            "carib_p2": {
+                "slug": "ncep-mrms-v12-msqpe01h-p2-carib",
+                "suffix": "CARIB/MultiSensor_QPE_01H_Pass2",
+                "pass": 2,
+            },
+        }
 
-    @task()
-    def download_mrms_v12_qpe_pass2():
-        product_slug = "ncep-mrms-v12-multisensor-qpe-01h-pass2"
-        execution_date = get_current_context()["execution_date"]
-        file_dir = f"{URL_ROOT}/MultiSensor_QPE_01H_Pass2"
-        # filename = f'PRISM_tmin_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
-        filename = f'MRMS_MultiSensor_QPE_01H_Pass2_00.00_{execution_date.strftime("%Y%m%d-%H0000")}.grib2.gz'
-        s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
-        print(f"Downloading {filename}")
-        output = trigger_download(
-            url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key
-        )
+        # create dynamic tasks
+        def create_task(**kwargs):
+            t_id = kwargs["task_id"]
 
-        return json.dumps(
-            {
-                "datetime": execution_date.isoformat(),
-                "s3_key": s3_key,
-                "product_slug": product_slug,
-            }
-        )
+            @task(task_id=t_id)
+            def download():
+                product_slug = kwargs["task_values"]["slug"]
+                url_suffix = kwargs["task_values"]["suffix"]
+                file_dir = f"{url_root}/{url_suffix}"
+                execution_date = get_current_context()["execution_date"]
+                filename = filename_template.substitute(
+                    pass_=kwargs["task_values"]["pass"],
+                    datetime_=execution_date.strftime("%Y%m%d-%H0000"),
+                )
+                s3_key = f"{key_prefix}/{product_slug}/{filename}"
 
-    # Notify Tasks
-    #################################################
-    @task()
-    def notify_cumulus(payload):
-        # Airflow will convert the parameter to a string, convert it back
-        payload = json.loads(payload)
+                print(f"Downloading {filename}")
 
-        cumulus.notify_acquirablefile(
-            acquirable_id=cumulus.acquirables[payload["product_slug"]],
-            datetime=payload["datetime"],
-            s3_key=payload["s3_key"],
-        )
+                trigger_download(
+                    url=f"{file_dir}/{filename}", s3_bucket=s3_bucket, s3_key=s3_key
+                )
 
-    notify_cumulus(download_mrms_v12_qpe_pass1())
-    notify_cumulus(download_mrms_v12_qpe_pass2())
+                return json.dumps(
+                    {
+                        "datetime": execution_date.isoformat(),
+                        "s3_key": s3_key,
+                        "product_slug": product_slug,
+                    }
+                )
+
+            @task(task_id=f"{t_id}_notify_cumulus")
+            def notify(payload):
+                payload_json = json.loads(payload)
+                result = cumulus.notify_acquirablefile(
+                    acquirable_id=cumulus.acquirables[payload_json["product_slug"]],
+                    datetime=payload_json["datetime"],
+                    s3_key=payload_json["s3_key"],
+                )
+                print(result)
+
+            download_ = download()
+            notify_ = notify(download_)
+
+            return notify_
+
+        _ = [
+            create_task(task_id=t_id, task_values=t_val)
+            for t_id, t_val in products.items()
+        ]
+
+    return mrms()
 
 
-mrms_v12_qpe_dag = cumulus_mrms_v12_qpe_pass1_pass2()
+for key, val in implementation.items():
+    globals()[val["dag_id"]] = create_dag(
+        dag_id=val["dag_id"],
+        tags=val["tags"],
+        s3_bucket=val["bucket"],
+        conn_type=key,
+        schedule_interval="5 * * * *",
+    )
