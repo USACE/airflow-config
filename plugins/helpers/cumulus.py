@@ -10,6 +10,16 @@ S3_ACQUIRABLE_PREFIX = "cumulus/acquirables"
 S3_BUCKET = Variable.get("S3_BUCKET")
 
 acquirables = {
+    "ncrfc-rtmat-01h": "6c879d18-2eca-4b35-9fab-2b5f78262fa6",
+    "ncrfc-fmat-01h": "28d16afe-2834-4d2c-9df2-fdf2c40e510f",
+    "ncep-mrms-v12-msqpe01h-p2-carib": "a483aa42-4388-4289-a41e-6b78998066a7",
+    "ncep-mrms-v12-msqpe01h-p1-carib": "e5dfeef2-f070-49dc-8f3c-1c9230000f96",
+    "ncep-mrms-v12-msqpe01h-p2-alaska": "1860dfa9-0d2c-4b75-84ed-516792d940ee",
+    "ncep-mrms-v12-msqpe01h-p1-alaska": "cf75d07d-d527-4be0-b066-0bfa86565ab5",
+    "marfc-rtmat-01h": "5fc5d74a-6684-4ffb-886a-663848ba22d9",
+    "marfc-nbmt-03h": "e2228d8c-204a-4c7e-849b-a9a7e5c13eca",
+    "marfc-nbmt-01h": "af651a3b-03ad-424d-8cf7-9ca7230309ed",
+    "marfc-fmat-06h": "7093dd22-2fa4-4172-b67d-5abc586e5eb6",
     "cbrfc-mpe": "2429db9a-9872-488a-b7e3-de37afc52ca4",
     "hrrr-total-precip": "d4e67bee-2320-4281-b6ef-a040cdeafeb8",
     "nbm-co-01h": "d4aa1d8d-ce06-47a0-9768-e817b43a20dd",
