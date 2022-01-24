@@ -28,7 +28,9 @@ services:
       /bin/sh -c "
       /entrypoint db reset -y;
       /entrypoint db init;
-      /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password 
+      /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
+      exit 0;
+      "
   airflow_scheduler:
     env_file:
       - ./airflow.env
