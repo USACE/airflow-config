@@ -1,7 +1,7 @@
 networks:
   default:
-    # name: cumulus-api_default
-    name: water-api_default
+    name: cumulus-api_default
+    # name: water-api_default
     # name: instrumentation-api_default
 
 services:
@@ -25,7 +25,14 @@ services:
     depends_on:
       - airflowdb
     entrypoint: >
-      /bin/sh -c " /entrypoint db reset -y; /entrypoint db init; /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow; exit 0; "
+      /bin/sh -c "
+      echo 'sleeping for 10 seconds while minio starts...';
+      sleep 10;
+      /usr/bin/mc config host add minio http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY;
+      /usr/bin/mc mb minio/castle-data-develop minio/castle-data-stable;
+      /usr/bin/mc policy set public minio/castle-data-develop;
+      exit 0;
+      "
   airflow_scheduler:
     env_file:
       - ./airflow.env
