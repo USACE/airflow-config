@@ -1,21 +1,10 @@
+"""Multi-Radar/Multi-Sensor V12
+
+Returns
+-------
+Airflow DAG
+    Directed Acyclic Graph
 """
-# Multi-Radar/Multi-Sensor V12
-
-This pipeline handles download, processing, and derivative product creation for MultiRadar MultiSensor QPE 1HR Pass1 and Pass2
-
-Raw data downloaded to S3 and notifies the Cumulus API of new product(s)
-
-URLs:
-- BASE - https://mrms.ncep.noaa.gov/data/2D
-- Conus - [___<BASE>___/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/MultiSensor_QPE_01H_Pass1/)
-- Alaska - [___<BASE>___/ALASKA/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/ALASKA/MultiSensor_QPE_01H_Pass1/)
-- Carib - [___<BASE>___/CARIB/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/CARIB/MultiSensor_QPE_01H_Pass1/)
-
-Filename Pattern:
-
-`MRMS_MultiSensor_QPE_01H_Pass1_00.00_YYYYMMDD-HH0000.grib2.gz`
-"""
-
 
 from datetime import datetime, timedelta
 import json
@@ -42,15 +31,24 @@ default_args = {
     default_args=default_args,
     tags=["stable", "cumulus", "precip", "MRMS"],
     schedule_interval="5 * * * *",
-    doc_md=__doc__,
 )
 def mrms_v12():
-    """[summary]
+    """
+    # Multi-Radar/Multi-Sensor V12
 
-    Returns
-    -------
-    [type]
-        [description]
+    This pipeline handles download, processing, and derivative product creation for MultiRadar MultiSensor QPE 1HR Pass1 and Pass2
+
+    Raw data downloaded to S3 and notifies the Cumulus API of new product(s)
+
+    URLs:
+    - BASE - https://mrms.ncep.noaa.gov/data/2D
+    - Conus - [___<BASE>___/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/MultiSensor_QPE_01H_Pass1/)
+    - Alaska - [___<BASE>___/ALASKA/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/ALASKA/MultiSensor_QPE_01H_Pass1/)
+    - Carib - [___<BASE>___/CARIB/MultiSensor_QPE_01H_Pass1/](https://mrms.ncep.noaa.gov/data/2D/CARIB/MultiSensor_QPE_01H_Pass1/)
+
+    Filename Pattern:
+
+    `MRMS_MultiSensor_QPE_01H_Pass1_00.00_YYYYMMDD-HH0000.grib2.gz`
     """
     s3_bucket = cumulus.S3_BUCKET
     key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
