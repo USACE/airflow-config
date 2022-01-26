@@ -1,7 +1,7 @@
 networks:
   default:
-    # name: cumulus-api_default
-    name: water-api_default
+    name: cumulus-api_default
+    # name: water-api_default
     # name: instrumentation-api_default
 
 services:
@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'airflow']
+      test: [ 'CMD', 'pg_isready', '-U', 'airflow' ]
       interval: 5s
       retries: 5
     # ports:
