@@ -59,7 +59,7 @@ def cumulus_mrms_v12():
     )
 
     url_root = "https://mrms.ncep.noaa.gov/data/2D"
-    products = {
+    regional_products = {
         "conus": [
             {
                 "slug": "ncep-mrms-v12-multisensor-qpe-01h-pass1",
@@ -103,19 +103,19 @@ def cumulus_mrms_v12():
 
         with TaskGroup(group_id=f"{name}_mrmsv12") as task_group:
             for product in products:
-                p_slug = product["slug"]
-                p_suffix = product["suffix"]
-                p_pass = product["pass"]
+                slug_ = product["slug"]
+                suffix_ = product["suffix"]
+                pass_ = product["pass"]
 
-                @task(task_id=f"download_pass{p_pass}")
-                def download():
-                    file_dir = f"{url_root}/{p_suffix}"
+                @task(task_id=f"download_pass{pass_}")
+                def download(slug_, suffix_, pass_):
+                    file_dir = f"{url_root}/{suffix_}"
                     execution_date = get_current_context()["execution_date"]
                     filename = filename_template.substitute(
-                        pass_=p_pass,
+                        pass_=pass_,
                         datetime_=execution_date.strftime("%Y%m%d-%H0000"),
                     )
-                    s3_key = f"{key_prefix}/{p_slug}/{filename}"
+                    s3_key = f"{key_prefix}/{slug_}/{filename}"
 
                     print(f"Downloading {filename}")
 
@@ -127,11 +127,11 @@ def cumulus_mrms_v12():
                         {
                             "datetime": execution_date.isoformat(),
                             "s3_key": s3_key,
-                            "product_slug": p_slug,
+                            "product_slug": slug_,
                         }
                     )
 
-                @task(task_id=f"notify_pass{p_pass}")
+                @task(task_id=f"notify_pass{pass_}")
                 def notify(payload):
                     payload_json = json.loads(payload)
                     result = cumulus.notify_acquirablefile(
@@ -141,12 +141,12 @@ def cumulus_mrms_v12():
                     )
                     print(result)
 
-                download_ = download()
+                download_ = download(slug_, suffix_, pass_)
                 notify(download_)
 
             return task_group
 
-    _ = [create_task_group(key, val) for key, val in products.items()]
+    _ = [create_task_group(key, val) for key, val in regional_products.items()]
 
 
 DAG_ = cumulus_mrms_v12()
