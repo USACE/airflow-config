@@ -24,7 +24,7 @@ services:
     image: apache/airflow:2.1.4-python3.8
     depends_on:
       - airflowdb
-    entrypoint: >
+    entrypoint: |-
       /bin/sh -c "
       /entrypoint db reset -y;
       /entrypoint db init;

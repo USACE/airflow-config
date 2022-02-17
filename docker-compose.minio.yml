@@ -2,8 +2,8 @@ version: '3'
 
 networks:
   default:
-    name: water-api_default
-    # name: cumulus-api_default
+    name: cumulus-api_default
+    # name: water-api_default
 
 services:
   minio:
@@ -22,7 +22,7 @@ services:
     image: minio/mc
     depends_on:
       - minio
-    entrypoint: >
+    entrypoint: |-
       /bin/sh -c "
       echo 'sleeping for 10 seconds while minio starts...';
       sleep 10;
