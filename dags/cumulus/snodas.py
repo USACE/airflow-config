@@ -33,7 +33,7 @@ default_args = {
 
 # An Example Using the Taskflow API
 @dag(
-    default_args=default_args, schedule_interval="20 14 * * *", tags=["cumulus", "snow"]
+    default_args=default_args, schedule_interval="20 13 * * *", tags=["cumulus", "snow"]
 )
 def cumulus_snodas_unmasked():
     """This pipeline handles download, processing, and derivative product creation for NOHRSC SNODAS Products\n
