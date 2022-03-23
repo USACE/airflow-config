@@ -89,9 +89,7 @@ def cumulus_ndgd_rtma_precip_backload():
 
         # Scan for files in source directory
         month_dir = f'NCEP-rtma_precip-{execution_date.strftime("%Y.%m")}'
-        key_prefix = (
-            f"/cumulus/leia98_from_CPC/{month_dir}/{execution_date.strftime('%Y')}"
-        )
+        key_prefix = f"{cumulus.S3_ACQUIRABLE_PREFIX}/leia98_from_CPC/{month_dir}/{execution_date.strftime('%Y')}"
         print("*" * 60)
         print(f"Scanning for objects in src: {key_prefix}")
         print("*" * 60)
