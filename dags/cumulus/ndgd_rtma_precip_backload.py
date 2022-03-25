@@ -16,7 +16,7 @@ default_args = {
     "depends_on_past": False,
     # "start_date": (datetime.utcnow() - timedelta(hours=48)).replace(minute=0, second=0),
     "start_date": datetime(2019, 12, 1),
-    "end_date": datetime(2020, 3, 31),
+    "end_date": datetime(2020, 6, 30),
     "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
