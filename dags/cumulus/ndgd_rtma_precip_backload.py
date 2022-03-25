@@ -15,7 +15,7 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     # "start_date": (datetime.utcnow() - timedelta(hours=48)).replace(minute=0, second=0),
-    "start_date": datetime(2019, 12, 1),
+    "start_date": datetime(2019, 10, 1),
     "end_date": datetime(2021, 6, 30),
     "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
