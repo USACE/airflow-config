@@ -2,6 +2,9 @@ from airflow import DAG
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
+from airflow.operators.python import PythonOperator
+import logging
+import subprocess
 
 with DAG(
     dag_id="check_disk_space",
@@ -11,12 +14,19 @@ with DAG(
     tags=["maintenance"],
 ) as dag:
 
-    # Task 1
-    # dummy_task = DummyOperator(task_id="dummy_task")
+    def run_cmd():
 
-    # Task 2
-    bash_task = BashOperator(
-        task_id="bash_task",
-        bash_command="df -h && echo '----- LOGS BREAKDOWN--------' && du -d 1 -h $AIRFLOW_HOME/logs",
+        bashCommand = "df -h && echo '----- LOGS BREAKDOWN--------' && du -d 1 -h $AIRFLOW_HOME/logs"
+
+        ret = subprocess.run(bashCommand, capture_output=True, shell=True)
+
+        lines = ret.stdout.decode().splitlines()
+
+        for line in lines:
+            logging.error(line)
+
+    bash_task = PythonOperator(
+        task_id="display_task_id",
+        python_callable=run_cmd,
     )
     bash_task
