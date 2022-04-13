@@ -15,8 +15,8 @@ services:
       test: [ 'CMD', 'pg_isready', '-U', 'airflow' ]
       interval: 5s
       retries: 5
-    # ports:
-    #   - '5432:5432'
+    ports:
+      - '50432:5432' # host port changed to prevent clash with other app's DB
 
   airflow_init:
     env_file:
