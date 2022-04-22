@@ -12,4 +12,6 @@ To start minio using `docker compose -f docker-compose.minio.yml up` or `./minio
 ## Notes:
 - You may need to adjust the network or remove it completely.
 
-### Airflow Web UI: http://localhost:8000
+### Airflow Web UI: http://localhost:8000 
+- user: admin
+- pw: admin
