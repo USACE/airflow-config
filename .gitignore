@@ -15,3 +15,4 @@
 
 # Airflow Logs Directory
 logs/**
+!logs/readme.md
