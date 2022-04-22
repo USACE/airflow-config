@@ -35,12 +35,10 @@ services:
     env_file:
       - ./airflow.env
     image: apache/airflow:2.1.4-python3.8
-    # depends_on:
-    #   - airflow_init
     depends_on:
       airflowdb:
         condition: service_healthy
-      airflow-init:
+      airflow_init:
         condition: service_started
     restart: always
     # command: scheduler
