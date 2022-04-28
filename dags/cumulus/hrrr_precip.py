@@ -47,19 +47,34 @@ with DAG(
         exec_dt = get_current_context()["execution_date"]
 
         directory = f'hrrr.{exec_dt.strftime("%Y%m%d")}/conus'
-        src_filename = (
+        src_product_filename = (
             f'hrrr.t{exec_dt.strftime("%H")}z.wrfsfcf{str(hour).zfill(2)}.grib2'
         )
-        dst_filename = f'hrrr.{exec_dt.strftime("%Y%m%d")}.t{exec_dt.strftime("%H")}z.wrfsfcf{str(hour).zfill(2)}.grib2'
-        s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{dst_filename}"
-        print(f"Downloading {src_filename}")
-        output = trigger_download(
-            url=f"{URL_ROOT}/{directory}/{src_filename}",
+        src_index_filename = src_product_filename + ".idx"
+
+        dst_product_filename = f'hrrr.{exec_dt.strftime("%Y%m%d")}.t{exec_dt.strftime("%H")}z.wrfsfcf{str(hour).zfill(2)}.grib2'
+        dst_product_s3_key = (
+            f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{dst_product_filename}"
+        )
+        dst_index_s3_key = dst_product_s3_key + ".idx"
+
+        print(f"Downloading product file: {src_product_filename}")
+        trigger_download(
+            url=f"{URL_ROOT}/{directory}/{src_product_filename}",
             s3_bucket=cumulus.S3_BUCKET,
-            s3_key=s3_key,
+            s3_key=dst_product_s3_key,
         )
 
-        return json.dumps({"datetime": exec_dt.isoformat(), "s3_key": s3_key})
+        print(f"Downloading index file: {src_index_filename}")
+        trigger_download(
+            url=f"{URL_ROOT}/{directory}/{src_index_filename}",
+            s3_bucket=cumulus.S3_BUCKET,
+            s3_key=dst_index_s3_key,
+        )
+
+        return json.dumps(
+            {"datetime": exec_dt.isoformat(), "s3_key": dst_product_s3_key}
+        )
 
     ##############################################################################
     def notify_api(payload):
