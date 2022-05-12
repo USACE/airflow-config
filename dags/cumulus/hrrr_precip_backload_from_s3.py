@@ -28,6 +28,7 @@ with DAG(
     tags=["cumulus", "precip", "forecast"],
     schedule_interval="@hourly",
     catchup=True,
+    max_active_runs=5,
 ) as dag:
     dag.doc_md = """This pipeline handles the reading of existing HRRR acquirables from S3 and sending API notifications to reprocess products. \n
     High-Resolution Rapid Refresh (HRRR) \n
