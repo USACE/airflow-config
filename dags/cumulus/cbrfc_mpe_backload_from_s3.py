@@ -25,7 +25,7 @@ default_args = {
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    "end_date": datetime(2020, 12, 31),
+    "end_date": datetime(2021, 4, 19),
     "max_active_runs": 5,
 }
 
