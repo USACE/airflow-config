@@ -26,7 +26,6 @@ default_args = {
     "email_on_retry": False,
     "retries": 0,
     "retry_delay": timedelta(minutes=1),
-    "max_active_runs": 6,
 }
 
 MAX_HOUR = 36
@@ -36,6 +35,7 @@ MAX_HOUR = 36
     default_args=default_args,
     tags=["cumulus", "precip", "airtemp", "NBM"],
     schedule_interval="@hourly",
+    max_active_runs=6,
 )
 def cumulus_nbm_backload():
     """
