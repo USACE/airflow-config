@@ -18,7 +18,7 @@ from textwrap import dedent
 with DAG(
     dag_id="maint_purge_logs",
     schedule_interval="@daily",
-    start_date=datetime(2022, 6, 2),
+    start_date=datetime(2022, 6, 1),
     catchup=False,
     tags=["maintenance"],
     doc_md=dedent(__doc__),
