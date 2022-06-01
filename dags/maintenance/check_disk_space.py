@@ -16,7 +16,7 @@ with DAG(
 
     def run_cmd():
 
-        bashCommand = "df -h && echo '----- LOGS BREAKDOWN--------' && du -d 1 -h $AIRFLOW_HOME/logs"
+        bashCommand = "df -h && echo '----- /opt/airflow BREAKDOWN--------' && du -d 1 -h $AIRFLOW_HOME"
 
         ret = subprocess.run(bashCommand, capture_output=True, shell=True)
 
