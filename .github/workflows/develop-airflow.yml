@@ -1,0 +1,45 @@
+name: Update Airflow Containers
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - .github/workflows/develop-airflow.yml
+      - plugins/celery_config.py
+  workflow_dispatch:
+jobs:
+  DockerImage:
+    name: apache/airflow:2.3.1-python3.8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.CASTLECI_DEVELOP_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CASTLECI_DEVELOP_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.CASTLECI_DEVELOP_AWS_REGION }}
+      - name: ECR Login
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Pull Image; Push to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: apache/airflow
+          IMAGE_TAG: 2.3.1-python3.8-sqs
+        run: |
+          export DOCKER_BUILDKIT=1
+          docker build airflow \
+          --build-arg AIRFLOW_VERSION="2.3.1" \
+          --build-arg PYTHON_BASE_IMAGE="python:3.8-slim-bullseye" \
+          --build-arg ADDITIONAL_DEV_APT_DEPS="libcurl4-openssl-dev libssl-dev" \
+          --build-arg ADDITIONAL_PYTHON_DEPS="celery[sqs]" \
+          --build-arg INSTALL_MYSQL_CLIENT="false" \
+          --build-arg INSTALL_MSSQL_CLIENT="false" \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      - name: ECR Logout
+        if: always()
+        run: docker logout ${{ steps.login-ecr.outputs.registry }}
