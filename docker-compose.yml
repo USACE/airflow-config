@@ -1,10 +1,102 @@
+# Adapted from Airflow's docker-compose.yml file:
+# https://airflow.apache.org/docs/apache-airflow/stable/docker-compose.yaml
 networks:
   default:
     name: cumulus-api_default
     # name: water-api_default
     # name: instrumentation-api_default
+x-airflow-common:
+  # In order to add custom dependencies or upgrade provider packages you can use your extended image.
+  # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
+  # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
+  &airflow-common
+  image: apache/airflow:2.3.1-python3.8-usace
+  build:
+    context: _docker/airflow
+    args:
+      - AIRFLOW_VERSION=2.3.1
+      - PYTHON_BASE_IMAGE=python:3.8-slim-bullseye
+      - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
+      - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
+      - INSTALL_MYSQL_CLIENT=false
+      - INSTALL_MSSQL_CLIENT=false
+  environment:
+    #######################################
+    # VARIABLES DEFINED BY AIRFLOW SOFTWARE
+    #######################################
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__FERNET_KEY: u1rsP4UVZf5_uREVUhAjqYYygN328ASxeNYdy0yd6_Q=
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    # NOTE: AIRFLOW__CORE__SQL_ALCHEMY_CONN (previously used) has been deprecated in-lieu
+    #       of AIRFLOW__DATABASE__SQL_ALCHEMY_CONN 
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflowdb:5432/airflow
+    # CELERY
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflowdb/airflow
+    # AIRFLOW__CELERY__BROKER_URL: sqs://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@elasticmq
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+    AIRFLOW__CELERY__CELERY_CONFIG_OPTIONS: celery_config.CELERY_CONFIG
+    # default queue; specified in celery_config.py
+    AIRFLOW__OPERATORS__DEFAULT_QUEUE: airflow
+    # SCHEDULER
+    # How often (in seconds) to scan the DAGs directory for new files. Default=300 (5 minutes).
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 60
+    # Number of seconds after which a DAG file is parsed.
+    # The DAG file is parsed everymin_file_process_interval number of seconds.
+    # Updates to DAGs are reflected after this interval. 
+    # Keeping this number low will increase CPU usage. Default=30
+    AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 30
+    # LOGGING
+    AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+    AIRFLOW__LOGGING__REMOTE_LOGGING: TRUE
+    AIRFLOW__LOGGING__REMOTE_LOG_CONN_ID: LOCAL_MINIO
+    AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: s3://castle-data-develop/airflow/logs
+    # METRICS
+    AIRFLOW__METRICS__STATSD_ON: True
+    AIRFLOW__METRICS__STATSD_HOST: airflow-statsd-exporter
+    AIRFLOW__METRICS__STATSD_PORT: 9125
+    AIRFLOW__METRICS__STATSD_PREFIX: airflow
+    # WEBSERVER
+    AIRFLOW__WEBSERVER__INSTANCE_NAME: "Local Dev"
+    ######################
+    # VARIABLES WE CREATED
+    ######################
+    SQS_BASE_URL: http://elasticmq:9324/queue
+    # SQS_IS_ELASTICMQ: true
+    # CELERY QUEUES
+    CELERY_QUEUE_URL_AIRFLOW: http://elasticmq:9324/queue/airflow
+    # CONNECTIONS
+    AIRFLOW_CONN_SQS: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?region_name=elasticmq&host=http%3A%2F%2Felasticmq%3A9324
+    AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?host=http%3A%2F%2Fminio%3A9000&region=us-east-1
+    AIRFLOW_CONN_CUMULUS: http://nologin:appkey@api
+    AIRFLOW_CONN_MIDAS: http://nologin:appkey@api
+    AIRFLOW_CONN_WATER: http://nologin:appkey@api
+    AIRFLOW_CONN_SHARED: https://nologin:appkey@develop-shared-api.castle.cloud/https
+    # VARIABLES
+    AIRFLOW_VAR_CWMSDATA: https://cwms-data.usace.army.mil/cwms-data
+    AIRFLOW_VAR_S3_BUCKET: castle-data-develop
+    # How Downloads are Handled (Download or Fire Lambda Function to Handle Download
+    DOWNLOAD_OPERATOR_USE_CONNECTION: LOCAL_MINIO
+    DOWNLOAD_OPERATOR_USE_LAMBDA: FALSE
+    DOWNLOAD_OPERATOR_USE_LAMBDA_NAME: ""
+    DOWNLOAD_OPERATOR_USE_LAMBDA_REGION: us-east-1
+  volumes:
+    # volumes are attached to any container with <<: *airflow-common
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    elasticmq:
+      condition: service_started
+    airflowdb:
+      condition: service_healthy
 
 services:
+  #############################################################################
+  # Postgres Database
+  #############################################################################
   airflowdb:
     image: postgres:13
     environment:
@@ -17,11 +109,31 @@ services:
       retries: 5
     ports:
       - '50432:5432' # host port changed to prevent clash with other app's DB
-
+  #############################################################################
+  # ELASTIC MQ
+  #############################################################################
+  # elasticmq:
+  #   build:
+  #     context: _docker/elasticmq
+  #   ports:
+  #     - "9324:9324"
+  #   restart: always
+  redis:
+    image: redis:latest
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+    restart: always
+  #############################################################################
+  # Airflow Init
+  #############################################################################
   airflow_init:
-    env_file:
-      - ./airflow.env
-    image: apache/airflow:2.1.4-python3.8
+    <<: *airflow-common
+    image: apache/airflow:2.3.1-python3.8-usace
     depends_on:
       - airflowdb
     entrypoint: |-
@@ -31,32 +143,71 @@ services:
       /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
       exit 0;
       "
+  #############################################################################
+  # Airflow Scheduler
+  #############################################################################
   airflow_scheduler:
-    env_file:
-      - ./airflow.env
-    image: apache/airflow:2.1.4-python3.8
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"'
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
     depends_on:
-      airflowdb:
-        condition: service_healthy
+      <<: *airflow-common-depends-on
       airflow_init:
-        condition: service_started
+        condition: service_completed_successfully
+  #############################################################################
+  # Airflow Celery Worker
+  #############################################################################
+  airflow_worker:
+    <<: *airflow-common
+    command: celery worker
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    environment:
+      <<: *airflow-common-env
+      # Required to handle warm shutdown of the celery workers properly
+      # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
+      DUMB_INIT_SETSID: "0"
     restart: always
-    # command: scheduler
-    entrypoint: >
-      /bin/sh -c "sleep 15 && airflow scheduler"
-    volumes:
-      - ./logs:/opt/airflow/logs
-      - ./dags:/opt/airflow/dags
-      - ./plugins:/opt/airflow/plugins
-  airflow_ui:
-    env_file:
-      - ./airflow.env
-    image: apache/airflow:2.1.4-python3.8
     depends_on:
-      - airflow_init
-      - airflow_scheduler
-    restart: always
-    # environment:
+      <<: *airflow-common-depends-on
+      airflow_init:
+        condition: service_completed_successfully
+  #############################################################################
+  # Airflow User Interface
+  #############################################################################
+  airflow_ui:
+    <<: *airflow-common
+    image: apache/airflow:2.3.1-python3.8-usace
+    command: webserver
     ports:
       - '8000:8080'
-    command: webserver
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8080/health"
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow_init:
+        condition: service_completed_successfully
