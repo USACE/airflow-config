@@ -30,9 +30,9 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     # NOTE: AIRFLOW__CORE__SQL_ALCHEMY_CONN (previously used) has been deprecated in-lieu
     #       of AIRFLOW__DATABASE__SQL_ALCHEMY_CONN 
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflowdb:5432/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@pgbouncer:5432/airflow
     # CELERY
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflowdb/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@pgbouncer/airflow
     # AIRFLOW__CELERY__BROKER_URL: sqs://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@elasticmq
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CELERY__CELERY_CONFIG_OPTIONS: celery_config.CELERY_CONFIG
@@ -92,6 +92,8 @@ x-airflow-common:
       condition: service_started
     airflowdb:
       condition: service_healthy
+    pgbouncer:
+      condition: service_started
 
 services:
   #############################################################################
@@ -110,6 +112,24 @@ services:
     ports:
       - '50432:5432' # host port changed to prevent clash with other app's DB
   #############################################################################
+  # Postgres Database
+  #############################################################################
+  pgbouncer:
+    image: pgbouncer:latest
+    build:
+      context: _docker/pgbouncer
+      args:
+        - PGBOUNCER_VERSION=1.16.1
+        - PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_16_1/pgbouncer-1.16.1.tar.gz
+    environment:
+      DB_HOST: airflowdb
+      DB_USER: airflow
+      DB_PASSWORD: airflow
+      DB_PORT: 5432
+      LISTEN_PORT: 5432
+      VERBOSE: 0
+      QUIET: 0
+  #############################################################################
   # ELASTIC MQ
   #############################################################################
   # elasticmq:
@@ -123,7 +143,7 @@ services:
     expose:
       - 6379
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 30s
       retries: 50
