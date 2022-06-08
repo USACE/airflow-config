@@ -2,8 +2,7 @@
 Acquire and Process PRISM Early
 """
 
-import os, json, logging
-import requests
+import json
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -46,7 +45,7 @@ def cumulus_prism_early():
     @task()
     def download_raw_tmin_early():
         product_slug = "prism-tmin-early"
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/tmin/{execution_date.strftime("%Y")}'
         filename = f'PRISM_tmin_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
@@ -66,7 +65,7 @@ def cumulus_prism_early():
     @task()
     def download_raw_tmax_early():
         product_slug = "prism-tmax-early"
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/tmax/{execution_date.strftime("%Y")}'
         filename = f'PRISM_tmax_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
@@ -86,7 +85,7 @@ def cumulus_prism_early():
     @task()
     def download_raw_ppt_early():
         product_slug = "prism-ppt-early"
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/ppt/{execution_date.strftime("%Y")}'
         filename = f'PRISM_ppt_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"

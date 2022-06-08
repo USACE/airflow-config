@@ -46,7 +46,7 @@ def cumulus_snodas_unmasked():
     def snodas_download_unmasked():
 
         # In order to get the current day's file, set execution forward 1 day
-        execution_date = get_current_context()["execution_date"] + timedelta(hours=24)
+        execution_date = get_current_context()["logical_date"] + timedelta(hours=24)
 
         URL_ROOT = f'ftp://sidads.colorado.edu/DATASETS/NOAA/G02158/unmasked/{execution_date.year}/{execution_date.strftime("%m_%b")}'
         filename = f'SNODAS_unmasked_{execution_date.strftime("%Y%m%d")}.tar'

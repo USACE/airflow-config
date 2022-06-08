@@ -42,7 +42,7 @@ def cumulus_snodas_assimilation():
     def snodas_download_assimilation():
 
         # In order to get the current day's file, set execution forward 1 day
-        execution_date = get_current_context()["execution_date"] + timedelta(hours=24)
+        execution_date = get_current_context()["logical_date"] + timedelta(hours=24)
 
         URL_ROOT = f"https://www.nohrsc.noaa.gov/pub/data/assim"
         filename = f'assim_layers_{execution_date.strftime("%Y%m%d")}12.tar'
