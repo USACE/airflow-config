@@ -28,6 +28,8 @@ x-airflow-common:
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__CORE__FERNET_KEY: u1rsP4UVZf5_uREVUhAjqYYygN328ASxeNYdy0yd6_Q=
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    # Prevent the 30+ connections from being loaded
+    AIRFLOW__DATABASE__LOAD_DEFAULT_CONNECTIONS: False
     # NOTE: AIRFLOW__CORE__SQL_ALCHEMY_CONN (previously used) has been deprecated in-lieu
     #       of AIRFLOW__DATABASE__SQL_ALCHEMY_CONN 
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@pgbouncer:5432/airflow
@@ -129,6 +131,7 @@ services:
       LISTEN_PORT: 5432
       VERBOSE: 0
       QUIET: 0
+      POOL_MODE: transaction
   #############################################################################
   # ELASTIC MQ
   #############################################################################
