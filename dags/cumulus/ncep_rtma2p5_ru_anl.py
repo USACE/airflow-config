@@ -3,8 +3,7 @@ Acquire and Process NCEP Real-Time Mesoscale Analysis (RTMA)
 2.5km Rapid Update (RU) ANL - Observed CONUS Air Temperatures
 """
 
-import os, json, logging
-import requests
+import json
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -54,7 +53,7 @@ def cumulus_rtma_ru_anl_airtemp():
     def download_raw_data():
 
         datetimes = []
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
 
         """
         Because Airflow is always delayed due to the way it processes the previous 

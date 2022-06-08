@@ -72,7 +72,7 @@ def cumulus_nbm_backload():
 
             @task(task_id=f"check_f{fhour:03d}")
             def check_file():
-                execution_date = get_current_context()["execution_date"]
+                execution_date = get_current_context()["logical_date"]
                 execution_hr = execution_date.hour
                 execution_dt = execution_date.strftime("%Y%m%d")
 

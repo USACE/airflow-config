@@ -9,7 +9,7 @@ QPF --> ORN_QPF_SFC_20210822ZZ_FFF_2021082306fFFF.grb.gz
     , where ZZ is the forecast cycle and FFF is the forecast hour
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from airflow import DAG
 
@@ -18,7 +18,6 @@ from helpers.downloads import trigger_download
 
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
-from airflow.utils.dates import days_ago
 
 implementation = {
     "default": {
@@ -32,7 +31,7 @@ implementation = {
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": days_ago(2),
+    "start_date": (datetime.utcnow() - timedelta(hours=12)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,

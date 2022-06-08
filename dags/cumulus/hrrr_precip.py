@@ -1,7 +1,5 @@
 import json
-import requests
-import logging
-import pprint
+
 
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
@@ -44,7 +42,7 @@ with DAG(
     ##############################################################################
     def download_precip_fcst_hour(hour):
 
-        exec_dt = get_current_context()["execution_date"]
+        exec_dt = get_current_context()["logical_date"]
 
         directory = f'hrrr.{exec_dt.strftime("%Y%m%d")}/conus'
         src_product_filename = (
