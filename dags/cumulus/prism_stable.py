@@ -1,13 +1,14 @@
 """
-Acquire and Process PRISM Early
+Acquire and Process PRISM Stable
 """
 
 import json
+import time
 from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.decorators import dag, task
-from airflow.operators.python import get_current_context
+from airflow.operators.python import get_current_context, PythonOperator
 from helpers.downloads import trigger_download
 
 import helpers.cumulus as cumulus
@@ -15,39 +16,43 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=36)).replace(minute=0, second=0),
-    # "start_date": datetime(2021, 11, 9),
-    "catchup_by_default": True,
+    "start_date": datetime(1981, 1, 1),
+    "catchup_by_default": False,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 5,
-    "retry_delay": timedelta(minutes=30),
+    "retries": 1,
+    "retry_delay": timedelta(minutes=1),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    # 'end_date': datetime(2016, 1, 1),
+    "end_date": datetime(1981, 2, 10),
 }
 
 
-@dag(default_args=default_args, schedule_interval="30 12 * * *", tags=["cumulus"])
-def cumulus_prism_early():
+@dag(
+    default_args=default_args,
+    schedule_interval="0 12 * * *",
+    tags=["cumulus", "historic"],
+    max_active_runs=2,
+)
+def cumulus_prism_stable():
     """This pipeline handles download, processing, and derivative product creation for \n
-    PRISM: Min Temp (tmin) early, Max Temp (tmax) early and Precip (ppt) early
-    URL Dir - ftp://prism.nacse.org/daily/tmin/YYYY/
-    Files matching PRISM_tmin_early_4kmD2_YYYYMMDD_bil.zip - Daily around 12:30-14:30 UTC
+    PRISM: Min Temp (tmin) stable, Max Temp (tmax) stable and Precip (ppt) stable
+    URL Dir - ftp://prism.nacse.org/daily/
+    Files matching PRISM_tmin_stable_4kmD2_YYYYMMDD_bil.zip
     """
 
     URL_ROOT = f"ftp://prism.nacse.org/daily"
 
-    # Download Tasks
-    #################################################
     @task()
-    def download_raw_tmin_early():
-        product_slug = "prism-tmin-early"
+    def download_raw_tmin_stable():
+        product_slug = "prism-tmin-stable"
         execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/tmin/{execution_date.strftime("%Y")}'
-        filename = f'PRISM_tmin_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
+        filename = (
+            f'PRISM_tmin_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
+        )
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
         print(f"Downloading {filename}")
         output = trigger_download(
@@ -63,11 +68,13 @@ def cumulus_prism_early():
         )
 
     @task()
-    def download_raw_tmax_early():
-        product_slug = "prism-tmax-early"
+    def download_raw_tmax_stable():
+        product_slug = "prism-tmax-stable"
         execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/tmax/{execution_date.strftime("%Y")}'
-        filename = f'PRISM_tmax_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
+        filename = (
+            f'PRISM_tmax_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
+        )
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
         print(f"Downloading {filename}")
         output = trigger_download(
@@ -83,11 +90,11 @@ def cumulus_prism_early():
         )
 
     @task()
-    def download_raw_ppt_early():
-        product_slug = "prism-ppt-early"
+    def download_raw_ppt_stable():
+        product_slug = "prism-ppt-stable"
         execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/ppt/{execution_date.strftime("%Y")}'
-        filename = f'PRISM_ppt_early_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
+        filename = f'PRISM_ppt_stable_4kmD2_{execution_date.strftime("%Y%m%d")}_bil.zip'
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
         print(f"Downloading {filename}")
         output = trigger_download(
@@ -115,9 +122,14 @@ def cumulus_prism_early():
             s3_key=payload["s3_key"],
         )
 
-    notify_cumulus(download_raw_tmin_early())
-    notify_cumulus(download_raw_tmax_early())
-    notify_cumulus(download_raw_ppt_early())
+    @task()
+    def delay_task():
+        PythonOperator(task_id="python_delay", python_callable=lambda: time.sleep(15))
+
+    notify_cumulus(download_raw_tmin_stable())
+    notify_cumulus(download_raw_tmax_stable())
+    notify_cumulus(download_raw_ppt_stable())
+    delay_task()
 
 
-prism_dag = cumulus_prism_early()
+prism_dag = cumulus_prism_stable()

@@ -43,7 +43,7 @@ def cumulus_ndgd_rtma_precip_backload():
     @task()
     def copy_raw_precip():
 
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
 
         month_dir = f'NCEP-rtma_precip-{execution_date.strftime("%Y.%m")}'
         # old name looks like: 2019.10.31.23--NCEP-rtma_precip--RT.23.ds.precipa.bin

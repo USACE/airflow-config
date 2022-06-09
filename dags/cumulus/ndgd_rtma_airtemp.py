@@ -49,7 +49,7 @@ def cumulus_ndgd_rtma_airtemp():
     @task()
     def download_raw_airtemp():
 
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/RT.{execution_date.strftime("%H")}'
         filename = "ds.temp.bin"
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/ds.temp_{execution_date.strftime("%Y%m%d_%H")}.bin'

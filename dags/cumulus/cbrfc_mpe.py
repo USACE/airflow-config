@@ -47,7 +47,7 @@ def cumulus_cbrfc_mpe():
 
     @task()
     def download_raw_cbrfc_mpe():
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
         filename = f'xmrg{execution_date.strftime("%m%d%Y%H")}z.grb'
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
         print(f"Downloading {filename}")

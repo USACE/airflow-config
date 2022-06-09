@@ -113,7 +113,7 @@ def cumulus_mrms_v12():
                 @task(task_id=f"download_pass{pass_}")
                 def download(slug_, suffix_, pass_):
                     file_dir = f"{url_root}/{suffix_}"
-                    execution_date = get_current_context()["execution_date"]
+                    execution_date = get_current_context()["logical_date"]
                     filename = filename_template.substitute(
                         pass_=pass_,
                         datetime_=execution_date.strftime("%Y%m%d-%H0000"),

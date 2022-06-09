@@ -47,7 +47,7 @@ def cumulus_ndgd_rmta_precip():
     @task()
     def download_raw_precip():
 
-        execution_date = get_current_context()["execution_date"]
+        execution_date = get_current_context()["logical_date"]
         file_dir = f'{URL_ROOT}/RT.{execution_date.strftime("%H")}'
         filename = "ds.precipa.bin"
         s3_key = f'{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/ds.precipa_{execution_date.strftime("%Y%m%d_%H")}.bin'
