@@ -33,7 +33,7 @@ jobs:
           --build-arg AIRFLOW_VERSION="2.3.2" \
           --build-arg PYTHON_BASE_IMAGE="python:3.8-slim-bullseye" \
           --build-arg ADDITIONAL_DEV_APT_DEPS="libcurl4-openssl-dev libssl-dev" \
-          --build-arg ADDITIONAL_PYTHON_DEPS="celery[sqs]" \
+          --build-arg ADDITIONAL_PYTHON_DEPS="celery[sqs] apache-airflow[statsd]" \
           --build-arg INSTALL_MYSQL_CLIENT="false" \
           --build-arg INSTALL_MSSQL_CLIENT="false" \
           --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
