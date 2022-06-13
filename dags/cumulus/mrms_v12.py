@@ -31,7 +31,7 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["cumulus", "precip", "MRMS"],
-    schedule_interval="5 * * * *",
+    schedule_interval="10 * * * *",
 )
 def cumulus_mrms_v12():
     """

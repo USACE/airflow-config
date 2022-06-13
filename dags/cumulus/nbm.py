@@ -32,7 +32,7 @@ MAX_HOUR = 36
 @dag(
     default_args=default_args,
     tags=["cumulus", "precip", "airtemp", "NBM"],
-    schedule_interval="@hourly",
+    schedule_interval="3 * * * *",
 )
 def cumulus_nbm():
     """
