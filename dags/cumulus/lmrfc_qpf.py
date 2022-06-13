@@ -124,5 +124,5 @@ for key, val in implementation.items():
         dag_id=d_id,
         tags=d_tags,
         s3_bucket=d_bucket,
-        schedule_interval="5 */3 * * *",
+        schedule_interval="8 */3 * * *",
     )

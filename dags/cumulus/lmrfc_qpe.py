@@ -101,5 +101,5 @@ for key, val in implementation.items():
     d_tags = val["tags"]
     d_bucket = val["bucket"]
     globals()[d_id] = create_dag(
-        dag_id=d_id, tags=d_tags, s3_bucket=d_bucket, schedule_interval="5 * * * *"
+        dag_id=d_id, tags=d_tags, s3_bucket=d_bucket, schedule_interval="8 * * * *"
     )

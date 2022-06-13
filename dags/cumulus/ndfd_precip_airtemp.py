@@ -28,7 +28,7 @@ with DAG(
     # start_date=datetime(2021, 3, 27),
     tags=["cumulus", "forecast", "precip", "airtemp"],
     # schedule_interval='*/15 * * * *',
-    schedule_interval="@hourly",
+    schedule_interval="12 * * * *",
     catchup=False,
 ) as dag:
     dag.doc_md = __doc__
