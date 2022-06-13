@@ -21,12 +21,12 @@ default_args = {
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=1),
+    "retries": 3,
+    "retry_delay": timedelta(minutes=5),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
-    "end_date": datetime(2021, 11, 30),
+    "end_date": datetime(1981, 4, 1),
 }
 
 
