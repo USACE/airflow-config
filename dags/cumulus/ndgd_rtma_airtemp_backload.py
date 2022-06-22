@@ -8,6 +8,7 @@ from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
 from helpers.downloads import trigger_download, s3_list_keys, copy_s3_file
+import logging
 
 import helpers.cumulus as cumulus
 
@@ -49,8 +50,8 @@ def cumulus_ndgd_rtma_airtemp_backload():
         return dt
 
     def get_new_filename(old_name):
-        print("--old name--")
-        print(old_name)
+        logging.error("--old name--")
+        logging.error(old_name)
 
         # old name looks like: 2019.10.31.235009--NCEP-rtma_precip--RT.23.ds.precipa.bin
         # convert to name like: ds.precipa_20211017_11.bin
@@ -74,15 +75,15 @@ def cumulus_ndgd_rtma_airtemp_backload():
         key_prefix = (
             f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{dest_filename_prefix}"
         )
-        print("*" * 60)
-        print(f"Scanning for objects dst: {key_prefix}")
+        logging.error("*" * 60)
+        logging.error(f"Scanning for objects dst: {key_prefix}")
         dst_objects = s3_list_keys(
             bucket_name=cumulus.S3_BUCKET,
             prefix=key_prefix,
             delimiter=None,
         )
-        print(f"Match Count: {dest_filename_prefix}: {len(dst_objects)}")
-        print("*" * 60)
+        logging.error(f"Match Count: {dest_filename_prefix}: {len(dst_objects)}")
+        logging.error("*" * 60)
         for obj in dst_objects:
             dst_files.append(os.path.basename(obj))
 
@@ -92,9 +93,9 @@ def cumulus_ndgd_rtma_airtemp_backload():
         month_dir = f'NCEP-rtma_airtemp-{execution_date.strftime("%Y.%m")}'
         # key_prefix = f"{cumulus.S3_ACQUIRABLE_PREFIX}/ltia98_from_CPC/{month_dir}/{execution_date.strftime('%Y')}"
         key_prefix = f"{cumulus.S3_ACQUIRABLE_PREFIX}/ltia98_from_CPC/{month_dir}"
-        print("*" * 60)
-        print(f"Scanning for objects in src: {key_prefix}")
-        print("*" * 60)
+        logging.error("*" * 60)
+        logging.error(f"Scanning for objects in src: {key_prefix}")
+        logging.error("*" * 60)
         objects = s3_list_keys(
             bucket_name=cumulus.S3_BUCKET,
             prefix=key_prefix,
@@ -102,7 +103,7 @@ def cumulus_ndgd_rtma_airtemp_backload():
         )
 
         if len(objects) == 0:
-            print(f"no object found in {key_prefix}")
+            logging.error(f"no object found in {key_prefix}")
             raise AirflowSkipException
 
         for obj in objects:
@@ -112,7 +113,7 @@ def cumulus_ndgd_rtma_airtemp_backload():
                     f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{new_filename}"
                 )
                 # print(obj)
-                print(f"Copying {obj} to {dst_s3_key}")
+                logging.error(f"Copying {obj} to {dst_s3_key}")
                 copy_s3_file(cumulus.S3_BUCKET, obj, cumulus.S3_BUCKET, dst_s3_key)
                 results.append(
                     {
@@ -123,7 +124,7 @@ def cumulus_ndgd_rtma_airtemp_backload():
 
         # If no files copied
         if len(results) == 0:
-            print("No new files to copy.")
+            logging.error("No new files to copy.")
             raise AirflowSkipException
 
         return json.dumps(results)
@@ -142,7 +143,7 @@ def cumulus_ndgd_rtma_airtemp_backload():
                 s3_key=items["s3_key"],
             )
 
-        print(f"Sent {len(payload)} notifications to API")
+        logging.error(f"Sent {len(payload)} notifications to API")
 
         return
 
