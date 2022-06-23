@@ -34,6 +34,7 @@ default_args = {
     default_args=default_args,
     schedule_interval="15 * * * *",
     tags=["cumulus", "precip"],
+    max_active_runs=4,
 )
 def cumulus_cbrfc_mpe():
     """This pipeline handles download, processing, and derivative product creation for \n
