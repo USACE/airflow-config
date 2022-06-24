@@ -34,7 +34,7 @@ default_args = {
     schedule_interval="@hourly",
     tags=["cumulus", "precip"],
 )
-def cumulus_ndgd_rtma_precip_backload():
+def cumulus_ndgd_rtma_precip_backload_from_s3():
     """Copy from CPC Dir and rename placing into correct S3 acquirable dir and notifying API to process.\n
     Files will be processed by hour."""
 
@@ -80,4 +80,4 @@ def cumulus_ndgd_rtma_precip_backload():
     notify_cumulus(copy_raw_precip())
 
 
-ndgd_rtma_dag = cumulus_ndgd_rtma_precip_backload()
+ndgd_rtma_dag = cumulus_ndgd_rtma_precip_backload_from_s3()

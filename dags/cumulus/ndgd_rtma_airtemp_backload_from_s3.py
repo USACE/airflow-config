@@ -35,7 +35,7 @@ default_args = {
     tags=["cumulus", "airtemp"],
     max_active_runs=4,
 )
-def cumulus_ndgd_rtma_airtemp_backload():
+def cumulus_ndgd_rtma_airtemp_backload_from_s3():
     """Copy from CPC Dir and rename placing into correct S3 acquirable dir and notifying API to process.\n
     Files will be processed by hour."""
 
@@ -81,4 +81,4 @@ def cumulus_ndgd_rtma_airtemp_backload():
     notify_cumulus(copy_raw_airtemp())
 
 
-ndgd_rtma_dag = cumulus_ndgd_rtma_airtemp_backload()
+ndgd_rtma_dag = cumulus_ndgd_rtma_airtemp_backload_from_s3()
