@@ -114,7 +114,9 @@ def cumulus_mrms_v12():
                 def download(slug_, suffix_, pass_):
                     file_dir = f"{url_root}/{suffix_}"
                     # use current hour not previous hour (to get most recent product)
-                    execution_date = get_current_context()["logical_date"]
+                    execution_date = get_current_context()["logical_date"] + timedelta(
+                        hours=1
+                    )
                     filename = filename_template.substitute(
                         pass_=pass_,
                         datetime_=execution_date.strftime("%Y%m%d-%H0000"),
