@@ -24,14 +24,14 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 5,
-    "retry_delay": timedelta(minutes=30),
+    "retry_delay": timedelta(minutes=20),
 }
 
 
 @dag(
     default_args=default_args,
     tags=["cumulus", "precip", "MRMS"],
-    schedule_interval="10 * * * *",
+    schedule_interval="20 * * * *",
 )
 def cumulus_mrms_v12():
     """
@@ -113,7 +113,10 @@ def cumulus_mrms_v12():
                 @task(task_id=f"download_pass{pass_}")
                 def download(slug_, suffix_, pass_):
                     file_dir = f"{url_root}/{suffix_}"
-                    execution_date = get_current_context()["logical_date"]
+                    # use current hour not previous hour (to get most recent product)
+                    execution_date = get_current_context()["logical_date"] + timedelta(
+                        hours=1
+                    )
                     filename = filename_template.substitute(
                         pass_=pass_,
                         datetime_=execution_date.strftime("%Y%m%d-%H0000"),
