@@ -24,16 +24,16 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 5,
-    "retry_delay": timedelta(minutes=20),
+    "retry_delay": timedelta(minutes=15),
 }
 
 
 @dag(
     default_args=default_args,
     tags=["cumulus", "precip", "MRMS"],
-    schedule_interval="20 * * * *",
+    schedule_interval="0 * * * *",
 )
-def cumulus_mrms_v12():
+def cumulus_mrms_v12_pass2():
     """
     # Multi-Radar/Multi-Sensor V12
 
@@ -65,11 +65,6 @@ def cumulus_mrms_v12():
     regional_products = {
         "conus": [
             {
-                "slug": "ncep-mrms-v12-multisensor-qpe-01h-pass1",
-                "suffix": "MultiSensor_QPE_01H_Pass1",
-                "pass": 1,
-            },
-            {
                 "slug": "ncep-mrms-v12-multisensor-qpe-01h-pass2",
                 "suffix": "MultiSensor_QPE_01H_Pass2",
                 "pass": 2,
@@ -77,22 +72,12 @@ def cumulus_mrms_v12():
         ],
         "alaska": [
             {
-                "slug": "ncep-mrms-v12-msqpe01h-p1-alaska",
-                "suffix": "ALASKA/MultiSensor_QPE_01H_Pass1",
-                "pass": 1,
-            },
-            {
                 "slug": "ncep-mrms-v12-msqpe01h-p2-alaska",
                 "suffix": "ALASKA/MultiSensor_QPE_01H_Pass2",
                 "pass": 2,
             },
         ],
         "carib": [
-            {
-                "slug": "ncep-mrms-v12-msqpe01h-p1-carib",
-                "suffix": "CARIB/MultiSensor_QPE_01H_Pass1",
-                "pass": 1,
-            },
             {
                 "slug": "ncep-mrms-v12-msqpe01h-p2-carib",
                 "suffix": "CARIB/MultiSensor_QPE_01H_Pass2",
@@ -113,10 +98,7 @@ def cumulus_mrms_v12():
                 @task(task_id=f"download_pass{pass_}")
                 def download(slug_, suffix_, pass_):
                     file_dir = f"{url_root}/{suffix_}"
-                    # use current hour not previous hour (to get most recent product)
-                    execution_date = get_current_context()["logical_date"] + timedelta(
-                        hours=1
-                    )
+                    execution_date = get_current_context()["logical_date"]
                     filename = filename_template.substitute(
                         pass_=pass_,
                         datetime_=execution_date.strftime("%Y%m%d-%H0000"),
@@ -155,4 +137,4 @@ def cumulus_mrms_v12():
     _ = [create_task_group(key, val) for key, val in regional_products.items()]
 
 
-DAG_ = cumulus_mrms_v12()
+DAG_ = cumulus_mrms_v12_pass2()
