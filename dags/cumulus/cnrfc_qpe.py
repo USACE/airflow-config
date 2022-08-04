@@ -16,8 +16,8 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    # "start_date": (datetime.utcnow() - timedelta(hours=48)).replace(minute=0, second=0),
-    "start_date": datetime(2022, 7, 1),
+    "start_date": (datetime.utcnow() - timedelta(hours=48)).replace(minute=0, second=0),
+    # "start_date": datetime(2022, 7, 1),
     "catchup_by_default": True,
     # "email": ["airflow@airflow.com"],
     "email_on_failure": False,
@@ -33,7 +33,7 @@ default_args = {
     tags=["cumulus", "precip", "QPE", "CNRFC"],
     max_active_runs=4,
 )
-def cumulus_cnrfc_mpe():
+def cumulus_cnrfc_qpe():
     """This pipeline handles download, processing, and derivative product creation for \n
     CNRFC QPE\n
     URL Dir - https://www.cnrfc.noaa.gov/archive/YYYY/MMM/netcdfqpe/qpe.YYYYMMdd_HHMM.nc.gz\n
@@ -44,7 +44,7 @@ def cumulus_cnrfc_mpe():
     PRODUCT_SLUG = "cnrfc-qpe-06h"
 
     @task()
-    def download_raw_cnrfc_mpe():
+    def download_raw_cnrfc_qpe():
         logical_date = get_current_context()["logical_date"]
 
         last_day_of_current_month = calendar.monthrange(
@@ -98,7 +98,7 @@ def cumulus_cnrfc_mpe():
             s3_key=payload["s3_key"],
         )
 
-    notify_cumulus(download_raw_cnrfc_mpe())
+    notify_cumulus(download_raw_cnrfc_qpe())
 
 
-cbrfc_dag = cumulus_cnrfc_mpe()
+cbrfc_dag = cumulus_cnrfc_qpe()
