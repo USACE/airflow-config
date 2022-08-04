@@ -10,9 +10,6 @@ Airflow DAG
 
 import json
 from datetime import datetime, timedelta
-from sched import scheduler
-
-from black import schedule_formatting
 
 import helpers.cumulus as cumulus
 from airflow.decorators import dag, task
