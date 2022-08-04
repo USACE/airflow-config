@@ -10,6 +10,9 @@ Airflow DAG
 
 import json
 from datetime import datetime, timedelta
+from sched import scheduler
+
+from black import schedule_formatting
 
 import helpers.cumulus as cumulus
 from airflow.decorators import dag, task
@@ -33,6 +36,7 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["cumulus", "snow"],
+    schedule_interval="@daily",
     max_active_runs=4,
 )
 def cumulus_snodas_unmasked_backload():
