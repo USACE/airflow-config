@@ -2,7 +2,7 @@ import json
 
 # from airflow import AirflowException
 import requests
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.models import Variable
 from airflow.providers.http.hooks.http import HttpHook
 
@@ -11,6 +11,7 @@ S3_BUCKET = Variable.get("S3_BUCKET")
 
 acquirables = {
     "cnrfc-qpe-06h": "34a89c35-090d-46e8-964a-c621403301b9",
+    "cnrfc-qpf-06h": "c22785cd-400e-4664-aef8-426734825c2c",
     "ncrfc-rtmat-01h": "6c879d18-2eca-4b35-9fab-2b5f78262fa6",
     "ncrfc-fmat-01h": "28d16afe-2834-4d2c-9df2-fdf2c40e510f",
     "ncep-mrms-v12-msqpe01h-p2-carib": "a483aa42-4388-4289-a41e-6b78998066a7",
