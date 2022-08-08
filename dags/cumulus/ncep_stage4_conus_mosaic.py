@@ -40,7 +40,7 @@ def cumulus_ncep_stage4_conus_mosaic():
     """
 
     URL_ROOT = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/pcpanl/prod"
-    PRODUCT_SLUG = "ncep-stage4-mosaic"
+    PRODUCT_SLUG = "ncep-stage4-mosaic-01h"
 
     @task()
     def download_raw_stage4_qpe():
