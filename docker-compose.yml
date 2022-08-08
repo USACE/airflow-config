@@ -2,9 +2,13 @@
 # https://airflow.apache.org/docs/apache-airflow/stable/docker-compose.yaml
 networks:
   default:
+    name: airflow-config_default
+  cumulus:
     name: cumulus-api_default
-    # name: water-api_default
-    # name: instrumentation-api_default
+  water:
+    name: water-api_default
+  instrumentation:
+    name: instrumentation-api_default
 x-airflow-common:
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
@@ -90,8 +94,6 @@ x-airflow-common:
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
-    elasticmq:
-      condition: service_started
     airflowdb:
       condition: service_healthy
     pgbouncer:
@@ -133,14 +135,8 @@ services:
       QUIET: 0
       POOL_MODE: transaction
   #############################################################################
-  # ELASTIC MQ
+  # REDIS
   #############################################################################
-  # elasticmq:
-  #   build:
-  #     context: _docker/elasticmq
-  #   ports:
-  #     - "9324:9324"
-  #   restart: always
   redis:
     image: redis:latest
     expose:
@@ -209,6 +205,11 @@ services:
       <<: *airflow-common-depends-on
       airflow_init:
         condition: service_completed_successfully
+    networks:
+      - default
+      - cumulus
+      - water
+      - instrumentation
   #############################################################################
   # Airflow User Interface
   #############################################################################
