@@ -19,8 +19,8 @@ from helpers.downloads import trigger_download
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2006, 1, 1),
-    "end_date": datetime(2006, 5, 1),
+    "start_date": datetime(2003, 10, 1),
+    "end_date": datetime(2004, 10, 1),
     "catchup_by_default": False,
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
