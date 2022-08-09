@@ -32,7 +32,7 @@ default_args = {
     tags=["cumulus", "precip", "QPE", "CONUS", "stage4", "NCEP"],
     max_active_runs=4,
 )
-def cumulus_ncep_stage4_conus_mosaic():
+def cumulus_ncep_stage4_conus_01h():
     """This pipeline handles download, processing, and derivative product creation for \n
     NCEP Stage 4 MOSAIC QPE\n
     URL Dir - https://nomads.ncep.noaa.gov/pub/data/nccf/com/pcpanl/prod/pcpanl.20220808/st4_conus.YYYYMMHHMM.01h.grb2\n
@@ -73,4 +73,4 @@ def cumulus_ncep_stage4_conus_mosaic():
     notify_cumulus(download_raw_stage4_qpe())
 
 
-stage4_dag = cumulus_ncep_stage4_conus_mosaic()
+stage4_dag = cumulus_ncep_stage4_conus_01h()
