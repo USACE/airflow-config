@@ -92,8 +92,6 @@ with DAG(
     ##############################################################################
     for fcst_hour in range(0, 19):
 
-        print(f"Forecast Hour: {fcst_hour}")
-
         download_task_id = f"download_fcst_hr_{str(fcst_hour).zfill(2)}"
 
         download_task = PythonOperator(
