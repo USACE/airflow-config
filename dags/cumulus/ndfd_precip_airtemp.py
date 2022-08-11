@@ -106,7 +106,7 @@ with DAG(
 
         file_datetime = datetime.fromtimestamp(float(file_datetime))
         file_datetime = file_datetime.replace(tzinfo=timezone.utc)
-        logging.info("File datetime is: {file_datetime}")
+        logging.info(f"File datetime is: {file_datetime}")
 
         print(f"Downloading {src_file_url}")
 
