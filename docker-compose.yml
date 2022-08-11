@@ -77,7 +77,7 @@ x-airflow-common:
     AIRFLOW_CONN_CUMULUS: http://nologin:appkey@api
     AIRFLOW_CONN_MIDAS: http://nologin:appkey@api
     AIRFLOW_CONN_WATER: http://nologin:appkey@api
-    AIRFLOW_CONN_SHARED: https://nologin:appkey@develop-shared-api.castle.cloud/https
+    AIRFLOW_CONN_SHARED: https://nologin:appkey@develop-shared-api.corps.cloud/https
     # VARIABLES
     AIRFLOW_VAR_CWMSDATA: https://cwms-data.usace.army.mil/cwms-data
     AIRFLOW_VAR_S3_BUCKET: castle-data-develop
