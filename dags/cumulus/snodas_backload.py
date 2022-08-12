@@ -20,7 +20,7 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2003, 10, 1),
-    "end_date": datetime(2006, 10, 1),
+    "end_date": datetime(2008, 10, 1),
     "catchup_by_default": False,
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
