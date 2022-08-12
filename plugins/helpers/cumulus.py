@@ -10,6 +10,7 @@ S3_ACQUIRABLE_PREFIX = "cumulus/acquirables"
 S3_BUCKET = Variable.get("S3_BUCKET")
 
 acquirables = {
+    "abrfc-qpe-01h": "f7500b0e-5227-44fb-bcf1-746be7574cf0",
     "cnrfc-qpe-06h": "34a89c35-090d-46e8-964a-c621403301b9",
     "cnrfc-qpf-06h": "c22785cd-400e-4664-aef8-426734825c2c",
     "ncrfc-rtmat-01h": "6c879d18-2eca-4b35-9fab-2b5f78262fa6",
@@ -39,6 +40,9 @@ acquirables = {
     "prism-ppt-stable": "c1b5f8a5-f357-4c1a-9ec1-854db35c71d9",
     "prism-tmax-stable": "3952d221-502f-4937-b860-db8d4b3df435",
     "prism-tmin-stable": "8a20fb67-7c47-46be-b61d-73be8584300f",
+    "ncep-stage4-mosaic-01h": "29b1e90b-3f8c-484f-a7fa-7055aec4d5b8",
+    "ncep-stage4-mosaic-06h": "1011b702-9cb7-4b86-9638-ccbf2c19086f",
+    "ncep-stage4-mosaic-24h": "758958c4-0938-428e-8221-621bd07e9a34",
     "wrf-columbia-precip": "ec926de8-6872-4d2b-b7ce-6002221babcd",
     "wrf-columbia-airtemp": "552bf762-449f-4983-bbdc-9d89daada260",
     "wpc-qpf-2p5km": "0c725458-deb7-45bb-84c6-e98083874c0e",
