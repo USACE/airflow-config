@@ -34,6 +34,8 @@ default_args = {
     default_args=default_args,
     schedule_interval="5 * * * *",
     tags=["cumulus", "airtemp"],
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_ndgd_rtma_airtemp():
     """This pipeline handles download and processing for \n

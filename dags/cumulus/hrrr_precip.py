@@ -27,6 +27,8 @@ with DAG(
     # schedule_interval='*/15 * * * *'
     schedule_interval="@hourly",
     catchup=False,
+    max_active_runs=1,
+    max_active_tasks=4,
 ) as dag:
     dag.doc_md = """This pipeline handles download and API notification for HRRR hourly forecast products. \n
     High-Resolution Rapid Refresh (HRRR) \n

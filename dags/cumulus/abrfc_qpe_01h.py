@@ -30,7 +30,8 @@ default_args = {
     default_args=default_args,
     schedule_interval="10 * * * *",
     tags=["cumulus", "precip", "QPE", "ABRFC"],
-    max_active_runs=4,
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_abrfc_qpe_01h():
     """This pipeline handles download, processing, and derivative product creation for \n
