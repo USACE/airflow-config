@@ -35,7 +35,11 @@ default_args = {
 
 # An Example Using the Taskflow API
 @dag(
-    default_args=default_args, schedule_interval="20 13 * * *", tags=["cumulus", "snow"]
+    default_args=default_args,
+    schedule_interval="20 13 * * *",
+    tags=["cumulus", "snow"],
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_snodas_unmasked():
     """

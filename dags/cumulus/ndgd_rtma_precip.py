@@ -31,7 +31,11 @@ default_args = {
 
 
 @dag(
-    default_args=default_args, schedule_interval="5 * * * *", tags=["cumulus", "precip"]
+    default_args=default_args,
+    schedule_interval="5 * * * *",
+    tags=["cumulus", "precip"],
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_ndgd_rmta_precip():
     """This pipeline handles download and processing for \n
