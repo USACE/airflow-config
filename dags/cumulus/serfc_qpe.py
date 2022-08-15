@@ -50,6 +50,8 @@ def create_dag(**kwargs):
         tags=kwargs["tags"],
         schedule_interval=kwargs["schedule_interval"],
         doc_md=dedent(__doc__),
+        max_active_runs=2,
+        max_active_tasks=4,
     )
     def cumulus_acq_serfc():
         key_prefix = cumulus.S3_ACQUIRABLE_PREFIX

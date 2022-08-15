@@ -30,6 +30,8 @@ with DAG(
     # schedule_interval='*/15 * * * *',
     schedule_interval="12 * * * *",
     catchup=False,
+    max_active_runs=2,
+    max_active_tasks=4,
 ) as dag:
     dag.doc_md = __doc__
 

@@ -29,7 +29,11 @@ default_args = {
 
 
 @dag(
-    default_args=default_args, schedule_interval="30 20 * * *", tags=["cumulus", "snow"]
+    default_args=default_args,
+    schedule_interval="30 20 * * *",
+    tags=["cumulus", "snow"],
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_snodas_assimilation():
     """This pipeline handles download, processing, and derivative product creation for NOHRSC SNODAS Assimilation\n

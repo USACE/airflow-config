@@ -32,6 +32,8 @@ default_args = {
     default_args=default_args,
     tags=["cumulus", "precip", "MRMS"],
     schedule_interval="0 * * * *",
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_mrms_v12_pass2():
     """

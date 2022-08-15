@@ -31,7 +31,8 @@ default_args = {
     default_args=default_args,
     schedule_interval="15 0,6,12,18 * * *",
     tags=["cumulus", "precip", "QPE", "CNRFC"],
-    max_active_runs=4,
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_cnrfc_qpe():
     """This pipeline handles download, processing, and derivative product creation for \n

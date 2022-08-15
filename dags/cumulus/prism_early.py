@@ -30,7 +30,13 @@ default_args = {
 }
 
 
-@dag(default_args=default_args, schedule_interval="30 12 * * *", tags=["cumulus"])
+@dag(
+    default_args=default_args,
+    schedule_interval="30 12 * * *",
+    tags=["cumulus"],
+    max_active_runs=2,
+    max_active_tasks=4,
+)
 def cumulus_prism_early():
     """This pipeline handles download, processing, and derivative product creation for \n
     PRISM: Min Temp (tmin) early, Max Temp (tmax) early and Precip (ppt) early
