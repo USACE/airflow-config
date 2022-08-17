@@ -78,7 +78,7 @@ def cumulus_rtma_ru_anl_airtemp():
         for dt in sorted(datetimes):
             file_dir = f'{URL_ROOT}/rtma2p5_ru.{dt.strftime("%Y%m%d")}'
             filename = f'rtma2p5_ru.t{dt.strftime("%H%M")}z.2dvaranl_ndfd.grb2'
-            s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
+            s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{dt.strftime('%Y%m%d')}_{filename}"
             print(f"Downloading {filename}")
             output = trigger_download(
                 url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key
