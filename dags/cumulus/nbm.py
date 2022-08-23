@@ -59,7 +59,10 @@ def cumulus_nbm():
 
     url_root = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod"
     blend_template = Template("blend.${date_}/${hr_}/core")
-    filename_template = Template("blend.t${hr_}z.core.f${fhour_}.${region_}.grib2")
+    src_filename_template = Template("blend.t${hr_}z.core.f${fhour_}.${region_}.grib2")
+    dst_filename_template = Template(
+        "blend.${ymd_}.t${hr_}z.core.f${fhour_}.${region_}.grib2"
+    )
     product_slug = "nbm-co-01h"
 
     def create_task_group(**kwargs):
@@ -76,13 +79,21 @@ def cumulus_nbm():
                 blend = blend_template.substitute(
                     date_=execution_dt, hr_=f"{execution_hr:02d}"
                 )
-                filename = filename_template.substitute(
-                    hr_=f"{execution_hr:02d}", fhour_=f"{fhour:03d}", region_=region
+                src_filename = src_filename_template.substitute(
+                    hr_=f"{execution_hr:02d}",
+                    fhour_=f"{fhour:03d}",
+                    region_=region,
+                )
+                dst_filename = dst_filename_template.substitute(
+                    ymd_=execution_dt,
+                    hr_=f"{execution_hr:02d}",
+                    fhour_=f"{fhour:03d}",
+                    region_=region,
                 )
 
-                s3_key = f"{key_prefix}/{product_slug}/{filename}"
+                s3_key = f"{key_prefix}/{product_slug}/{dst_filename}"
                 trigger_download(
-                    url=f"{url_root}/{blend}/{filename}",
+                    url=f"{url_root}/{blend}/{src_filename}",
                     s3_bucket=s3_bucket,
                     s3_key=s3_key,
                 )
