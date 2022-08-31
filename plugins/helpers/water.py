@@ -1,5 +1,5 @@
 from typing import List
-from airflow.hooks.base_hook import BaseHook
+from airflow.hooks.base import BaseHook
 from airflow.providers.http.hooks.http import HttpHook
 from airflow import AirflowException
 from airflow.models import Variable

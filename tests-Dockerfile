@@ -1,0 +1,35 @@
+FROM python:3.8
+
+ARG AIRFLOW_HOME=/opt/airflow
+
+# ENV PYTHONUNBUFFERED=1
+ENV PYTEST_ADDOPTS="--color=yes"
+ENV AIRFLOW_HOME=${AIRFLOW_HOME}
+
+RUN apt-get update -y && apt-get install -y \
+  python3-pip \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install Pip Requirements
+COPY tests/requirements.txt /
+RUN pip3 install -r requirements.txt
+
+# cache buster
+RUN echo ${date}
+
+# # Source Code Directory
+RUN mkdir -p ${AIRFLOW_HOME}
+COPY ./dags/ ${AIRFLOW_HOME}/dags
+COPY ./plugins/ ${AIRFLOW_HOME}/plugins
+COPY ./tests/ ${AIRFLOW_HOME}/tests
+# COPY ./tests/airflow.env ${AIRFLOW_HOME}/
+
+COPY ./tests/entrypoint.sh /entrypoint.sh
+
+WORKDIR ${AIRFLOW_HOME}
+
+ENTRYPOINT [ "/entrypoint.sh" ]
+
+# For Testing; Keep Container Running to shell inside
+# ENTRYPOINT [ "/bin/sh", "-c", "while true; do sleep 2 && echo 'sleeping for 2 seconds'; done;" ]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
