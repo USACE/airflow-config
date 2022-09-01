@@ -22,7 +22,6 @@ RUN mkdir -p ${AIRFLOW_HOME}
 COPY ./dags/ ${AIRFLOW_HOME}/dags
 COPY ./plugins/ ${AIRFLOW_HOME}/plugins
 COPY ./tests/ ${AIRFLOW_HOME}/tests
-# COPY ./tests/airflow.env ${AIRFLOW_HOME}/
 
 COPY ./tests/entrypoint.sh /entrypoint.sh
 
