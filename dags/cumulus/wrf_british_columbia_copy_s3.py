@@ -7,7 +7,6 @@
 import json
 from pathlib import Path
 from string import Template
-from typing import List
 from datetime import datetime, timedelta
 from airflow.utils.task_group import TaskGroup
 
@@ -22,8 +21,8 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     # "start_date": datetime(1929, 1, 1),
-    "start_date": datetime(1980, 1, 1),
-    "end_date": datetime(1980, 1, 1),
+    "start_date": datetime(1929, 1, 1),
+    "end_date": datetime(1939, 1, 1),
     # "end_date": datetime(2017, 1, 1),
     "catchup_by_default": True,
     "email_on_failure": False,
@@ -50,15 +49,15 @@ def cumulus_copy_british_columbia():
 
     ## S3 Bucket and Key
 
-    Source Bucket = `colubia-river`
+    Source Bucket = `columbia-river`
 
-    key = `wrfout/d03fmt/reconstruction/*.nc`
+    key = `wrf_bc/d03fmtCom/reconstruction/*.nc`
 
     ## File Names
 
     ### Cumulus Acquirable
 
-    WRF Columbia River acquirable slug: `wrf-columbia-river`
+    WRF British Columbia acquirable slug: `wrf-bc`
 
     ### Product Slug Naming
 
@@ -66,9 +65,9 @@ def cumulus_copy_british_columbia():
 
     - Four part naming delimited by dash (`-`)
     - First part defines the model, which is WRF
-    - Second part is the project name defined by the `Pacific Northwestern Division Hydrology Portal`
+    - Second part is the project name
     - Third part is the year (YYYY); some years are defined as `summer` (s) or `winter` (w)
-    - The last part is the parameter name (file name)
+    - The last part is the parameter name (file name); trailing underscores (_) removed
     - Source files are netCDF with the suffix `.nc`
     - Destination files are netCDF with the suffix `.nc`
 
@@ -87,13 +86,13 @@ def cumulus_copy_british_columbia():
     |  VAPOR_PS.nc  |  -->  |  Vapor Pressure             |
 
     """
-    CUMULUS_ACQUIRABLE = "wrf-british-columbia"
+    CUMULUS_ACQUIRABLE = "wrf-bc"
 
     S3_SRC_BUCKET = "columbia-river"
     S3_SRC_KEY_PREFIX = "wrf_bc/d03fmtCom/reconstruction"
     S3_DST_BUCKET = "castle-data-develop"
 
-    filename_template = Template("wrf-british_columbia-${yr}${season}-${para}")
+    filename_template = Template("wrf-bc-${yr}${season}-${para}")
     filenames = [
         "DEWPNT_T.nc",
         "GROUND_T.nc",
@@ -125,7 +124,7 @@ def cumulus_copy_british_columbia():
                 product_filename = filename_template.substitute(
                     yr=execution_date.year,
                     season=season,
-                    para=filename.stem.lower().rstrip("_"),
+                    para=filename.stem.lower().replace("_", ""),
                 )
                 src_key = f"{S3_SRC_KEY_PREFIX}/{execution_date.year}{season}/ncf/{str(filename)}"
                 dst_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{CUMULUS_ACQUIRABLE}/{product_filename}{filename.suffix}"
