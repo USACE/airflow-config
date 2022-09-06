@@ -50,7 +50,7 @@ def cumulus_copy_columbia_wrf():
 
     ## S3 Bucket and Key
 
-    Source Bucket = `colubia-river`
+    Source Bucket = `columbia-river`
 
     key = `wrfout/d03fmt/reconstruction/*.nc`
 
@@ -66,9 +66,9 @@ def cumulus_copy_columbia_wrf():
 
     - Four part naming delimited by dash (`-`)
     - First part defines the model, which is WRF
-    - Second part is the project name defined by the `Pacific Northwestern Division Hydrology Portal`
+    - Second part is the project name
     - Third part is the year (YYYY); some years are defined as `summer` (s) or `winter` (w)
-    - The last part is the parameter name (file name)
+    - The last part is the parameter name (file name); trailing underscores (_) removed
     - Source files are netCDF with the suffix `.nc`
     - Destination files are netCDF with the suffix `.nc`
 
@@ -125,7 +125,7 @@ def cumulus_copy_columbia_wrf():
                 product_filename = filename_template.substitute(
                     yr=execution_date.year,
                     season=season,
-                    para=filename.stem.lower().rstrip("_").replace("_", "-"),
+                    para=filename.stem.lower().replace("_", ""),
                 )
                 src_key = f"{S3_SRC_KEY_PREFIX}/{execution_date.year}{season}/ncf/{str(filename)}"
                 dst_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{CUMULUS_ACQUIRABLE}/{product_filename}{filename.suffix}"
