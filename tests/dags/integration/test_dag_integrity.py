@@ -15,7 +15,7 @@ def test_at_least_one_tag():
         assert dag.tags, err_msg
 
 
-def test_retries_present():
+def test_at_least_one_retry():
     dag_bag = DagBag(include_examples=False)
     for dag in dag_bag.dags:
         retries = dag_bag.dags[dag].default_args.get("retries", 0)

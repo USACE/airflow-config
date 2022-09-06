@@ -36,7 +36,7 @@ with DAG(
     def purge_logs():
 
         display_storage()
-        bashCommand = "echo '\n-- Deleting files older than 2 days --' && find $AIRFLOW_HOME/logs -mtime +2 -exec rm -fv {} \;"
+        bashCommand = r"echo '\n-- Deleting files older than 2 days --' && find $AIRFLOW_HOME/logs -mtime +2 -exec rm -fv {} \;"
         ret = subprocess.run(bashCommand, capture_output=True, shell=True)
         lines = ret.stdout.decode().splitlines()
         for line in lines:
