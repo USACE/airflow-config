@@ -21,8 +21,10 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
+    # "start_date": datetime(1928, 1, 1),
     "start_date": datetime(1928, 1, 1),
-    "end_date": datetime(2018, 1, 1),
+    "end_date": datetime(1938, 1, 1),
+    # "end_date": datetime(2018, 1, 1),
     "catchup_by_default": True,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -35,6 +37,8 @@ default_args = {
     default_args=default_args,
     schedule_interval="@yearly",
     tags=["cumulus", "precip", "airtemp", "Weather Research and Forecasting"],
+    max_active_runs=2,
+    max_active_tasks=3,
 )
 def cumulus_copy_columbia_wrf():
     """
@@ -136,6 +140,15 @@ def cumulus_copy_columbia_wrf():
                     }
                 )
 
+            def notify_cumulus(notification):
+                # Airflow will convert the parameter to a string, convert it back
+                payload = json.loads(notification)
+                cumulus.notify_acquirablefile(
+                    acquirable_id=cumulus.acquirables[payload["product_slug"]],
+                    datetime=payload["datetime"],
+                    s3_key=payload["s3_key"],
+                )
+
             @task(task_id=f"copy_seasonal_winter_{filename.stem}")
             def copy_winter_season(filename: Path):
                 return copy_season(filename, "w")
@@ -144,23 +157,16 @@ def cumulus_copy_columbia_wrf():
             def copy_summer_season(filename: Path):
                 return copy_season(filename, "s")
 
-            @task(task_id=f"notify_w_{filename.stem}")
-            def notify_cumulus(notifications: List):
-                # Airflow will convert the parameter to a string, convert it back
-                for notice in notifications:
-                    payload = json.loads(notice)
-                    cumulus.notify_acquirablefile(
-                        acquirable_id=cumulus.acquirables[payload["product_slug"]],
-                        datetime=payload["datetime"],
-                        s3_key=payload["s3_key"],
-                    )
+            @task(task_id=f"notify_seasonal_winter_{filename.stem}")
+            def notify_cumulus_winter_season(notification):
+                notify_cumulus(notification)
 
-            notify_cumulus(
-                [
-                    copy_winter_season(filename),
-                    copy_summer_season(filename),
-                ],
-            )
+            @task(task_id=f"notify_seasonal_summer_{filename.stem}")
+            def notify_cumulus_summer_season(notification):
+                notify_cumulus(notification)
+
+            notify_cumulus_winter_season(copy_winter_season(filename))
+            notify_cumulus_summer_season(copy_summer_season(filename))
 
         return task_group
 
