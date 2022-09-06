@@ -51,7 +51,7 @@ acquirables = {
     "lmrfc-qpe-01h": "660ce26c-9b70-464b-8a17-5c923752545d",
     "nohrsc-snodas-assimilated": "21a331c1-4694-41d2-8cdf-7d44f38be66d",
     "wrf-columbia": "ec926de8-6872-4d2b-b7ce-6002221babcd",
-    "wrf-columbia-airtemp": "552bf762-449f-4983-bbdc-9d89daada260",
+    "wrf-bc": "552bf762-449f-4983-bbdc-9d89daada260",
 }
 
 
