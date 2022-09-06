@@ -183,7 +183,7 @@ def create_dag(**kwargs):
 
             @task(
                 task_id=f"sync_to_water_{office_symbol}",
-                trigger_rule="none_failed_or_skipped",
+                trigger_rule="none_failed_min_one_success",
             )
             def sync_to_water(locations):
                 is_empty = lambda v: "no value" if v is None else v

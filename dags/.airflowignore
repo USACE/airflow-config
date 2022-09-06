@@ -1,3 +1,4 @@
 # ignore dags in the _save subdir
 _save/*
 _to_be_migrated/*
+/__pycache__/*

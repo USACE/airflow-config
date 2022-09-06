@@ -1,0 +1,1 @@
+Credit ideas from: https://github.com/astronomer/airflow-testing-skeleton

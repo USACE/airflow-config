@@ -7,15 +7,16 @@ We already write to remote logs (via S3)
 """
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
-from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
 import logging
 import subprocess
 from textwrap import dedent
 
+default_args = {"owner": "airflow", "retries": 1, "retry_delay": timedelta(minutes=10)}
+
 with DAG(
+    default_args=default_args,
     dag_id="maint_purge_logs",
     schedule_interval="@daily",
     start_date=datetime(2022, 6, 1),
@@ -35,7 +36,7 @@ with DAG(
     def purge_logs():
 
         display_storage()
-        bashCommand = "echo '\n-- Deleting files older than 2 days --' && find $AIRFLOW_HOME/logs -mtime +2 -exec rm -fv {} \;"
+        bashCommand = r"echo '\n-- Deleting files older than 2 days --' && find $AIRFLOW_HOME/logs -mtime +2 -exec rm -fv {} \;"
         ret = subprocess.run(bashCommand, capture_output=True, shell=True)
         lines = ret.stdout.decode().splitlines()
         for line in lines:
