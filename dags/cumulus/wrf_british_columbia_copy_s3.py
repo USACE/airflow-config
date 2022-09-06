@@ -41,7 +41,7 @@ default_args = {
 )
 def cumulus_copy_british_columbia():
     """
-    # Weather Research and Forecasting - Columbia River Basin
+    # Weather Research and Forecasting - British Columbia
 
     ## S3 Processing
 
