@@ -7,7 +7,6 @@
 import json
 from pathlib import Path
 from string import Template
-from typing import List
 from datetime import datetime, timedelta
 from airflow.utils.task_group import TaskGroup
 
@@ -28,7 +27,7 @@ default_args = {
     "catchup_by_default": True,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 0,
+    "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
 

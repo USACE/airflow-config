@@ -43,8 +43,6 @@ acquirables = {
     "ncep-stage4-mosaic-01h": "29b1e90b-3f8c-484f-a7fa-7055aec4d5b8",
     "ncep-stage4-mosaic-06h": "1011b702-9cb7-4b86-9638-ccbf2c19086f",
     "ncep-stage4-mosaic-24h": "758958c4-0938-428e-8221-621bd07e9a34",
-    "wrf-columbia-precip": "ec926de8-6872-4d2b-b7ce-6002221babcd",
-    "wrf-columbia-airtemp": "552bf762-449f-4983-bbdc-9d89daada260",
     "wpc-qpf-2p5km": "0c725458-deb7-45bb-84c6-e98083874c0e",
     "nsidc-ua-swe-sd-v1": "4b0f8d9c-1be4-4605-8265-a076aa6aa555",
     "serfc-qpf-06h": "355d8d9b-1eb4-4f1d-93b7-d77054c5c267",
@@ -52,7 +50,8 @@ acquirables = {
     "lmrfc-qpf-06h": "fca9e8a4-23e3-471f-a56b-39956055a442",
     "lmrfc-qpe-01h": "660ce26c-9b70-464b-8a17-5c923752545d",
     "nohrsc-snodas-assimilated": "21a331c1-4694-41d2-8cdf-7d44f38be66d",
-    "wrf-columbia": "234ab142-a434-471b-a8c6-7b41ee341ac4",
+    "wrf-columbia": "ec926de8-6872-4d2b-b7ce-6002221babcd",
+    "wrf-columbia-airtemp": "552bf762-449f-4983-bbdc-9d89daada260",
 }
 
 
