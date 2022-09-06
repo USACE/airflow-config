@@ -52,6 +52,7 @@ acquirables = {
     "lmrfc-qpf-06h": "fca9e8a4-23e3-471f-a56b-39956055a442",
     "lmrfc-qpe-01h": "660ce26c-9b70-464b-8a17-5c923752545d",
     "nohrsc-snodas-assimilated": "21a331c1-4694-41d2-8cdf-7d44f38be66d",
+    "wrf-british-columbia":"b5bb46bd-97c8-4f3d-abf3-78a75ac7c5d9",
 }
 
 
