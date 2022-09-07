@@ -22,7 +22,7 @@ default_args = {
     "depends_on_past": False,
     # "start_date": datetime(1929, 1, 1),
     "start_date": datetime(1929, 1, 1),
-    "end_date": datetime(1939, 1, 1),
+    "end_date": datetime(1929, 1, 1),
     # "end_date": datetime(2017, 1, 1),
     "catchup_by_default": True,
     "email_on_failure": False,
