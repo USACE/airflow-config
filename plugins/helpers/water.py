@@ -1,3 +1,4 @@
+import json
 from typing import List
 from airflow.hooks.base import BaseHook
 from airflow.providers.http.hooks.http import HttpHook
@@ -278,6 +279,36 @@ def put_nws_stages(site, payload):
 
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
+        raise
+
+
+def get_cwms_timeseries(provider, datasource_type="cwms-timeseries"):
+
+    conn = get_connection()
+
+    h = HttpHook(http_conn_id=conn.conn_id, method="GET")
+    endpoint = f"/timeseries?provider={provider}&datasource_type={datasource_type}&key={conn.password}"
+    headers = {"Content-Type": "application/json"}
+    r = h.run(endpoint=endpoint, headers=headers)
+
+    return r.json()
+
+
+def post_cwms_timeseries(payload):
+
+    conn = get_connection()
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method="POST")
+        endpoint = f"/timeseries/measurements?key={conn.password}"
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        if r.status_code != "202":
+            print(f"Expected status code 202, received {r.status_code}")
+            print(r.text)
+
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        print(payload)
         raise
 
     return
