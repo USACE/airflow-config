@@ -1,7 +1,6 @@
 import json
 from datetime import datetime, timedelta
-import string
-from xml.dom import NotFoundErr
+import logging
 
 from airflow import DAG
 from airflow.decorators import dag, task
@@ -32,7 +31,7 @@ default_args = {
     max_active_runs=2,
     max_active_tasks=4,
     catchup=False,
-    description="A simple DAG",
+    description="Extract Project Timeseries for Project Charts",
 )
 def a2w_sync_project_ts():
     """Comments here"""
@@ -62,114 +61,65 @@ def a2w_sync_project_ts():
                         tsids.append(obj["key"])
                 return tsids
 
-            @task(task_id=f"extract_{office}_from_radar")
-            def extract(ts_list):
+            # Extract a single timeseries from RADAR
+            # Load/POST that single timeseries data back to Water API
+            # Note: This was done due to resource limits on RADAR
+            @task(task_id=f"extract_and_load{office}")
+            def extract_and_load(tsid):
 
-                if isinstance(ts_list, str):
-                    ts_list = [ts_list]
+                if tsid is None:
+                    logging.warning("tsid is None")
+                    raise AirflowSkipException
 
-                # ts_list = json.loads(ts_list)
-                print(ts_list)
-                print(len(ts_list))
-                print(type(ts_list))
-
-                # extract the latest value
-
+                # Define the extract time-windows based on the task datetime
                 logical_date = get_current_context()["logical_date"]
                 begin = logical_date.strftime("%Y-%m-%dT%H:%M")
                 end = (logical_date + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
 
-                if len(ts_list) == 0:
-                    raise AirflowSkipException
-
                 # begin = "2022-09-06T14:00"
                 # end = "2022-09-06T16:00"
-                r = get_radar_timeseries(ts_list, begin, end, office)
+                r = get_radar_timeseries([tsid], begin, end, office)
                 r = json.loads(r)
-                print(r)
-
-                # Let's dig out the minimal data we need.
-                # Minimize clutter in xcoms
+                # print(r)
 
                 # Grab the time-series list object which can be iterated over
                 # when multiple tsids are requested
                 ts_obj_list = r["time-series"]["time-series"]
 
-                return_obj_list = []
+                # it may be possible for the extract task to return an empty
+                # list if the tsid was not valid (not found in RADAR).
+                # Ensure erray is not empty before trying to extract items
+                if len(ts_obj_list) == 0:
+                    logging.warning(
+                        "No data returned from RADAR.  Skipping POST to Water API"
+                    )
+                    raise AirflowSkipException
 
                 for ts_obj in ts_obj_list:
-                    tsid = ts_obj["name"]
-                    ts_office = ts_obj["office"]
+
+                    a2w_payload = {}
+                    a2w_payload["provider"] = ts_obj["office"].lower()
+                    a2w_payload["datasource_type"] = "cwms-timeseries"
+                    a2w_payload["key"] = ts_obj["name"]
                     x = ts_obj["regular-interval-values"]["segments"][0]
-                    ts_latest_data = [
-                        x["last-time"],
-                        x["values"][x["value-count"] - 1][0],
-                    ]
-                    return_obj = {}
-                    return_obj["office"] = ts_office
-                    return_obj["tsid"] = tsid
-                    return_obj["latest"] = ts_latest_data
-                    return_obj_list.append(return_obj)
+                    a2w_payload["measurements"] = {
+                        "times": [x["last-time"]],
+                        "values": [x["values"][x["value-count"] - 1][0]],
+                    }
 
-                return return_obj_list
-
-            @task(task_id=f"load_{office}_into_a2w")
-            def load(office_data):
-
-                # data = []
-                # for x in office_data:
-                #     # print(x)
-                #     if len(x) > 0:
-                #         # print(f"adding {x[0]}")
-                #         data.append(x[0])
-
-                a2w_payload = []
-
-                for item in office_data:
-
-                    # it may be possible for the extract task to return an empty
-                    # list if the tsid was not valid (not found in RADAR).
-                    # Ensure erray is not empty before trying to extract items
-                    if len(item) > 0:
-                        i = item[0]
-
-                        obj = {}
-                        # print(item["office"])
-                        # print(item["tsid"])
-                        obj["provider"] = i["office"].lower()
-                        obj["datasource_type"] = "cwms-timeseries"
-                        obj["key"] = i["tsid"]
-                        obj["measurements"] = {
-                            "times": [i["latest"][0]],
-                            "values": [i["latest"][1]],
-                        }
-                        a2w_payload.append(obj)
-
-                        # Post to the A2W API
-                        post_a2w_cwms_timeseries(a2w_payload)
+                # Post to the A2W API
+                post_a2w_cwms_timeseries([a2w_payload])
 
                 return
 
-            # extract(prep_tsids(office=office, config=get_a2w_config((office))))
-
-            office_data = extract.expand(
-                ts_list=prep_tsids(office=office, config=get_a2w_config((office)))
+            # Dynamic Task Mapping
+            extract_and_load.expand(
+                tsid=prep_tsids(office=office, config=get_a2w_config((office)))
             )
 
-            load(office_data)
-
             return task_group
-
-    # @task
-    # def get_project_ts_from_radar(arg):
-    #     print(list(arg))
-
-    # get_project_ts_from_radar.expand(arg=get_a2w_config())
-    # consumer(arg=make_list())
-
-    # get_a2w_config()
 
     _ = [create_task_group(office=office) for office in ["LRH", "LRN", "MVP"]]
 
 
-project_ts_ydag = a2w_sync_project_ts()
+project_ts_dag = a2w_sync_project_ts()
