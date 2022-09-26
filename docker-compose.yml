@@ -76,7 +76,7 @@ x-airflow-common:
     AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?host=http%3A%2F%2Fminio%3A9000&region=us-east-1
     AIRFLOW_CONN_CUMULUS: http://nologin:appkey@api
     AIRFLOW_CONN_MIDAS: http://nologin:appkey@api
-    AIRFLOW_CONN_WATER: http://nologin:appkey@api
+    AIRFLOW_CONN_WATER: http://nologin:appkey@water-api
     AIRFLOW_CONN_SHARED: https://nologin:appkey@develop-shared-api.corps.cloud/https
     # VARIABLES
     AIRFLOW_VAR_CWMSDATA: https://cwms-data.usace.army.mil/cwms-data
