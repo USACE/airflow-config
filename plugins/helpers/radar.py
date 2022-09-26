@@ -1,9 +1,8 @@
 from urllib.parse import urlsplit, urlunsplit
-from airflow.models import Variable
 
 import requests
 
-url_parts = urlsplit(Variable.get("CWMSDATA"))
+url_parts = urlsplit("https://cwms-data.usace.army.mil/cwms-data")
 
 def api_request(subdirectory, query=None, fragment=None):
     url = urlunsplit(
