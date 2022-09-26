@@ -1,8 +1,8 @@
 from typing import List
-from airflow.hooks.base import BaseHook
-from airflow.providers.http.hooks.http import HttpHook
 from airflow import AirflowException
+from airflow.hooks.base import BaseHook
 from airflow.models import Variable
+from airflow.providers.http.hooks.http import HttpHook
 
 S3_BUCKET = Variable.get("S3_BUCKET")
 
@@ -95,18 +95,15 @@ def sync_radar_locations(payload):
     conn = get_connection()
     try:
         h = HttpHook(http_conn_id=conn.conn_id, method="POST")
-        endpoint = f"/sync/locations?key={conn.password}"
+        endpoint = f"/locations?key={conn.password}"
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
         r = h.run(endpoint=endpoint, json=payload, headers=headers)
-        print(r.status_code)
+        return r.text
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
-        raise
-
-    return
 
 
 def sync_usgs_sites(payload):
@@ -126,7 +123,7 @@ def sync_usgs_sites(payload):
     return
 
 
-def get_location_kind():
+def get_location_kind(kind=None):
 
     # Offices endpoint returns a list of objects
     conn = get_connection()
@@ -137,7 +134,12 @@ def get_location_kind():
 
     # Don't bother converting the string to list or obj, airflow will
     # convert to a string to pass across xcomms
-    return r.text
+    if kind is None:
+        return r.text
+    else:
+        location_kind = r.json()
+        kind_id = {item["name"]: item["id"] for item in location_kind}
+        return kind_id[kind]
 
 
 def get_location_office_id(office_id):
