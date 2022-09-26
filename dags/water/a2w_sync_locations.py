@@ -108,7 +108,7 @@ with DAG(
 
         return locations_list
 
-    @task
+    @task(trigger_rule="none_failed_min_one_success")
     def transform_location(locations):
         context = get_current_context()
         ti = context["ti"]
