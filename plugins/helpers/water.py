@@ -1,5 +1,4 @@
 from typing import List
-
 from airflow import AirflowException
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable
