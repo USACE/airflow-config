@@ -171,11 +171,15 @@ with DAG(
     @task
     def post_locations(locations):
         loc = json_drop_duplicates(locations)
-        return_message = water.sync_radar_locations(loc)
-        # for loc in locations:
-        #     return_message = water.sync_radar_locations(
-        #         payload=loc
-        #     )
+        # TODO: Review locations endpoint to see if it really needs to be
+        # all or nothing with the list of entries.  Currently, each location
+        # has to make a call to the water api to allow any new location to be added.
+        # return_message = water.sync_radar_locations(loc)
+        
+        for loc in locations:
+            return_message = water.sync_radar_locations(
+                payload=loc
+            )
         # print(f"{return_message=}")
 
     offices = cwms_offices()
