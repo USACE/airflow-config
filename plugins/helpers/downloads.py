@@ -7,7 +7,7 @@ from pathlib import Path
 import os
 from urllib.request import urlretrieve
 
-from airflow.providers.amazon.aws.hooks.lambda_function import AwsLambdaHook
+from airflow.providers.amazon.aws.hooks.lambda_function import LambdaHook
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 # CONSTANTS
@@ -116,7 +116,7 @@ def download(url, outfile):
 
 def trigger_download_lambda(payload):
     """Sends Message to AWS lambda to perform download"""
-    hook = AwsLambdaHook(
+    hook = LambdaHook(
         aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION,
         function_name=DOWNLOAD_OPERATOR_USE_LAMBDA_NAME,
         region_name=DOWNLOAD_OPERATOR_USE_LAMBDA_REGION,
