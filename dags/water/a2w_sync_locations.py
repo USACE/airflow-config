@@ -3,7 +3,6 @@
 """
 
 import json
-from termios import TIOCPKT_STOP
 import pandas as pd
 from datetime import datetime, timedelta
 

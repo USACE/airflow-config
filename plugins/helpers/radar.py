@@ -1,4 +1,3 @@
-import os
 from urllib.parse import urlsplit, urlunsplit
 from airflow.models import Variable
 
