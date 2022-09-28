@@ -30,9 +30,25 @@ def get_static_offices():
         "LRB", "LRC", "LRD", "LRE", "LRH", "LRL", "LRN", "LRP", 
         "MVD", "MVK", "MVM", "MVN", "MVP", "MVR", "MVS", 
         "NAB", "NAD", "NAE", "NAN", "NAO", "NAP",
-        "NWD", "NWDM", "NWDP", "POA", "POD", "POH",
+        "NWD", "NWK", "NWO", "NWP", "NWS", "NWW", 
+        "POA", "POD", "POH",
         "SAC", "SAD", "SAJ", "SAM", "SAS", "SAW",
         "SPA", "SPD", "SPK", "SPL", "SPN", 
         "SWD", "SWF", "SWG", "SWL", "SWT"
         ]
     # fmt: on
+
+
+def get_nwd_group(office):
+
+    nwd_map = {
+        "NWK": "NWDM",
+        "NWO": "NWDM",
+        "NWP": "NWDP",
+        "NWS": "NWDP",
+        "NWW": "NWDP",
+        "NWD": "NWD",
+    }
+
+    if office.upper() in nwd_map.keys():
+        return nwd_map[office]
