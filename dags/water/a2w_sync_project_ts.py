@@ -11,6 +11,7 @@ from airflow.exceptions import AirflowSkipException
 from helpers.radar import get_timeseries as get_radar_timeseries
 from helpers.water import get_cwms_timeseries as get_a2w_cwms_timeseries
 from helpers.water import post_cwms_timeseries as post_a2w_cwms_timeseries
+from helpers.sharedApi import get_static_offices
 
 default_args = {
     "owner": "airflow",
@@ -119,7 +120,7 @@ def a2w_sync_project_ts():
 
             return task_group
 
-    _ = [create_task_group(office=office) for office in ["LRH", "LRN", "MVP"]]
+    _ = [create_task_group(office=office) for office in get_static_offices()]
 
 
 project_ts_dag = a2w_sync_project_ts()

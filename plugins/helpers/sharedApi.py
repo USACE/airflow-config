@@ -22,3 +22,17 @@ def get_offices():
     # Don't bother converting the string to list or obj, airflow will
     # convert to a string to pass across xcomms
     return r.text
+
+
+def get_static_offices():
+    # fmt: off
+    return [
+        "LRB", "LRC", "LRD", "LRE", "LRH", "LRL", "LRN", "LRP", 
+        "MVD", "MVK", "MVM", "MVN", "MVP", "MVR", "MVS", 
+        "NAB", "NAD", "NAE", "NAN", "NAO", "NAP",
+        "NWD", "NWDM", "NWDP", "POA", "POD", "POH",
+        "SAC", "SAD", "SAJ", "SAM", "SAS", "SAW",
+        "SPA", "SPD", "SPK", "SPL", "SPN", 
+        "SWD", "SWF", "SWG", "SWL", "SWT"
+        ]
+    # fmt: on
