@@ -33,3 +33,16 @@ def get_timeseries(tsids: list, begin: str, end: str, office=None):
     return api_request(
         "timeseries", f"name={tsid_str}{office_str}&begin={begin}&end={end}"
     )
+
+
+def get_levels(tsids: list, office=None):
+    if len(tsids) == 0:
+        raise AirflowException("Invalid parameters provided for function.")
+    tsid_str = "|".join(tsids)
+
+    if office is not None:
+        office_str = f"&office={office}"
+    else:
+        office_str = ""
+
+    return api_request("levels", f"name={tsid_str}{office_str}")
