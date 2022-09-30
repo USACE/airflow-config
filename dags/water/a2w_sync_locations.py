@@ -27,7 +27,6 @@ Water API endpoint `/sync/locations`
 __North America centroid default for missing coordinates__
 """
 
-from itertools import chain
 import json
 from datetime import datetime, timedelta
 
@@ -35,6 +34,7 @@ import helpers.radar as radar
 import helpers.water as water
 import pandas as pd
 from airflow.decorators import dag, task
+from airflow.operators.python import get_current_context
 from airflow.utils.task_group import TaskGroup
 from helpers.sharedApi import get_nwd_group, get_static_offices
 
@@ -78,6 +78,17 @@ def json_drop_duplicates(payload):
     doc_md=__doc__,
 )
 def a2w_sync_locations():
+    @task
+    def office_kind_ids(**context):
+        ti = context["task_instance"]
+        water_kind_ids = json.loads(water.get_location_kind())
+        kind_ids = {item["name"]: item["id"] for item in water_kind_ids}
+        water_office_ids = json.loads(water.get_offices())
+        office_ids = {item["symbol"]: item["id"] for item in water_office_ids}
+
+        ti.xcom_push(key="office_ids", value=office_ids)
+        ti.xcom_push(key="kind_ids", value=kind_ids)
+
     def create_tasks_group(office):
         with TaskGroup(group_id=f"{office}") as task_group:
 
@@ -102,11 +113,10 @@ def a2w_sync_locations():
 
             @task(task_id=f"transform_locations_{office}")
             def transform_locations(office_locations):
-                # from water, get the location kinds, offices, and make a dict
-                water_kind_ids = json.loads(water.get_location_kind())
-                kind_ids = {item["name"]: item["id"] for item in water_kind_ids}
-                water_office_ids = json.loads(water.get_offices())
-                office_ids = {item["symbol"]: item["id"] for item in water_office_ids}
+                context = get_current_context()
+                ti = context["task_instance"]
+                office_ids = ti.xcom_pull(task_ids="office_kind_ids", key="office_ids")
+                kind_ids = ti.xcom_pull(task_ids="office_kind_ids", key="kind_ids")
 
                 radar_locations = []
                 for location in office_locations:
@@ -170,21 +180,21 @@ def a2w_sync_locations():
             def sync_locations(locations):
                 """
                 Loop through locations
-                
-                TODO: Look at Go endpoint sync/locations.  There are conflicts
-                between office_id, name, and sometimes slug.  This may be caused
-                by the sync routine within a transaction not seeing conficts due
-                to not committed at the time.
                 """
-                loc = json_drop_duplicates(locations)
-                for l in loc:
-                    water.sync_radar_locations(l)
+                water.sync_radar_locations(locations)
+                # loc = json_drop_duplicates(locations)
+                # for l in loc:
+                #     water.sync_radar_locations(l)
 
             sync_locations(transform_locations(list_locations(office)))
 
         return task_group
 
-    _ = [create_tasks_group(office) for office in get_static_offices()]
+    task_groups = [create_tasks_group(office) for office in get_static_offices()]
+
+    _office_kind_ids = office_kind_ids()
+
+    _office_kind_ids >> task_groups
 
 
 sync_locations_dag = a2w_sync_locations()
