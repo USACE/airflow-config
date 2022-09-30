@@ -143,25 +143,19 @@ def get_location_kind(kind=None):
         return kind_id[kind]
 
 
-def get_location_office_id(office_id):
+def get_locations(office_id=None, kind_id=None):
 
-    # Offices endpoint returns a list of objects
-    conn = get_connection()
-    h = HttpHook(http_conn_id=conn.conn_id, method="GET")
-    endpoint = f"/locations?office_id={office_id}"
-    headers = {"Content-Type": "application/json"}
-    r = h.run(endpoint=endpoint, headers=headers)
+    kind_str = ""
+    if kind_id is not None:
+        kind_str = f"&kind_id={kind_id}"
 
-    # Don't bother converting the string to list or obj, airflow will
-    # convert to a string to pass across xcomms
-    return (r.status_code, r.json())
-
-
-def get_locations():
+    office_str = ""
+    if office_id is not None:
+        office_str = f"&office_id={office_id}"
 
     conn = get_connection()
     h = HttpHook(http_conn_id=conn.conn_id, method="GET")
-    endpoint = f"/locations"
+    endpoint = f"/locations?{office_str}{kind_str}"
     headers = {"Content-Type": "application/json"}
     r = h.run(endpoint=endpoint, headers=headers)
 
@@ -296,7 +290,7 @@ def get_cwms_timeseries(provider, datasource_type="cwms-timeseries"):
     return r.json()
 
 
-def post_cwms_timeseries(payload):
+def post_cwms_timeseries_measurements(payload):
 
     conn = get_connection()
     try:
@@ -306,6 +300,26 @@ def post_cwms_timeseries(payload):
         r = h.run(endpoint=endpoint, json=payload, headers=headers)
         if r.status_code != "202":
             print(f"Expected status code 202, received {r.status_code}")
+            print(r.text)
+
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        print(payload)
+        raise
+
+    return
+
+
+def post_cwms_timeseries(payload):
+
+    conn = get_connection()
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method="POST")
+        endpoint = f"/timeseries?key={conn.password}"
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        if r.status_code != "201":
+            print(f"Expected status code 201, received {r.status_code}")
             print(r.text)
 
     except AirflowException as error:
