@@ -96,7 +96,7 @@ def sync_radar_locations(payload):
     conn = get_connection()
     try:
         h = HttpHook(http_conn_id=conn.conn_id, method="POST")
-        endpoint = f"/locations?key={conn.password}"
+        endpoint = f"/sync/locations?key={conn.password}"
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
