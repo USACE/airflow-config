@@ -114,6 +114,8 @@ def a2w_sync_timeseries_paths_v2():
             @task(task_id=f"extract_{office}_radar_timeseries")
             def extract_radar_timeseries(location_name):
 
+                logging.info(f"Getting tsids for location -->  {location_name}")
+
                 # Define the extract time-windows based on the task datetime
                 logical_date = get_current_context()["logical_date"]
                 begin = (logical_date - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
@@ -133,8 +135,6 @@ def a2w_sync_timeseries_paths_v2():
                 if len(ts_obj_list) == 0:
                     logging.warning(f"No data returned from RADAR for {location_name}.")
                     raise AirflowSkipException
-
-                print(f"Getting tsids for location -->  {location_name}")
 
                 exclude_fpart_words = ["raw", "fcst"]
 
@@ -216,6 +216,7 @@ def a2w_sync_timeseries_paths_v2():
                 locations=extract_a2w_locs_task
             )
 
+            # Dynamic Task Mapping - each location run through function
             extract_radar_ts = extract_radar_timeseries.expand(
                 location_name=transform_locations_task,
             )
