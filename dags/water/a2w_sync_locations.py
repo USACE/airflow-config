@@ -34,7 +34,6 @@ import helpers.radar as radar
 import helpers.water as water
 import pandas as pd
 from airflow.decorators import dag, task
-from airflow.operators.python import get_current_context
 from airflow.utils.task_group import TaskGroup
 from helpers.sharedApi import get_nwd_group, get_static_offices
 
@@ -79,15 +78,20 @@ def json_drop_duplicates(payload):
 )
 def a2w_sync_locations():
     @task
-    def office_kind_ids(**context):
-        ti = context["task_instance"]
-        water_kind_ids = json.loads(water.get_location_kind())
-        kind_ids = {item["name"]: item["id"] for item in water_kind_ids}
+    def get_a2w_office_ids():
         water_office_ids = json.loads(water.get_offices())
         office_ids = {item["symbol"]: item["id"] for item in water_office_ids}
+        return office_ids
 
-        ti.xcom_push(key="office_ids", value=office_ids)
-        ti.xcom_push(key="kind_ids", value=kind_ids)
+    office_ids = get_a2w_office_ids()
+
+    @task
+    def get_a2w_office_kind_ids():
+        water_kind_ids = json.loads(water.get_location_kind())
+        kind_ids = {item["name"]: item["id"] for item in water_kind_ids}
+        return kind_ids
+
+    office_kind_ids = get_a2w_office_kind_ids()
 
     def create_tasks_group(office):
         with TaskGroup(group_id=f"{office}") as task_group:
@@ -112,11 +116,7 @@ def a2w_sync_locations():
                 return locations_list
 
             @task(task_id=f"transform_locations_{office}")
-            def transform_locations(office_locations):
-                context = get_current_context()
-                ti = context["task_instance"]
-                office_ids = ti.xcom_pull(task_ids="office_kind_ids", key="office_ids")
-                kind_ids = ti.xcom_pull(task_ids="office_kind_ids", key="kind_ids")
+            def transform_locations(office_locations, office_ids, kind_ids):
 
                 radar_locations = []
                 for location in office_locations:
@@ -194,15 +194,19 @@ def a2w_sync_locations():
                 # for l in loc:
                 #     water.sync_radar_locations(l)
 
-            sync_locations(transform_locations(list_locations(office)))
+            sync_locations(
+                transform_locations(
+                    office_locations=list_locations(office),
+                    office_ids=office_ids,
+                    kind_ids=office_kind_ids,
+                )
+            )
 
         return task_group
 
     task_groups = [create_tasks_group(office) for office in get_static_offices()]
 
-    _office_kind_ids = office_kind_ids()
-
-    _office_kind_ids >> task_groups
+    office_ids >> office_kind_ids >> task_groups
 
 
 sync_locations_dag = a2w_sync_locations()
