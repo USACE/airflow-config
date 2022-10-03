@@ -96,7 +96,7 @@ def sync_radar_locations(payload):
     conn = get_connection()
     try:
         h = HttpHook(http_conn_id=conn.conn_id, method="POST")
-        endpoint = f"/locations?key={conn.password}"
+        endpoint = f"/sync/locations?key={conn.password}"
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -105,6 +105,8 @@ def sync_radar_locations(payload):
         return r.text
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
+        print(json.dumps(payload))
+        raise
 
 
 def sync_usgs_sites(payload):
