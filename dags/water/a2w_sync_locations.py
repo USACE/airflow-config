@@ -125,7 +125,6 @@ def a2w_sync_locations():
                     office = location["identity"]["office"]
                     bounding_office = location["political"]["bounding-office"]
 
-                    print(f"office is: {office}")
                     if office == bounding_office or bounding_office is None:
                         the_office = office
                     # If a division/region has the same location name as the district and sets the
