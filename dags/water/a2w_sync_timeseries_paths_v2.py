@@ -87,8 +87,8 @@ def a2w_sync_timeseries_paths_v2():
                 office_timeseries = water.get_cwms_timeseries(
                     provider=office, datasource_type="cwms-timeseries"
                 )
-                if len(office_timeseries) == 0:
-                    raise AirflowSkipException(f"No records found for {office}")
+                # if len(office_timeseries) == 0:
+                #     raise AirflowSkipException(f"No records found for {office}")
 
                 return office_timeseries
 
@@ -145,11 +145,21 @@ def a2w_sync_timeseries_paths_v2():
                     loc_payload["provider"] = ts_obj["office"].lower()
                     loc_payload["datasource_type"] = "cwms-timeseries"
                     loc_payload["key"] = ts_obj["name"]
-                    x = ts_obj["regular-interval-values"]["segments"][0]
-                    loc_payload["measurements"] = {
-                        "times": [x["last-time"]],
-                        "values": [x["values"][x["value-count"] - 1][0]],
-                    }
+                    try:
+                        x = ts_obj["regular-interval-values"]["segments"][0]
+                        # Note: "values" [[value, quality_code]]
+                        loc_payload["measurements"] = {
+                            "times": [x["last-time"]],
+                            "values": [x["values"][x["value-count"] - 1][0]],
+                        }
+
+                    except:
+                        x = ts_obj["irregular-interval-values"]["values"]
+                        # Note: "values" [["time", value, quality_code]]
+                        loc_payload["measurements"] = {
+                            "times": [x[len(x) - 1][0]],
+                            "values": [x[len(x) - 1][1]],
+                        }
                     # print(loc_payload)
 
                     tsid_parts = loc_payload["key"].split(".")
@@ -234,7 +244,7 @@ def a2w_sync_timeseries_paths_v2():
             return task_group
 
     # _ = [create_task_group(office=office) for office in get_static_offices()]
-    _ = [create_task_group(office=office) for office in ["LRH", "LRN", "MVP"]]
+    _ = [create_task_group(office=office) for office in ["LRN", "MVP"]]
 
 
 timeseries_dag = a2w_sync_timeseries_paths_v2()
