@@ -205,6 +205,12 @@ def a2w_sync_locations():
 
     task_groups = [create_tasks_group(office) for office in get_static_offices()]
 
+    # Force task groups to run in serial instead of default parallel
+    for idx, tg in enumerate(task_groups):
+        if idx > 0:
+            last_task_group >> tg
+        last_task_group = tg
+
     office_ids >> office_kind_ids >> task_groups
 
 

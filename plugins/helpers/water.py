@@ -105,6 +105,8 @@ def sync_radar_locations(payload):
         return r.text
     except AirflowException as error:
         print(f"Airflow Exception: {error}")
+        print(json.dumps(payload))
+        raise
 
 
 def sync_usgs_sites(payload):
