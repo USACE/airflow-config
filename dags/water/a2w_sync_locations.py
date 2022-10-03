@@ -74,6 +74,7 @@ def json_drop_duplicates(payload):
     tags=["a2w", "radar"],
     max_active_runs=2,
     max_active_tasks=3,
+    catchup=False,
     doc_md=__doc__,
 )
 def a2w_sync_locations():
