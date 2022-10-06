@@ -22,7 +22,7 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 1,
-    "retry_delay": timedelta(minutes=5),
+    "retry_delay": timedelta(minutes=1),
 }
 
 
@@ -31,7 +31,7 @@ default_args = {
     tags=["a2w"],
     schedule_interval="0 14 * * *",
     max_active_runs=2,
-    max_active_tasks=4,
+    max_active_tasks=6,
     catchup=False,
     description="Extract Project Timeseries Paths from RADAR, Post to Water API",
 )
@@ -62,7 +62,7 @@ def a2w_sync_timeseries_paths_v2():
 
         with TaskGroup(group_id=f"{office}") as task_group:
 
-            @task(task_id=f"extract_{office}_a2w_locations")
+            @task(task_id=f"extract_{office}_a2w_locations", trigger_rule="all_done")
             def extract_a2w_office_locations(office: str, offices: list):
                 office_id = get_office_id_by_symbol(office, offices)
 
@@ -82,7 +82,7 @@ def a2w_sync_timeseries_paths_v2():
 
             # -------------------------------------------
 
-            @task(task_id=f"extract_{office}_a2w_timeseries")
+            @task(task_id=f"extract_{office}_a2w_timeseries", trigger_rule="all_done")
             def extract_a2w_office_timeseries(office: str):
                 office_timeseries = water.get_cwms_timeseries(
                     provider=office, datasource_type="cwms-timeseries"
@@ -121,13 +121,26 @@ def a2w_sync_timeseries_paths_v2():
                 begin = (logical_date - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
                 end = (logical_date + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
 
-                r = radar.get_timeseries([location_name + "*"], begin, end, office)
-                print(f"Radar response: {r}")
+                # Special case for NWDP, NWDM
+                radar_office = office
+                if get_nwd_group(office) is not None:
+                    radar_office = get_nwd_group(office)
+
+                r = radar.get_timeseries(
+                    [location_name + "*"], begin, end, radar_office
+                )
+                if r == None:
+                    raise ValueError(f"Invalid Response: {r}")
+
                 r = json.loads(r)
 
                 # Grab the time-series list object which can be iterated over
                 # when multiple tsids are requested
                 ts_obj_list = r["time-series"]["time-series"]
+
+                exclude_fpart_words = ["raw", "fcst"]
+
+                location_results = []
 
                 # it may be possible for the extract task to return an empty
                 # list if the tsid was not valid (not found in RADAR).
@@ -135,14 +148,13 @@ def a2w_sync_timeseries_paths_v2():
                 if len(ts_obj_list) == 0:
                     logging.warning(f"No data returned from RADAR for {location_name}.")
                     raise AirflowSkipException
+                    # return location_results
 
-                exclude_fpart_words = ["raw", "fcst"]
-
-                location_results = []
                 for ts_obj in ts_obj_list:
 
                     loc_payload = {}
-                    loc_payload["provider"] = ts_obj["office"].lower()
+                    # loc_payload["provider"] = ts_obj["office"].lower()
+                    loc_payload["provider"] = office
                     loc_payload["datasource_type"] = "cwms-timeseries"
                     loc_payload["key"] = ts_obj["name"]
                     try:
@@ -179,11 +191,19 @@ def a2w_sync_timeseries_paths_v2():
 
             @task(
                 task_id=f"load_{office}_timeseries_into_a2w",
-                trigger_rule="none_failed_min_one_success",
+                trigger_rule="all_done",
             )
             def load_timeseries_into_a2w(
                 location_timeseries_list: _LazyXComAccess, a2w_timeseries
             ):
+
+                print(type(location_timeseries_list))
+                print(
+                    f"Length of location_timeseries_list: {len(location_timeseries_list)}"
+                )
+                print(f"Length of a2w_timeseries: {len(a2w_timeseries)}")
+                # if type(location_timeseries_list) != list:
+                #     raise AirflowSkipException(f"No timeseries to post")
 
                 new_timeseries = []
 
@@ -210,13 +230,41 @@ def a2w_sync_timeseries_paths_v2():
                 for t in new_timeseries:
                     print(t)
 
-                print("--- existing ts in a2w ------")
-                for existing_ts in a2w_timeseries:
-                    print(existing_ts)
+                # print("--- existing ts in a2w ------")
+                # for existing_ts in a2w_timeseries:
+                #     print(existing_ts)
 
-                water.post_cwms_timeseries(new_timeseries)
+                if len(new_timeseries) > 0:
+                    print(f"Posting {len(new_timeseries)} timeseries")
+                    water.post_cwms_timeseries(new_timeseries)
 
                 return
+
+            # -------------------------------------------
+
+            # @task(
+            #     task_id=f"load_{office}_timeseries_measurements_into_a2w",
+            #     trigger_rule="all_done",
+            # )
+            # def load_timeseries_measurements_into_a2w(
+            #     location_timeseries_list: _LazyXComAccess,
+            # ):
+
+            #     payload = []
+            #     # This should be a list of lists.
+            #     # Each outer list represents a base location search results
+            #     # Inner list is all timeseries found for that base location
+            #     for loc_ts_list in location_timeseries_list:
+            #         # print(loc_ts)
+            #         # Loop over the list of timeseries related to a given base location
+            #         for ts_obj in loc_ts_list:
+            #             payload.append(ts_obj)
+
+            #     if len(payload) > 0:
+            #         print(f"Posting {len(payload)} timeseries measurment objects")
+            #         water.post_cwms_timeseries_measurements(payload)
+            #     else:
+            #         raise AirflowSkipException(f"No timeseries measurements to post")
 
             # -------------------------------------------
 
@@ -235,6 +283,10 @@ def a2w_sync_timeseries_paths_v2():
                 extract_radar_ts, extract_a2w_ts_task
             )
 
+            # load_ts_measurements_into_a2w = load_timeseries_measurements_into_a2w(
+            #     extract_radar_ts
+            # )
+
             # fmt: off
             extract_a2w_locs_task >> transform_locations_task >> extract_radar_ts >> load_ts_into_a2w
 
@@ -243,8 +295,17 @@ def a2w_sync_timeseries_paths_v2():
 
             return task_group
 
-    # _ = [create_task_group(office=office) for office in get_static_offices()]
-    _ = [create_task_group(office=office) for office in ["LRN", "MVP"]]
+    task_groups = [create_task_group(office=office) for office in get_static_offices()]
+    # task_groups = [
+    #     create_task_group(office=office)
+    #     for office in ["LRH", "LRN", "LRD", "NWP", "NWO", "NWS", "NWW"]
+    # ]
+
+    # Force task groups to run in serial instead of default parallel
+    # for idx, tg in enumerate(task_groups):
+    #     if idx > 0:
+    #         last_task_group >> tg
+    #     last_task_group = tg
 
 
 timeseries_dag = a2w_sync_timeseries_paths_v2()

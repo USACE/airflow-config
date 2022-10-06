@@ -280,12 +280,12 @@ def put_nws_stages(site, payload):
         raise
 
 
-def get_cwms_timeseries(provider, datasource_type="cwms-timeseries"):
+def get_cwms_timeseries(provider, datasource_type="cwms-timeseries", mapped=0):
 
     conn = get_connection()
 
     h = HttpHook(http_conn_id=conn.conn_id, method="GET")
-    endpoint = f"/timeseries?provider={provider}&datasource_type={datasource_type}&key={conn.password}"
+    endpoint = f"/timeseries?provider={provider}&datasource_type={datasource_type}&only_mapped={mapped}&key={conn.password}"
     headers = {"Content-Type": "application/json"}
     r = h.run(endpoint=endpoint, headers=headers)
 
@@ -318,6 +318,26 @@ def post_cwms_timeseries(payload):
     try:
         h = HttpHook(http_conn_id=conn.conn_id, method="POST")
         endpoint = f"/timeseries?key={conn.password}"
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=endpoint, json=payload, headers=headers)
+        if r.status_code != "201":
+            print(f"Expected status code 201, received {r.status_code}")
+            print(r.text)
+
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        print(payload)
+        raise
+
+    return
+
+
+def post_cwms_timeseries_measurements(payload):
+
+    conn = get_connection()
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method="POST")
+        endpoint = f"/timeseries/measurements?key={conn.password}"
         headers = {"Content-Type": "application/json"}
         r = h.run(endpoint=endpoint, json=payload, headers=headers)
         if r.status_code != "201":
