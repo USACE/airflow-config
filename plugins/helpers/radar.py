@@ -15,9 +15,17 @@ def api_request(subdirectory, query=None, fragment=None):
             fragment,
         )
     )
-    r = requests.get(url)
-    if r.status_code == 200:
-        return r.text
+    try:
+        r = requests.get(url=url, timeout=90)
+        if r.status_code == 200:
+            return r.text
+    except AirflowException as err:
+        print(f"Airflow Exception: {err}")
+        raise
+    finally:
+        if r is not None:
+            r.close()
+            r = None
 
 
 def get_timeseries(tsids: list, begin: str, end: str, office=None):

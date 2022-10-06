@@ -9,8 +9,9 @@ from airflow.operators.python import get_current_context
 from airflow.exceptions import AirflowSkipException
 
 from helpers.radar import get_timeseries as get_radar_timeseries
+from helpers.radar import get_levels as get_radar_levels
 from helpers.water import get_cwms_timeseries as get_a2w_cwms_timeseries
-from helpers.water import post_cwms_timeseries as post_a2w_cwms_timeseries
+from helpers.water import post_cwms_timeseries_measurements
 from helpers.sharedApi import get_static_offices
 
 default_args = {
@@ -28,19 +29,19 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["a2w"],
-    schedule_interval="8 * * * *",
-    max_active_runs=2,
+    schedule_interval="0 16 * * *",
+    max_active_runs=1,
     max_active_tasks=4,
     catchup=False,
-    description="Extract Project Timeseries for Project Charts",
+    description="Extract Project Levels for Project Charts",
 )
-def a2w_sync_project_ts():
-    """Comments here"""
+def a2w_sync_project_levels():
+    """Sync RADAR Location Levels with Water API Project Location Levels (stored in Timeseries table)"""
 
     @task
     def get_a2w_config(office):
 
-        r = get_a2w_cwms_timeseries(provider=office, datasource_type="cwms-timeseries")
+        r = get_a2w_cwms_timeseries(provider=office, datasource_type="cwms-levels")
         if len(r) == 0:
             raise AirflowSkipException
 
@@ -62,8 +63,8 @@ def a2w_sync_project_ts():
                         tsids.append(obj["key"])
                 return tsids
 
-            # Extract a single timeseries from RADAR
-            # Load/POST that single timeseries data back to Water API
+            # Extract a single level from RADAR
+            # Load/POST that single level data back to Water API
             # Note: This was done due to resource limits on RADAR
             @task(task_id=f"extract_and_load{office}")
             def extract_and_load(tsid):
@@ -74,18 +75,18 @@ def a2w_sync_project_ts():
 
                 # Define the extract time-windows based on the task datetime
                 logical_date = get_current_context()["logical_date"]
-                begin = logical_date.strftime("%Y-%m-%dT%H:%M")
-                end = (logical_date + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
+                # begin = logical_date.strftime("%Y-%m-%dT%H:%M")
+                # end = (logical_date + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M")
 
                 # begin = "2022-09-06T14:00"
                 # end = "2022-09-06T16:00"
-                r = get_radar_timeseries([tsid], begin, end, office)
+                r = get_radar_levels([tsid], office)
                 r = json.loads(r)
                 # print(r)
 
-                # Grab the time-series list object which can be iterated over
+                # Grab the location-levels list object which can be iterated over
                 # when multiple tsids are requested
-                ts_obj_list = r["time-series"]["time-series"]
+                ts_obj_list = r["location-levels"]["location-levels"]
 
                 # it may be possible for the extract task to return an empty
                 # list if the tsid was not valid (not found in RADAR).
@@ -100,16 +101,18 @@ def a2w_sync_project_ts():
 
                     a2w_payload = {}
                     a2w_payload["provider"] = ts_obj["office"].lower()
-                    a2w_payload["datasource_type"] = "cwms-timeseries"
+                    a2w_payload["datasource_type"] = "cwms-levels"
                     a2w_payload["key"] = ts_obj["name"]
-                    x = ts_obj["regular-interval-values"]["segments"][0]
+                    v = ts_obj["values"]["segments"][0]["values"]
                     a2w_payload["measurements"] = {
-                        "times": [x["last-time"]],
-                        "values": [x["values"][x["value-count"] - 1][0]],
+                        "times": [v[-1][0]],
+                        "values": [v[-1][1]],
                     }
 
                 # Post to the A2W API
-                post_a2w_cwms_timeseries([a2w_payload])
+                logging.info(f"Posting payload for: {a2w_payload['key']}")
+                logging.info(a2w_payload)
+                post_cwms_timeseries_measurements([a2w_payload])
 
                 return
 
@@ -123,4 +126,4 @@ def a2w_sync_project_ts():
     _ = [create_task_group(office=office) for office in get_static_offices()]
 
 
-project_ts_dag = a2w_sync_project_ts()
+project_ts_dag = a2w_sync_project_levels()
