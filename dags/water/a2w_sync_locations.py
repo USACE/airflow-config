@@ -40,7 +40,7 @@ from helpers.sharedApi import get_nwd_group, get_static_offices
 # Default arguments
 default_args = {
     "owner": "airflow",
-    "start_date": (datetime.utcnow() - timedelta(hours=6)).replace(minute=15, second=0),
+    "start_date": (datetime.utcnow() - timedelta(days=2)).replace(minute=0, second=0),
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
