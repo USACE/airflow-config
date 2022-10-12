@@ -5,11 +5,9 @@ import logging
 
 from airflow import DAG
 from airflow.decorators import dag, task
-from airflow.utils.task_group import TaskGroup
 from airflow.operators.python import get_current_context
 from airflow.exceptions import AirflowSkipException
 
-from helpers.radar import api_request
 from helpers.sharedApi import get_static_offices, get_nwd_group
 import helpers.water as water
 import helpers.radar as radar
@@ -17,7 +15,7 @@ import helpers.radar as radar
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=6)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow() - timedelta(days=2)).replace(minute=0, second=0),
     # "start_date": datetime(2021, 4, 4),
     "email_on_failure": False,
     "email_on_retry": False,
@@ -78,7 +76,7 @@ def a2w_sync_timeseries_paths():
             r = radar.get_timeseries([location + "*"], begin, end, radar_office)
             if r == None:
                 raise ValueError(f"Invalid Response: {r}")
-            r = json.loads(r)
+            r = json.loads(r.replace("\t", ""))
         except Exception as e:
             logging.error(f"Unable to retrieve {location} timeseries")
             logging.error(traceback.format_exc())
@@ -120,7 +118,11 @@ def a2w_sync_timeseries_paths():
 
     for office in get_static_offices():
 
-        @task(task_id=f"extract_and_load_{office}_tsids")
+        priority_weight = 1 if get_nwd_group(office.upper()) in ["NWDM", "NWDP"] else 2
+
+        @task(
+            task_id=f"extract_and_load_{office}_tsids", priority_weight=priority_weight
+        )
         def extract_and_load_tsids(office: str, offices: list):
             offices = json.loads(offices)
             print(offices)
@@ -163,7 +165,7 @@ def a2w_sync_timeseries_paths():
             # If not NWDP or NWDM offices
             else:
 
-                r = api_request("timeseries", f"name=@&office={office}")
+                r = radar.api_request("timeseries", f"name=@&office={office}")
 
                 if r is None:
                     raise ValueError(f"Invalid Response: {r}")
@@ -184,13 +186,13 @@ def a2w_sync_timeseries_paths():
                         payload["key"] = ts_obj["name"]
                         payload["datasource_type"] = "cwms-timeseries"
                         payload["provider"] = ts_obj["office"].upper()
-                        print(payload)
+                        # print(payload)
                         a2w_payload.append(payload)
 
             # Post results back to a2w
             if len(a2w_payload) > 0:
                 print(f"Posting {len(a2w_payload)} timeseries to a2w")
-                print(a2w_payload)
+                # print(a2w_payload)
                 water.post_cwms_timeseries(a2w_payload)
 
             return
