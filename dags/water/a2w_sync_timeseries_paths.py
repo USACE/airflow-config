@@ -28,8 +28,8 @@ default_args = {
     default_args=default_args,
     tags=["a2w", "radar"],
     schedule_interval="0 14 * * *",
-    max_active_runs=2,
-    max_active_tasks=1,
+    max_active_runs=1,
+    max_active_tasks=2,
     catchup=False,
     description="Extract Project Timeseries Paths from RADAR, Post to Water API",
 )
