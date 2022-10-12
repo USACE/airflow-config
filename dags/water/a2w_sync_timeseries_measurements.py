@@ -44,6 +44,7 @@ def a2w_sync_timeseries_measurements():
 
             @task(task_id=f"extract_{office}_a2w_timeseries")
             def extract_a2w_office_timeseries(office: str):
+
                 office_timeseries = water.get_cwms_timeseries(
                     provider=office, datasource_type="cwms-timeseries", mapped=1
                 )
