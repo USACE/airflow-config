@@ -280,12 +280,14 @@ def put_nws_stages(site, payload):
         raise
 
 
-def get_cwms_timeseries(provider, datasource_type="cwms-timeseries", mapped=0):
+def get_cwms_timeseries(
+    provider, datasource_type="cwms-timeseries", mapped=0, query=""
+):
 
     conn = get_connection()
 
     h = HttpHook(http_conn_id=conn.conn_id, method="GET")
-    endpoint = f"/timeseries?provider={provider}&datasource_type={datasource_type}&only_mapped={mapped}&key={conn.password}"
+    endpoint = f"/timeseries?provider={provider}&datasource_type={datasource_type}&only_mapped={mapped}&q={query}&key={conn.password}"
     headers = {"Content-Type": "application/json"}
     r = h.run(endpoint=endpoint, headers=headers)
 

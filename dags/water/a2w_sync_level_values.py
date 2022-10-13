@@ -18,7 +18,7 @@ import helpers.water as water
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=6)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow() - timedelta(hours=24)).replace(minute=0, second=0),
     # "start_date": datetime(2021, 4, 4),
     "email_on_failure": False,
     "email_on_retry": False,
@@ -44,9 +44,25 @@ def a2w_sync_level_values():
 
             @task(task_id=f"extract_{office}_a2w_levels")
             def extract_a2w_office_levels(office: str):
+
+                # Caution: If you set mapped=0, you will get more than 1024 items
+                # for some offices.  The initial default max limit for dynamic
+                # mapped tasks is 1024.  Going over will cause the task to fail.
                 office_levels = water.get_cwms_timeseries(
-                    provider=office, datasource_type="cwms-levels", mapped=0
+                    provider=office, datasource_type="cwms-levels", mapped=1
                 )
+
+                # If the office has less than 2 mapped tasks, try to get the values
+                # for all Elevation levels to have them ready for chart display.
+                if len(office_levels) < 2:
+                    office_elev_levels = water.get_cwms_timeseries(
+                        provider=office,
+                        datasource_type="cwms-levels",
+                        mapped=0,
+                        query="elev",
+                    )
+                    office_levels.extend(office_elev_levels)
+
                 # if len(office_timeseries) == 0:
                 #     raise AirflowSkipException(f"No records found for {office}")
 
@@ -127,6 +143,7 @@ def a2w_sync_level_values():
             @task(
                 task_id=f"load_{office}_level_values_into_a2w",
                 trigger_rule="all_done",
+                priority_weight=2,
             )
             def load_level_values_into_a2w(
                 location_levels_list: _LazyXComAccess,
