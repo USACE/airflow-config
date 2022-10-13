@@ -81,7 +81,7 @@ def a2w_sync_level_values():
             @task(task_id=f"extract_{office}_radar_levels")
             def extract_radar_levels(level_path):
 
-                logging.info(f"Getting values for tsid -->  {level_path}")
+                logging.info(f"Getting values for level -->  {level_path}")
 
                 # Define the extract time-windows based on the task datetime
                 # logical_date = get_current_context()["logical_date"]
@@ -115,26 +115,30 @@ def a2w_sync_level_values():
 
                 for lvl_obj in lvl_obj_list:
 
-                    loc_payload = {}
-                    # loc_payload["provider"] = ts_obj["office"].lower()
-                    loc_payload["provider"] = office
-                    loc_payload["datasource_type"] = "cwms-levels"
-                    loc_payload["key"] = lvl_obj["name"]
-                    try:
-                        x = lvl_obj["values"]["segments"][0]
-                        # Note: "values" [[time, value]]
-                        loc_payload["measurements"] = {
-                            "times": [x["values"][-1][0]],
-                            "values": [x["values"][-1][1]],
-                        }
+                    # Catch odd cases where the RADAR results may have more than one
+                    # level path.  Example: two paths with same name, but one has all upper case.
+                    if level_path == lvl_obj["name"]:
 
-                    except:
+                        loc_payload = {}
+                        # loc_payload["provider"] = ts_obj["office"].lower()
+                        loc_payload["provider"] = office
+                        loc_payload["datasource_type"] = "cwms-levels"
+                        loc_payload["key"] = lvl_obj["name"]
+                        try:
+                            x = lvl_obj["values"]["segments"][0]
+                            # Note: "values" [[time, value]]
+                            loc_payload["measurements"] = {
+                                "times": [x["values"][-1][0]],
+                                "values": [x["values"][-1][1]],
+                            }
 
-                        raise ValueError(
-                            f"Unable to find the values object: {lvl_obj_list}"
-                        )
+                        except:
 
-                    level_results.append(loc_payload)
+                            raise ValueError(
+                                f"Unable to find the values object: {lvl_obj_list}"
+                            )
+
+                        level_results.append(loc_payload)
 
                 return level_results
 
