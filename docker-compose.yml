@@ -152,7 +152,7 @@ services:
   #############################################################################
   airflow_init:
     <<: *airflow-common
-    image: apache/airflow:2.3.2-python3.8-usace
+    image: apache/airflow:2.4.2-python3.8-usace
     depends_on:
       - airflowdb
     entrypoint: |-
@@ -215,7 +215,7 @@ services:
   #############################################################################
   airflow_ui:
     <<: *airflow-common
-    image: apache/airflow:2.3.2-python3.8-usace
+    image: apache/airflow:2.4.2-python3.8-usace
     command: webserver
     ports:
       - '8000:8080'
