@@ -12,6 +12,30 @@ def get_connection():
     return BaseHook.get_connection("WATER")
 
 
+def api_request(path, method="GET", payload=None, expected_status_code=200):
+
+    conn = get_connection()
+    r = None
+
+    if method.upper() in ["POST", "PUT"]:
+        path = f"{path}?key={conn.password}"
+
+    try:
+        h = HttpHook(http_conn_id=conn.conn_id, method=method)
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=path, json=payload, headers=headers)
+
+        if r.status_code == expected_status_code:
+            return r.text
+    except AirflowException as err:
+        print(f"Airflow Exception: {err}")
+        raise
+    finally:
+        if r is not None:
+            r.close()
+            r = None
+
+
 def get_offices():
 
     # Offices endpoint returns a list of objects

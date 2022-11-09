@@ -5,7 +5,6 @@ import logging
 
 from airflow import DAG
 from airflow.decorators import dag, task
-from airflow import AirflowException
 from airflow.exceptions import AirflowSkipException
 
 from helpers.sharedApi import get_static_offices, get_nwd_group
@@ -28,7 +27,7 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["a2w", "radar"],
-    schedule="0 17 * * *",
+    schedule_interval="0 17 * * *",
     max_active_runs=1,
     max_active_tasks=2,
     catchup=False,
@@ -37,10 +36,23 @@ default_args = {
 def a2w_sync_level_paths():
     """Comments here"""
 
+    def get_office_id_by_symbol(symbol: str, offices: list):
+        for o in offices:
+            if o["symbol"].upper() == symbol.upper():
+                return o["id"]
+        return None
+
     # -------------------------------------------
-    def get_a2w_office_locations(office: str) -> dict:
+
+    def get_a2w_office_locations(office: str, offices: list) -> list:
+
+        offices = json.loads(offices)
 
         # make call to water api for office locations
+        # locations = water.get_locations(
+        #     office_id=get_office_id_by_symbol(office, offices)
+        # )
+
         locations = water.api_request(
             f"/locations?datatype=cwms-location&provider={office}",
             method="GET",
@@ -48,17 +60,16 @@ def a2w_sync_level_paths():
             expected_status_code=200,
         )
 
-        locations = json.loads(locations)
-        result_locations = {}
+        result_locations = []
 
         for loc in locations:
-            # print(loc)
             if loc["code"] not in result_locations:
-                result_locations[loc["code"]] = True
+                result_locations.append(loc["code"])
 
         return result_locations
 
     # -------------------------------------------
+
     def get_official_cwms_level(level_list: list, office_locations: list) -> str:
 
         for lvl in level_list:
@@ -68,14 +79,14 @@ def a2w_sync_level_paths():
                 return lvl
 
     # -------------------------------------------
+
     def get_radar_office_levels_by_locations(
         radar_office: str, office: str, location: str
     ) -> list:
         logging.info(f"Getting levels for location -->  {location}")
 
         try:
-            r = radar.api_request("levels", f"name={location}*&office={office}")
-            # r = radar.get_levels([location + "*"], radar_office)
+            r = radar.get_levels([location + "*"], radar_office)
             if r == None:
                 raise ValueError(f"Invalid Response: {r}")
             r = json.loads(r)
@@ -108,27 +119,27 @@ def a2w_sync_level_paths():
 
         return location_results
 
+    # -------------------------------------------
+
     @task
-    def check_radar_service():
-        r = radar.api_request("offices")
-        if r is None:
-            raise AirflowException("Failed RADAR check")
-        return
+    def get_cwms_offices():
+        offices = water.get_offices()
+        return json.dumps(offices)
 
-    check_radar_task = check_radar_service()
-
-    dynamic_tasks = []
+    offices = get_cwms_offices()
 
     for office in get_static_offices():
 
         priority_weight = 1 if get_nwd_group(office.upper()) in ["NWDM", "NWDP"] else 2
 
-        task_id = f"extract_and_load_{office}_levels"
+        @task(
+            task_id=f"extract_and_load_{office}_levels", priority_weight=priority_weight
+        )
+        def extract_and_load_levels(office: str, offices: list):
+            offices = json.loads(offices)
+            # print(offices)
 
-        @task(task_id=task_id, priority_weight=priority_weight)
-        def extract_and_load_levels(office: str):
-
-            office_locations = get_a2w_office_locations(office)
+            office_locations = get_a2w_office_locations(office, offices)
 
             if len(office_locations) == 0:
                 logging.warning(
@@ -141,14 +152,14 @@ def a2w_sync_level_paths():
             if get_nwd_group(office.upper()) in ["NWDM", "NWDP"]:
 
                 # Get A2w Locations - Send actual office (NWP, NWS, NWW) not the region group (NWDP)
-                # a2w_office_locations = get_a2w_office_locations(office, offices)
+                a2w_office_locations = get_a2w_office_locations(office, offices)
 
-                # if len(a2w_office_locations) == 0:
-                #     raise AirflowSkipException("This office has no locations in a2w.")
+                if len(a2w_office_locations) == 0:
+                    raise AirflowSkipException("This office has no locations in a2w.")
 
                 # Use the locations in a2w for each office to get all possible timeseries
                 # from the base locations
-                for loc in office_locations:
+                for loc in a2w_office_locations:
                     try:
                         office_location_lvlobj_list = (
                             get_radar_office_levels_by_locations(
@@ -168,7 +179,7 @@ def a2w_sync_level_paths():
             # If not NWDP or NWDM offices
             else:
 
-                r = radar.api_request("levels", f"office={office}&format=json")
+                r = radar.api_request("levels", f"office={office}")
 
                 if r is None:
                     raise ValueError(f"Invalid Response: {r}")
@@ -206,8 +217,7 @@ def a2w_sync_level_paths():
                         payload["key"] = get_official_cwms_level(
                             possible_names, office_locations
                         )
-                        payload["location_code"] = payload["key"].split(".")[0]
-                        payload["datatype"] = "cwms-level"
+                        payload["datasource_type"] = "cwms-levels"
                         payload["provider"] = lvl_obj["office"].upper()
                         print(payload)
                         a2w_payload.append(payload)
@@ -226,10 +236,7 @@ def a2w_sync_level_paths():
 
             return
 
-        dtask = extract_and_load_levels(office)
-        dynamic_tasks.append(dtask)
-
-    check_radar_task >> dynamic_tasks
+        extract_and_load_levels(office, offices)
 
 
 timeseries_dag = a2w_sync_level_paths()
