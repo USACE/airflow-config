@@ -1,6 +1,7 @@
 from urllib.parse import urlsplit, urlunsplit
 from airflow import AirflowException
 import requests
+import logging
 
 url_parts = urlsplit("https://cwms-data.usace.army.mil/cwms-data")
 
@@ -16,6 +17,7 @@ def api_request(subdirectory, query=None, fragment=None):
         )
     )
     try:
+        logging.info(url)
         r = requests.get(url=url, timeout=90)
         if r.status_code == 200:
             return r.text
