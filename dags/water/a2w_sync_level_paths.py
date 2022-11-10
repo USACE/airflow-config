@@ -95,7 +95,9 @@ def a2w_sync_level_paths():
         logging.info(f"Getting levels for location -->  {location}")
 
         try:
-            r = radar.api_request("levels", f"name={location}*&office={radar_office}")
+            r = radar.api_request(
+                "levels", f"name={location}*&office={radar_office}&format=json"
+            )
             # r = radar.get_levels([location + "*"], radar_office)
             if r == None:
                 raise ValueError(f"Invalid Response: {r}")
@@ -123,7 +125,7 @@ def a2w_sync_level_paths():
             loc_payload["datatype"] = "cwms-level"
             loc_payload["key"] = lvl_obj["name"]
             loc_payload["location"] = {
-                "provider": lvl_obj["office"],
+                "provider": office,
                 "datatype": "cwms-location",
                 "code": loc_payload["key"].split(".")[0],
             }
@@ -246,45 +248,31 @@ def a2w_sync_level_paths():
                         # print(payload)
                         a2w_payload.append(payload)
 
+            ## Get existing office levels
+            existing_office_levels = get_a2w_office_levels(office)
+
+            create_payload = []
+
+            # Filter out the existing levels for this office
+            # leaving only the newly discovered levels not in water-wapi
+            for lvl in a2w_payload:
+                if lvl["key"] not in existing_office_levels:
+                    create_payload.append(lvl)
+
             # Post results back to a2w
-            if len(a2w_payload) > 0:
-                print(f"Posting {len(a2w_payload)} timeseries to a2w")
-                # print(a2w_payload)
-                # water.post_cwms_timeseries(a2w_payload)
+            if len(create_payload) > 0:
+                print(f"Posting {len(create_payload)} timeseries to a2w")
 
-                ## Get existing office levels
-                existing_office_levels = get_a2w_office_levels(office)
-
-                print("-----office levels-------")
-                for ol in existing_office_levels:
-                    print(ol)
-
-                print("-------test--------")
-                print(f"Count before delete: {len(a2w_payload)}")
-
-                new_list = []
-
-                for lvl in a2w_payload:
-                    # print(lvl)
-                    # print(f"Looking for {lvl['key']} in {existing_office_levels}")
-                    # if lvl["location"]["code"] != "Bluestone":
-                    if lvl["key"] not in existing_office_levels:
-                        # a2w_payload.pop(idx)
-                        # print(f"NOT FOUND - APPENDING --> {lvl}")
-                        new_list.append(lvl)
-                    # else:
-                    #     print(f"Im in the else --> {lvl}")
-
-                print(f"Count after delete: {len(new_list)}")
-
-                print(new_list)
+                print(create_payload)
 
                 water.api_request(
                     path=f"/providers/{office}/timeseries",
                     method="POST",
-                    payload=new_list,
+                    payload=create_payload,
                     expected_status_code=201,
                 )
+            else:
+                raise AirflowSkipException("no new levels to post")
 
             return
 
