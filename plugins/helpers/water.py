@@ -8,8 +8,96 @@ from airflow.providers.http.hooks.http import HttpHook
 S3_BUCKET = Variable.get("S3_BUCKET")
 
 
+class WaterHook(HttpHook):
+    """
+    method: str = 'POST'
+    http_conn_id: str = default_conn_name
+    auth_type: Any = HTTPBasicAuth
+    tcp_keep_alive: bool = True
+    tcp_keep_alive_idle: int = 120
+    tcp_keep_alive_count: int = 20
+    tcp_keep_alive_interval: int = 30
+    """
+
+    def __init__(self, *args, **kw):
+
+        self.args = args
+        self.kw = kw
+
+        self.conn_name = "WATER"
+        self.conn = BaseHook.get_connection(self.conn_name)
+
+        self.response_type = "json"
+
+        self.headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        self.kw["http_conn_id"] = self.conn.conn_id
+
+        super().__init__(*args, **kw)
+
+    def request(self, *args, **kw):
+        """
+        endpoint: str | None = None
+        data: Dict[str, Any] | str | None = None
+        headers: Dict[str, Any] | None = None
+        extra_options: Dict[str, Any] | None = None
+        **request_kwargs: Any
+        """
+
+
+        if self.kw["method"] in ["POST", "PUT"]:
+            if len(args) >= 1:
+                args = list(args)
+                args[0] += f"?key={self.conn.password}"
+            if "endpoint" in kw:
+                kw["endpoint"] += f"?key={self.conn.password}"
+
+        resp = self.run(*args, **kw)
+        if resp.status_code in [200, 201, 202]:
+            if self.response_type == "json":
+                return resp.json()
+            elif self.response_type == "text":
+                return resp.text
+
+
 def get_connection():
     return BaseHook.get_connection("WATER")
+
+
+def a2w_post_method(endpoint, headers, payload, json=True):
+    try:
+        conn = get_connection()
+        ep = "/" + endpoint if not endpoint.startswith("/") else endpoint
+        h = HttpHook(http_conn_id=conn.conn_id, method="POST")
+        resp = h.run(
+            endpoint=ep + f"?key={conn.password}", headers=headers, json=payload
+        )
+        return resp.text
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        raise
+
+
+def a2w_get_method(endpoint, headers, json=False):
+    try:
+        conn = get_connection()
+
+        ep = "/" + endpoint if not endpoint.startswith("/") else endpoint
+
+        h = HttpHook(http_conn_id=conn.conn_id, method="GET")
+        resp = h.run(endpoint=ep, headers=headers)
+
+        if resp.status_code == 200:
+            if json:
+                return resp.json()
+            else:
+                return resp.text
+    except AirflowException as error:
+        print(f"Airflow Exception: {error}")
+        raise
 
 
 def get_offices():

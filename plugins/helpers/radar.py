@@ -5,6 +5,22 @@ import requests
 url_parts = urlsplit("https://cwms-data.usace.army.mil/cwms-data")
 
 
+def radar_request(uri, query=None, fragment=None):
+    url_parts = urlsplit(uri)
+    url = urlunsplit(
+        (
+            url_parts.scheme,
+            url_parts.netloc,
+            url_parts.path,
+            query,
+            fragment,
+        )
+    )
+    print(url)
+    r = requests.get(url=url, timeout=90)
+    return r
+
+
 def api_request(subdirectory, query=None, fragment=None):
     url = urlunsplit(
         (
