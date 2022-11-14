@@ -201,7 +201,18 @@ def a2w_sync_cwms_locations():
                     resp = water_hook.request(
                         endpoint=f"/locations?provider={office}",
                     )
-                    return resp
+                    _resp = [
+                        {
+                            k: v
+                            for k, v in obj.items()
+                            if k not in ["datatype_name", "state_name"]
+                        }
+                        for obj in resp
+                    ]
+
+                    # need to remove "state_name" attr before moving on.
+                    # resp = {key: resp[key] for key in resp if key != "state_name"}
+                    return _resp
                 except Exception as e:
                     print(e, f"Office ({office}) may not be a provider")
                     return list()
@@ -244,10 +255,8 @@ def a2w_sync_cwms_locations():
                     }
 
                     if _water_dict != _radar_dict:
-                        print(f"{_water_dict=}", f"{_radar_dict=}", sep="\n")
                         update_list.append({**water_asdict[code], **_radar_dict})
 
-                print(f"{update_list=}")
                 return update_list
 
             @task(task_id=f"post_update_sets")
@@ -260,7 +269,7 @@ def a2w_sync_cwms_locations():
                         water_hook = water.WaterHook(method=method)
                         resp = water_hook.request(
                             endpoint=f"/providers/{office.lower()}/locations",
-                            json=pom["payload"],
+                            json=payload,
                         )
                         return resp
 
@@ -276,7 +285,6 @@ def a2w_sync_cwms_locations():
             ]
 
             _post_sets = post_update_sets(payload_office_method)
-
 
         return tg
 
