@@ -7,22 +7,34 @@ RADAR Locations retrieved as JSON string
 
 Extract schema needed for posting to Water API
 
-## Post:
+## Post/Put:
 
-Water API endpoint `/sync/locations`
+Water API endpoint `/providers/:office/locations`
 
-```{
-    'office_id',
-    'name',
-    'public_name',
-    'kind_id',
-    'geometry' : {
-        'type',
-        'coordinates': [
-            0, 0
+```
+{
+    "provider"
+    "provider_name"
+    "datatype"
+    "datatype_name"
+    "code"
+    "slug"
+    "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -77.60356,
+            43.25758
         ]
     }
-}```
+    "state"
+    "state_name"
+    "attributes": {
+        "kind"
+        "public_name"
+        ...
+    }
+}
+```
 
 __North America centroid default for missing coordinates__
 """
@@ -199,20 +211,9 @@ def a2w_sync_cwms_locations():
                 water_hook = water.WaterHook(method="GET")
                 try:
                     resp = water_hook.request(
-                        endpoint=f"/locations?provider={office}",
+                        endpoint=f"/locations?provider={office.lower()}",
                     )
-                    _resp = [
-                        {
-                            k: v
-                            for k, v in obj.items()
-                            if k not in ["datatype_name", "state_name"]
-                        }
-                        for obj in resp
-                    ]
-
-                    # need to remove "state_name" attr before moving on.
-                    # resp = {key: resp[key] for key in resp if key != "state_name"}
-                    return _resp
+                    return resp
                 except Exception as e:
                     print(e, f"Office ({office}) may not be a provider")
                     return list()
@@ -259,32 +260,31 @@ def a2w_sync_cwms_locations():
 
                 return update_list
 
-            @task(task_id=f"post_update_sets")
-            def post_update_sets(payload_office_method):
-                for pom in payload_office_method:
-                    payload = pom["payload"]
-                    office = pom["office"]
-                    method = pom["method"]
-                    if len(payload) > 0:
-                        water_hook = water.WaterHook(method=method)
-                        resp = water_hook.request(
-                            endpoint=f"/providers/{office.lower()}/locations",
-                            json=payload,
-                        )
-                        return resp
+            # POST or PUT data sets
+            def post_put_sets(payload, office, method):
+                if len(payload) > 0:
+                    water_hook = water.WaterHook(method=method)
+                    resp = water_hook.request(
+                        endpoint=f"/providers/{office.lower()}/locations",
+                        json=payload,
+                    )
+                    return resp
+
+            @task(task_id=f"post_sets")
+            def post_sets(payload, office, method):
+                return post_put_sets(payload, office, method)
+
+            @task(task_id=f"update_sets")
+            def update_sets(payload, office, method):
+                return post_put_sets(payload, office, method)
 
             _radar_locations = radar_locations(office)
             _transform_radar = transform_radar(_radar_locations)
             _water_locations = water_locations(office)
             _create_post_sets = create_post_sets(_transform_radar, _water_locations)
             _create_update_sets = create_update_sets(_transform_radar, _water_locations)
-
-            payload_office_method = [
-                {"payload": _create_post_sets, "office": office, "method": "POST"},
-                {"payload": _create_update_sets, "office": office, "method": "PUT"},
-            ]
-
-            _post_sets = post_update_sets(payload_office_method)
+            _post_sets = post_sets(_create_post_sets, office, "POST")
+            _put_sets = update_sets(_create_update_sets, office, "PUT")
 
         return tg
 

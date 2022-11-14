@@ -4,11 +4,12 @@ from airflow import AirflowException
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable
 from airflow.providers.http.hooks.http import HttpHook
+from helpers import HelperHook
 
 S3_BUCKET = Variable.get("S3_BUCKET")
 
 
-class WaterHook(HttpHook):
+class WaterHook(HelperHook):
     """
     method: str = 'POST'
     http_conn_id: str = default_conn_name
@@ -27,40 +28,9 @@ class WaterHook(HttpHook):
         self.conn_name = "WATER"
         self.conn = BaseHook.get_connection(self.conn_name)
 
-        self.response_type = "json"
-
-        self.headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
-
         self.kw["http_conn_id"] = self.conn.conn_id
 
         super().__init__(*args, **kw)
-
-    def request(self, *args, **kw):
-        """
-        endpoint: str | None = None
-        data: Dict[str, Any] | str | None = None
-        headers: Dict[str, Any] | None = None
-        extra_options: Dict[str, Any] | None = None
-        **request_kwargs: Any
-        """
-
-
-        if self.kw["method"] in ["POST", "PUT"]:
-            if len(args) >= 1:
-                args = list(args)
-                args[0] += f"?key={self.conn.password}"
-            if "endpoint" in kw:
-                kw["endpoint"] += f"?key={self.conn.password}"
-
-        resp = self.run(*args, **kw)
-        if resp.status_code in [200, 201, 202]:
-            if self.response_type == "json":
-                return resp.json()
-            elif self.response_type == "text":
-                return resp.text
 
 
 def get_connection():
