@@ -47,7 +47,7 @@ import helpers.water as water
 import pandas as pd
 from airflow.decorators import dag, task
 from airflow.utils.task_group import TaskGroup
-from helpers import usace_office_group
+from helpers import MSC, usace_office_group
 from airflow.models.baseoperator import chain
 
 # CWMS Locations data type
@@ -288,7 +288,7 @@ def a2w_sync_cwms_locations():
 
         return tg
 
-    task_groups = [create_task_group(office) for office in ["LRB"]]
+    task_groups = [create_task_group(office) for office in MSC]
 
     chain(*task_groups)
 
