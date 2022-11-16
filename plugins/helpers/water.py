@@ -5,7 +5,33 @@ from airflow.hooks.base import BaseHook
 from airflow.models import Variable
 from airflow.providers.http.hooks.http import HttpHook
 
+from helpers import HelperHook
+
 S3_BUCKET = Variable.get("S3_BUCKET")
+
+
+class WaterHook(HelperHook):
+    """
+    method: str = 'POST'
+    http_conn_id: str = default_conn_name
+    auth_type: Any = HTTPBasicAuth
+    tcp_keep_alive: bool = True
+    tcp_keep_alive_idle: int = 120
+    tcp_keep_alive_count: int = 20
+    tcp_keep_alive_interval: int = 30
+    """
+
+    def __init__(self, *args, **kw):
+
+        self.args = args
+        self.kw = kw
+
+        self.conn_name = "WATER"
+        self.conn = BaseHook.get_connection(self.conn_name)
+
+        self.kw["http_conn_id"] = self.conn.conn_id
+
+        super().__init__(*args, **kw)
 
 
 def get_connection():
