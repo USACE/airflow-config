@@ -1,20 +1,18 @@
 """
 
 """
-from airflow.hooks.base import BaseHook
 from airflow.providers.http.hooks.http import HttpHook
-
 
 # fmt:off
 # NWx at end of list to force lower priority
 MSC = [
-    "LRB", "LRC", "LRD", "LRE", "LRH", "LRL", "LRN", "LRP", 
-    "MVD", "MVK", "MVM", "MVN", "MVP", "MVR", "MVS", 
+    "LRB", "LRC", "LRD", "LRE", "LRH", "LRL", "LRN", "LRP",
+    "MVD", "MVK", "MVM", "MVN", "MVP", "MVR", "MVS",
     "NAB", "NAD", "NAE", "NAN", "NAO", "NAP",
     "POA", "POD", "POH",
     "SAC", "SAD", "SAJ", "SAM", "SAS", "SAW",
-    "SPA", "SPD", "SPK", "SPL", "SPN", 
-    "SWD", "SWF", "SWG", "SWL", "SWT"
+    "SPA", "SPD", "SPK", "SPL", "SPN",
+    "SWD", "SWF", "SWG", "SWL", "SWT",
     "NWD", "NWK", "NWO", "NWP", "NWS", "NWW",
 ]
 
@@ -84,6 +82,8 @@ class HelperHook(HttpHook):
                 args[0] += f"?key={self.conn.password}"
             if "endpoint" in kw:
                 kw["endpoint"] += f"?key={self.conn.password}"
+
+        print(f"THE REQUEST ENDPOINT: {kw['endpoint']}")
 
         resp = self.run(*args, **kw)
         if resp.status_code in [200, 201, 202]:

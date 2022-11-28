@@ -27,12 +27,12 @@ class WaterHook(HelperHook):
         self.kw = kw
 
         self.conn_name = "WATER"
+
         self.conn = BaseHook.get_connection(self.conn_name)
 
         self.kw["http_conn_id"] = self.conn.conn_id
 
         super().__init__(*args, **kw)
-
 
 def get_connection():
     return BaseHook.get_connection("WATER")

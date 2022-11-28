@@ -2,20 +2,16 @@
 # Extract Location Levels from RADAR, Post to Water API
 """
 
+from datetime import datetime, timedelta, timezone
 import json
 import logging
-import traceback
-from datetime import datetime, timedelta, timezone
 
 import helpers.radar as radar
 import helpers.water as water
-from airflow import DAG, AirflowException
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
 from airflow.models.baseoperator import chain
 from airflow.utils.task_group import TaskGroup
-from helpers import MSC
-from helpers.sharedApi import get_nwd_group, get_static_offices
 
 default_args = {
     "owner": "airflow",
@@ -125,30 +121,39 @@ def a2w_sync_cwms_levels():
 
                 return (create_levels, update_levels)
 
-            def create_update_level(payload):
+            @task()
+            def create_level(provider, payloads):
+                # create_update_level(f"/providers/{provider}/timeseries", payloads[0])
+                payload = payloads[0]
                 water_hook = water.WaterHook(method="POST")
-                resp = water_hook.request(endpoint=payload)
+                resp = water_hook.request(
+                    endpoint=f"/providers/{provider.lower()}/timeseries",
+                    json=payload,
+                )
                 return resp
 
             @task()
-            def create_level(create_update_levels):
-                return create_update_level(create_update_levels[0])
-
-            @task()
-            def update_level(create_update_levels):
-                return create_update_level(create_update_levels[1])
+            def update_measurement(provider, payloads):
+                # create_update_level(f"/providers/{provider}/timeseries/values", payloads[1])
+                payload = payloads[1]
+                water_hook = water.WaterHook(method="POST")
+                resp = water_hook.request(
+                    endpoint=f"/providers/{provider.lower()}/timeseries/values",
+                    json=payload,
+                )
+                return resp
 
             _water_locations = water_location_codes(office)
             _water_level_keys = water_level_keys(office)
             _radar_levels = radar_levels(office, _water_locations, _water_level_keys)
-            _create_level = create_level(_radar_levels)
-            _update_level = update_level(_radar_levels)
+            _create_level = create_level(office, _radar_levels)
+            _update_measurement = update_measurement(office, _radar_levels)
 
-            _radar_levels >> [_create_level, _update_level]
+            _radar_levels >> [_create_level, _update_measurement]
 
         return tg
 
-    task_groups = [create_task_group(office) for office in ["LRH"]]  # MSC]
+    task_groups = [create_task_group(office) for office in ["LRB"]]  # MSC]
 
     chain(*task_groups)
 
