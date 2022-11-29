@@ -37,7 +37,9 @@ def usace_office_group(office):
             "NWD": "NWD",
         }[office.upper()]
     except KeyError as err:
-        print(f"KeyError: key not found - {err}; continue with '{office}'")
+        print(
+            f"KeyError: key not found in group code - {err}; continue with '{office}'"
+        )
     finally:
         return office
 
@@ -53,9 +55,8 @@ class HelperHook(HttpHook):
     tcp_keep_alive_interval: int = 30
     """
 
-    def __init__(self, *args, **kw):
+    def __init__(self, **kw):
 
-        self.args = args
         self.kw = kw
 
         self.response_type = "json"
@@ -65,9 +66,9 @@ class HelperHook(HttpHook):
             "Accept": "application/json",
         }
 
-        super().__init__(*args, **kw)
+        super().__init__(**kw)
 
-    def request(self, *args, **kw):
+    def request(self, **kw):
         """
         endpoint: str | None = None
         data: Dict[str, Any] | str | None = None
@@ -77,15 +78,10 @@ class HelperHook(HttpHook):
         """
 
         if self.kw["method"] in ["POST", "PUT"]:
-            if len(args) >= 1:
-                args = list(args)
-                args[0] += f"?key={self.conn.password}"
             if "endpoint" in kw:
                 kw["endpoint"] += f"?key={self.conn.password}"
 
-        print(f"THE REQUEST ENDPOINT: {kw['endpoint']}")
-
-        resp = self.run(*args, **kw)
+        resp = self.run(**kw)
         if resp.status_code in [200, 201, 202]:
             if self.response_type == "json":
                 return resp.json()

@@ -1,45 +1,21 @@
 """
-# Sync Water database with RADAR Locations
+# A2W Sync CWMS Locations
 
-RADAR Locations retrieved as JSON string
+Task groups created per District (MSC) each having the same tasks.
+The `chain()` function is used to force the group order to defined by the
+constant variable `MSC`, which is a list of all MSCs.  MSC list
+order defines priority ranking.  Task order is as follows:
 
-## Parse:
-
-Extract schema needed for posting to Water API
-
-## Post/Put:
-
-Water API endpoint `/providers/:office/locations`
-
-```
-{
-    "provider"
-    "provider_name"
-    "datatype"
-    "datatype_name"
-    "code"
-    "slug"
-    "geometry": {
-        "type": "Point",
-        "coordinates": [
-            -77.60356,
-            43.25758
-        ]
-    }
-    "state"
-    "state_name"
-    "attributes": {
-        "kind"
-        "public_name"
-        ...
-    }
-}
-```
-
-__North America centroid default for missing coordinates__
+- radar_locations: get radar locations
+- transform_radar: transform into usable JSON
+- water_locations: get locations in Water
+- create_post_sets: create a unique `set` of locations to post
+- create_update_sets: create a unique `set` of locations to update
+- post_sets: post the unique `set`
+- update_sets: update the unique `set`
 """
-from dataclasses import asdict, astuple, dataclass, field
 import json
+from dataclasses import asdict, astuple, dataclass, field
 from datetime import datetime, timedelta
 
 import helpers.radar as radar
@@ -47,8 +23,8 @@ import helpers.water as water
 import pandas as pd
 from airflow.decorators import dag, task
 from airflow.utils.task_group import TaskGroup
-from helpers import MSC, usace_office_group
-from airflow.models.baseoperator import chain
+from airflow.utils.trigger_rule import TriggerRule
+from helpers import usace_office_group
 
 # CWMS Locations data type
 DATATYPE = "cwms-location"
@@ -87,7 +63,9 @@ default_args = {
     "owner": "airflow",
     "start_date": (datetime.utcnow() - timedelta(days=2)).replace(minute=0, second=0),
     "retries": 1,
-    "retry_delay": timedelta(minutes=5),
+    "retry_delay": timedelta(minutes=2),
+    "execution_timeout": timedelta(hours=4),
+    "tigger_rule": TriggerRule.ALL_DONE,
 }
 
 
@@ -123,10 +101,11 @@ def json_drop_duplicates(payload):
     doc_md=__doc__,
 )
 def a2w_sync_cwms_locations():
-    def create_task_group(office):
+    previous = None
+    for office in ["LRB", "NWD", "NWS"]:
         with TaskGroup(group_id=f"{office}") as tg:
 
-            @task(task_id=f"radar_locations")
+            @task()
             def radar_locations(office):
                 try:
                     water_hook = water.WaterHook(method="GET")
@@ -153,12 +132,12 @@ def a2w_sync_cwms_locations():
 
                 return locations
 
-            @task(task_id=f"transform_radar")
-            def transform_radar(office_locations):
+            @task()
+            def transform_radar(office, office_locations):
                 radar_locations = []
                 for location in office_locations:
                     try:
-                        office = location["identity"]["office"]
+                        identity_office = location["identity"]["office"]
                         name = location["identity"]["name"]
                         public_name = location["label"]["public-name"]
                         lon = location["geolocation"]["longitude"]
@@ -173,11 +152,19 @@ def a2w_sync_cwms_locations():
                     # bounding office correctly to the district, we DON'T want to override the
                     # district office's meta-data with what the division/region sets UNLESS
                     # it's in the NWD regions.
-                    if office != bounding_office and office.upper() in [
-                        "NWDM",
-                        "NWDP",
-                    ]:
-                        office = bounding_office
+                    if (
+                        identity_office != bounding_office
+                        and identity_office.upper()
+                        in [
+                            "NWDM",
+                            "NWDP",
+                        ]
+                    ):
+                        identity_office = bounding_office
+
+                    # only add those objects that coorespond to the office we want
+                    if identity_office != office:
+                        continue
 
                     # Points
                     radar_pnt = RadarPoint()
@@ -195,8 +182,8 @@ def a2w_sync_cwms_locations():
                         radar_attr.kind = location_kind
                     # Location
                     radar_loc = RadarLocation(geometry=radar_geo, attributes=radar_attr)
-                    if office is not None:
-                        radar_loc.provider = office[:3]
+                    if identity_office is not None:
+                        radar_loc.provider = identity_office[:3]
                     if name is not None:
                         radar_loc.code = name
                     if state is not None:
@@ -206,7 +193,7 @@ def a2w_sync_cwms_locations():
 
                 return radar_locations
 
-            @task(task_id=f"water_locations")
+            @task()
             def water_locations(office):
                 water_hook = water.WaterHook(method="GET")
                 try:
@@ -218,7 +205,7 @@ def a2w_sync_cwms_locations():
                     print(e, f"Office ({office}) may not be a provider")
                     return list()
 
-            @task(task_id="create_post_sets")
+            @task()
             def create_post_sets(radar, water):
                 radar_asdict = {(item["code"]).lower(): item for item in radar}
                 water_asdict = {(item["code"]).lower(): item for item in water}
@@ -236,7 +223,7 @@ def a2w_sync_cwms_locations():
 
                 return post_objects
 
-            @task(task_id="create_update_sets")
+            @task()
             def create_update_sets(radar, water):
                 update_attr = ["geometry", "state", "attributes"]
 
@@ -270,29 +257,26 @@ def a2w_sync_cwms_locations():
                     )
                     return resp
 
-            @task(task_id=f"post_sets")
+            @task()
             def post_sets(payload, office, method):
                 return post_put_sets(payload, office, method)
 
-            @task(task_id=f"update_sets")
+            @task()
             def update_sets(payload, office, method):
                 return post_put_sets(payload, office, method)
 
             _radar_locations = radar_locations(office)
-            _transform_radar = transform_radar(_radar_locations)
+            _transform_radar = transform_radar(office, _radar_locations)
             _water_locations = water_locations(office)
             _create_post_sets = create_post_sets(_transform_radar, _water_locations)
             _create_update_sets = create_update_sets(_transform_radar, _water_locations)
             _post_sets = post_sets(_create_post_sets, office, "POST")
             _put_sets = update_sets(_create_update_sets, office, "PUT")
 
-        return tg
+        if previous:
+            previous >> tg
 
-    task_groups = [create_task_group(office) for office in ["LRB"]] #MSC]
-
-    chain(*task_groups)
-
-    return task_groups
+        previous = tg
 
 
 sync_locations_dag = a2w_sync_cwms_locations()

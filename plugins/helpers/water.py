@@ -21,9 +21,8 @@ class WaterHook(HelperHook):
     tcp_keep_alive_interval: int = 30
     """
 
-    def __init__(self, *args, **kw):
+    def __init__(self, **kw):
 
-        self.args = args
         self.kw = kw
 
         self.conn_name = "WATER"
@@ -32,7 +31,7 @@ class WaterHook(HelperHook):
 
         self.kw["http_conn_id"] = self.conn.conn_id
 
-        super().__init__(*args, **kw)
+        super().__init__(**kw)
 
 def get_connection():
     return BaseHook.get_connection("WATER")

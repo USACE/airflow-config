@@ -1,17 +1,28 @@
 """
-# Extract Location Levels from RADAR, Post to Water API
+# A2W Sync CWMS Levels
+
+Task groups created per District (MSC) each having the same tasks.
+The `chain()` function is used to force the group order to defined by the
+constant variable `MSC`, which is a list of all MSCs.  MSC list
+order defines priority ranking.  Task order is as follows:
+
+- water_location_codes: get locations from Water API
+- water_level_keys: get levels from Water API
+- radar_levels: get levels from RADAR and determine what needs creating and/or updated
+- create_level: create levels from list
+- update_measurement: update level latest measurement from list
+
 """
 
 from datetime import datetime, timedelta, timezone
-import json
-import logging
 
 import helpers.radar as radar
 import helpers.water as water
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
-from airflow.models.baseoperator import chain
 from airflow.utils.task_group import TaskGroup
+from airflow.utils.trigger_rule import TriggerRule
+from helpers import usace_office_group
 
 default_args = {
     "owner": "airflow",
@@ -23,6 +34,7 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=2),
     "execution_timeout": timedelta(hours=4),
+    "tigger_rule": TriggerRule.ALL_DONE,
 }
 
 
@@ -33,11 +45,12 @@ default_args = {
     max_active_runs=1,
     max_active_tasks=2,
     catchup=False,
-    description=__doc__,
+    doc_md=__doc__,
 )
 def a2w_sync_cwms_levels():
-    def create_task_group(office):
-        with TaskGroup(group_id=f"{office}") as tg:
+    previous = None
+    for office in ["LRB", "NWD", "NWS"]:
+        with TaskGroup(group_id=f"{office}", prefix_group_id=True) as tg:
 
             @task()
             def water_location_codes(office):
@@ -75,11 +88,13 @@ def a2w_sync_cwms_levels():
                 radar_hook = radar.RadarHook()
                 create_levels = []
                 update_levels = []
+                # filter the office ID b/c NWD doesn't play well with others
+                _office = usace_office_group(office)
                 for code, d in location_codes_asdict.items():
                     location_levels = radar_hook.request_(
                         method="GET",
                         url=uri
-                        + f"?level-id-mask={code}.*&office={office}&format=json",
+                        + f"?level-id-mask={code}.*&office={_office}&format=json",
                     )
                     # None Type in location levels return or Key Error continues to the next code
                     try:
@@ -89,7 +104,7 @@ def a2w_sync_cwms_levels():
                             "location-levels"
                         ]
                     except (KeyError, TypeError) as err:
-                        print(f"{code=}; KeyError - {err}")
+                        print(f"{code=}; Error - {err}")
                         continue
 
                     for level in location_levels_list:
@@ -121,27 +136,30 @@ def a2w_sync_cwms_levels():
 
                 return (create_levels, update_levels)
 
+            def create_update(endpoint, method, payload):
+                if len(payload) > 0:
+                    water_hook = water.WaterHook(method=method)
+                    resp = water_hook.request(
+                        endpoint=endpoint,
+                        json=payload,
+                    )
+                    return resp
+
             @task()
             def create_level(provider, payloads):
-                # create_update_level(f"/providers/{provider}/timeseries", payloads[0])
-                payload = payloads[0]
-                water_hook = water.WaterHook(method="POST")
-                resp = water_hook.request(
-                    endpoint=f"/providers/{provider.lower()}/timeseries",
-                    json=payload,
+                create_update(
+                    f"/providers/{provider.lower()}/timeseries",
+                    "POST",
+                    payloads[0],
                 )
-                return resp
 
             @task()
             def update_measurement(provider, payloads):
-                # create_update_level(f"/providers/{provider}/timeseries/values", payloads[1])
-                payload = payloads[1]
-                water_hook = water.WaterHook(method="POST")
-                resp = water_hook.request(
-                    endpoint=f"/providers/{provider.lower()}/timeseries/values",
-                    json=payload,
+                create_update(
+                    f"/providers/{provider.lower()}/timeseries/values",
+                    "POST",
+                    payloads[1],
                 )
-                return resp
 
             _water_locations = water_location_codes(office)
             _water_level_keys = water_level_keys(office)
@@ -151,13 +169,10 @@ def a2w_sync_cwms_levels():
 
             _radar_levels >> [_create_level, _update_measurement]
 
-        return tg
+        if previous:
+            previous >> tg
 
-    task_groups = [create_task_group(office) for office in ["LRB"]]  # MSC]
-
-    chain(*task_groups)
-
-    return task_groups
+        previous = tg
 
 
 DAG_ = a2w_sync_cwms_levels()
