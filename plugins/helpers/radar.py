@@ -2,7 +2,33 @@ from urllib.parse import urlsplit, urlunsplit
 from airflow import AirflowException
 import requests
 
+
 url_parts = urlsplit("https://cwms-data.usace.army.mil/cwms-data")
+
+
+class RadarHook(requests.Session):
+    """ """
+
+    __attrs__ = ["response_type"]
+
+    def __init__(self, *args, **kw):
+
+        self.headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        self.response_type = "json"
+
+        super().__init__(*args, **kw)
+
+    def request_(self, *args, **kw):
+        resp = self.request(*args, **kw)
+        if resp.status_code in [200, 201, 202]:
+            if self.response_type == "json":
+                return resp.json()
+            elif self.response_type == "text":
+                return resp.text
 
 
 def radar_request(uri, query=None, fragment=None):
@@ -16,7 +42,6 @@ def radar_request(uri, query=None, fragment=None):
             fragment,
         )
     )
-    print(url)
     r = requests.get(url=url, timeout=90)
     return r
 

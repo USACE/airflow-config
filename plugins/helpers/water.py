@@ -4,6 +4,7 @@ from airflow import AirflowException
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable
 from airflow.providers.http.hooks.http import HttpHook
+
 from helpers import HelperHook
 
 S3_BUCKET = Variable.get("S3_BUCKET")
@@ -20,54 +21,44 @@ class WaterHook(HelperHook):
     tcp_keep_alive_interval: int = 30
     """
 
-    def __init__(self, *args, **kw):
+    def __init__(self, **kw):
 
-        self.args = args
         self.kw = kw
 
         self.conn_name = "WATER"
+
         self.conn = BaseHook.get_connection(self.conn_name)
 
         self.kw["http_conn_id"] = self.conn.conn_id
 
-        super().__init__(*args, **kw)
-
+        super().__init__(**kw)
 
 def get_connection():
     return BaseHook.get_connection("WATER")
 
 
-def a2w_post_method(endpoint, headers, payload, json=True):
+def api_request(path, method="GET", payload=None, expected_status_code=200):
+
+    conn = get_connection()
+    r = None
+
+    if method.upper() in ["POST", "PUT"]:
+        path = f"{path}?key={conn.password}"
+
     try:
-        conn = get_connection()
-        ep = "/" + endpoint if not endpoint.startswith("/") else endpoint
-        h = HttpHook(http_conn_id=conn.conn_id, method="POST")
-        resp = h.run(
-            endpoint=ep + f"?key={conn.password}", headers=headers, json=payload
-        )
-        return resp.text
-    except AirflowException as error:
-        print(f"Airflow Exception: {error}")
+        h = HttpHook(http_conn_id=conn.conn_id, method=method)
+        headers = {"Content-Type": "application/json"}
+        r = h.run(endpoint=path, json=payload, headers=headers)
+
+        if r.status_code == expected_status_code:
+            return r.text
+    except AirflowException as err:
+        print(f"Airflow Exception: {err}")
         raise
-
-
-def a2w_get_method(endpoint, headers, json=False):
-    try:
-        conn = get_connection()
-
-        ep = "/" + endpoint if not endpoint.startswith("/") else endpoint
-
-        h = HttpHook(http_conn_id=conn.conn_id, method="GET")
-        resp = h.run(endpoint=ep, headers=headers)
-
-        if resp.status_code == 200:
-            if json:
-                return resp.json()
-            else:
-                return resp.text
-    except AirflowException as error:
-        print(f"Airflow Exception: {error}")
-        raise
+    finally:
+        if r is not None:
+            r.close()
+            r = None
 
 
 def get_offices():
