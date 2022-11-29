@@ -65,7 +65,7 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=2),
     "execution_timeout": timedelta(hours=4),
-    "tigger_rule": TriggerRule.ALL_DONE,
+    "tigger_rule": TriggerRule.DUMMY,
 }
 
 
@@ -113,8 +113,8 @@ def a2w_sync_cwms_locations():
                         endpoint=f"/datasources?provider={office.lower()}&datatype={DATATYPE}"
                     )
                     uri = resp[0]["datatype_uri"]
-                except KeyError as ke:
-                    print(ke)
+                except (KeyError, IndexError) as err:
+                    print(err)
                     return list()
 
                 office = usace_office_group(office)

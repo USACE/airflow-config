@@ -34,7 +34,7 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=2),
     "execution_timeout": timedelta(hours=4),
-    "tigger_rule": TriggerRule.ALL_DONE,
+    "tigger_rule": TriggerRule.DUMMY,
 }
 
 
@@ -50,7 +50,7 @@ default_args = {
 def a2w_sync_cwms_levels():
     previous = None
     for office in MSC:
-        with TaskGroup(group_id=f"{office}", prefix_group_id=True) as tg:
+        with TaskGroup(group_id=f"{office}") as tg:
 
             @task()
             def water_location_codes(office):
