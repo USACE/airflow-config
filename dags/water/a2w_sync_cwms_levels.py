@@ -22,7 +22,7 @@ from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
-from helpers import usace_office_group
+from helpers import MSC, usace_office_group
 
 default_args = {
     "owner": "airflow",
@@ -49,7 +49,7 @@ default_args = {
 )
 def a2w_sync_cwms_levels():
     previous = None
-    for office in ["LRB", "NWD", "NWS"]:
+    for office in MSC:
         with TaskGroup(group_id=f"{office}", prefix_group_id=True) as tg:
 
             @task()
