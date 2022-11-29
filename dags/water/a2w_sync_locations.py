@@ -126,9 +126,6 @@ def a2w_sync_cwms_locations():
                     url=uri + f"?office={office}&names=@",
                 )
 
-                # resp = radar.radar_request(uri=uri, query=f"office={office}&names=@")
-                # response_payload = resp.text
-
                 if response_payload is None or "DOCTYPE html" in response_payload:
                     return list()
                 response_str = response_payload.translate(
