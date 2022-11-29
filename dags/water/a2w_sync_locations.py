@@ -119,8 +119,12 @@ def a2w_sync_cwms_locations():
 
                 office = usace_office_group(office)
 
-                resp = radar.radar_request(uri=uri, query=f"office={office}&names=@")
-                response_payload = resp.text
+                radar_hook = radar.RadarHook()
+                radar_hook.response_type = "text"
+                response_payload = radar_hook.request_(
+                    method="GET",
+                    url=uri + f"?office={office}&names=@",
+                )
 
                 if response_payload is None or "DOCTYPE html" in response_payload:
                     return list()
