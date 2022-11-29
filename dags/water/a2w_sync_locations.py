@@ -24,7 +24,7 @@ import pandas as pd
 from airflow.decorators import dag, task
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
-from helpers import usace_office_group
+from helpers import MSC, usace_office_group
 
 # CWMS Locations data type
 DATATYPE = "cwms-location"
@@ -102,7 +102,7 @@ def json_drop_duplicates(payload):
 )
 def a2w_sync_cwms_locations():
     previous = None
-    for office in ["LRB", "NWD", "NWS"]:
+    for office in MSC:
         with TaskGroup(group_id=f"{office}") as tg:
 
             @task()
