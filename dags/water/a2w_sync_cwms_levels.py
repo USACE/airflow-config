@@ -1,6 +1,8 @@
 """
 # A2W Sync CWMS Levels
 
+## Tasks
+
 Task groups created per District (MSC) each having the same tasks.
 The `chain()` function is used to force the group order to defined by the
 constant variable `MSC`, which is a list of all MSCs.  MSC list
@@ -12,6 +14,13 @@ order defines priority ranking.  Task order is as follows:
 - create_level: create levels from list
 - update_measurement: update level latest measurement from list
 
+## Skipping Tasks
+
+Airflow's skip exception (`AirflowSkipException`) is used for exceptions and 
+when no data is available for a POST or a PUT.  Acquiring Water level keys (water_level_keys)
+and Water location codes (water_location_codes) tasks have a trigger rule == ALL_DONE to continue through each task group.
+RADAR levels (radar_levels) trigger rule runs if NONE_SKIPPED.  POST/PUT (create_level/update_measurement)
+run is NONE_SKIPPED.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -23,6 +32,10 @@ from airflow.exceptions import AirflowSkipException
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
 from helpers import MSC, usace_office_group
+
+# CWMS Locations data type
+CWMS_LOCATION = "cwms-location"
+CWMS_LEVEL = "cwms-level"
 
 default_args = {
     "owner": "airflow",
@@ -52,35 +65,53 @@ def a2w_sync_cwms_levels():
     for office in MSC:
         with TaskGroup(group_id=f"{office}") as tg:
 
-            @task()
+            @task(
+                task_id=f"{office}_water_level_keys",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
+            def water_level_keys(office):
+                try:
+                    water_hook = water.WaterHook(method="GET")
+                    levels = water_hook.request(
+                        endpoint=f"/timeseries?datatype={CWMS_LEVEL}&provider={office.lower()}"
+                    )
+                    level_keys_asdict = {item["key"]: item for item in levels}
+                    return level_keys_asdict
+                except Exception:
+                    raise AirflowSkipException
+
+            @task(
+                task_id=f"{office}_water_location_codes",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
             def water_location_codes(office):
                 water_hook = water.WaterHook(method="GET")
                 try:
                     locations = water_hook.request(
-                        endpoint=f"/locations?datatype=cwms-location&provider={office.lower()}"
+                        endpoint=f"/locations?datatype={CWMS_LOCATION}&provider={office.lower()}"
                     )
                     location_codes_asdict = {item["code"]: item for item in locations}
                     return location_codes_asdict
                 except Exception:
                     raise AirflowSkipException
 
-            @task()
-            def water_level_keys(office):
-                water_hook = water.WaterHook(method="GET")
-                levels = water_hook.request(
-                    endpoint=f"/timeseries?datatype=cwms-level&provider={office.lower()}"
-                )
-                level_keys_asdict = {item["key"]: item for item in levels}
-                return level_keys_asdict
-
-            @task()
+            @task(
+                task_id=f"{office}_radar_levels",
+                trigger_rule=TriggerRule.NONE_SKIPPED,
+            )
             def radar_levels(office, location_codes_asdict, level_keys_asdict):
+                if location_codes_asdict is None or level_keys_asdict is None:
+                    raise AirflowSkipException
+
                 # get the data source uri
-                water_hook = water.WaterHook(method="GET")
-                datasource = water_hook.request(
-                    endpoint=f"/datasources?datatype=cwms-level&provider={office.lower()}"
-                )
-                uri = datasource[0]["datatype_uri"]
+                try:
+                    water_hook = water.WaterHook(method="GET")
+                    datasource = water_hook.request(
+                        endpoint=f"/datasources?datatype={CWMS_LEVEL}&provider={office.lower()}"
+                    )
+                    uri = datasource[0]["datatype_uri"]
+                except Exception:
+                    raise AirflowSkipException
 
                 # loop through the list of location codes to get the available levels
                 # make a request for each code
@@ -144,8 +175,13 @@ def a2w_sync_cwms_levels():
                         json=payload,
                     )
                     return resp
+                else:
+                    raise AirflowSkipException
 
-            @task()
+            @task(
+                task_id=f"{office}_create_level",
+                trigger_rule=TriggerRule.NONE_SKIPPED,
+            )
             def create_level(provider, payloads):
                 create_update(
                     f"/providers/{provider.lower()}/timeseries",
@@ -153,7 +189,10 @@ def a2w_sync_cwms_levels():
                     payloads[0],
                 )
 
-            @task()
+            @task(
+                task_id=f"{office}_update_measurement",
+                trigger_rule=TriggerRule.NONE_SKIPPED,
+            )
             def update_measurement(provider, payloads):
                 create_update(
                     f"/providers/{provider.lower()}/timeseries/values",
@@ -167,7 +206,7 @@ def a2w_sync_cwms_levels():
             _create_level = create_level(office, _radar_levels)
             _update_measurement = update_measurement(office, _radar_levels)
 
-            _radar_levels >> [_create_level, _update_measurement]
+            _create_level >> _update_measurement
 
         if previous:
             previous >> tg

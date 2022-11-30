@@ -1,10 +1,10 @@
 """
 # A2W Sync CWMS Locations
 
+## Tasks
+
 Task groups created per District (MSC) each having the same tasks.
-The `chain()` function is used to force the group order to defined by the
-constant variable `MSC`, which is a list of all MSCs.  MSC list
-order defines priority ranking.  Task order is as follows:
+MSC list order defines priority ranking.  Tasks are as follows:
 
 - radar_locations: get radar locations
 - transform_radar: transform into usable JSON
@@ -13,6 +13,15 @@ order defines priority ranking.  Task order is as follows:
 - create_update_sets: create a unique `set` of locations to update
 - post_sets: post the unique `set`
 - update_sets: update the unique `set`
+
+## Skipping Tasks
+
+Airflow's skip exception (`AirflowSkipException`) is used when no data is available for a POST
+or a PUT.  A list of length == 0 for a post/update set assumes no data
+and the Water DB is up to date with what was returned from RADAR.  This
+skipping translates to the next task for the actual post/put sets.  Acquiring
+RADAR Locations (radar_locations) task and Water Locations (water_locations) task
+have a trigger rule == ALL_DONE to continue through each task group.
 """
 import json
 from dataclasses import asdict, astuple, dataclass, field
@@ -24,10 +33,11 @@ import pandas as pd
 from airflow.decorators import dag, task
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.exceptions import AirflowSkipException
 from helpers import MSC, usace_office_group
 
 # CWMS Locations data type
-DATATYPE = "cwms-location"
+CWMS_LOCATION = "cwms-location"
 
 # dataclasses to help define defaults when RADAR results have 'None' values for attributes
 @dataclass
@@ -51,7 +61,7 @@ class RadarAttr:
 @dataclass
 class RadarLocation:
     provider: str = field(default="", metadata={"alias": "office"})
-    datatype: str = field(default=DATATYPE)
+    datatype: str = field(default=CWMS_LOCATION)
     code: str = field(default="", metadata={"alias": "Location Code"})
     geometry: dict = field(default_factory=dict)
     attributes: dict = field(default_factory=dict)
@@ -93,7 +103,7 @@ def json_drop_duplicates(payload):
 
 @dag(
     default_args=default_args,
-    schedule_interval="@daily",
+    schedule="@daily",
     tags=["a2w", "radar"],
     max_active_runs=2,
     max_active_tasks=3,
@@ -105,12 +115,15 @@ def a2w_sync_cwms_locations():
     for office in MSC:
         with TaskGroup(group_id=f"{office}") as tg:
 
-            @task()
+            @task(
+                task_id=f"{office}_radar_locations",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
             def radar_locations(office):
                 try:
                     water_hook = water.WaterHook(method="GET")
                     resp = water_hook.request(
-                        endpoint=f"/datasources?provider={office.lower()}&datatype={DATATYPE}"
+                        endpoint=f"/datasources?provider={office.lower()}&datatype={CWMS_LOCATION}"
                     )
                     uri = resp[0]["datatype_uri"]
                 except (KeyError, IndexError) as err:
@@ -136,7 +149,10 @@ def a2w_sync_cwms_locations():
 
                 return locations
 
-            @task()
+            @task(
+                task_id=f"{office}_transform_radar",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
             def transform_radar(office, office_locations):
                 radar_locations = []
                 for location in office_locations:
@@ -197,7 +213,10 @@ def a2w_sync_cwms_locations():
 
                 return radar_locations
 
-            @task()
+            @task(
+                task_id=f"{office}_water_locations",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
             def water_locations(office):
                 water_hook = water.WaterHook(method="GET")
                 try:
@@ -209,7 +228,10 @@ def a2w_sync_cwms_locations():
                     print(e, f"Office ({office}) may not be a provider")
                     return list()
 
-            @task()
+            @task(
+                task_id=f"{office}_create_post_sets",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
             def create_post_sets(radar, water):
                 radar_asdict = {(item["code"]).lower(): item for item in radar}
                 water_asdict = {(item["code"]).lower(): item for item in water}
@@ -225,9 +247,15 @@ def a2w_sync_cwms_locations():
                     print(te, "; No codes to create, continue with empty list")
                     post_objects = []
 
+                if len(post_objects) == 0:
+                    raise AirflowSkipException
+
                 return post_objects
 
-            @task()
+            @task(
+                task_id=f"{office}_create_update_sets",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
             def create_update_sets(radar, water):
                 update_attr = ["geometry", "state", "attributes"]
 
@@ -249,6 +277,9 @@ def a2w_sync_cwms_locations():
                     if _water_dict != _radar_dict:
                         update_list.append({**water_asdict[code], **_radar_dict})
 
+                if len(update_list) == 0:
+                    raise AirflowSkipException
+
                 return update_list
 
             # POST or PUT data sets
@@ -260,12 +291,20 @@ def a2w_sync_cwms_locations():
                         json=payload,
                     )
                     return resp
+                else:
+                    raise AirflowSkipException
 
-            @task()
+            @task(
+                task_id=f"{office}_post_sets",
+                trigger_rule=TriggerRule.NONE_SKIPPED,
+            )
             def post_sets(payload, office, method):
                 return post_put_sets(payload, office, method)
 
-            @task()
+            @task(
+                task_id=f"{office}_update_sets",
+                trigger_rule=TriggerRule.NONE_SKIPPED,
+            )
             def update_sets(payload, office, method):
                 return post_put_sets(payload, office, method)
 
@@ -283,4 +322,4 @@ def a2w_sync_cwms_locations():
         previous = tg
 
 
-sync_locations_dag = a2w_sync_cwms_locations()
+DAG_ = a2w_sync_cwms_locations()
