@@ -29,7 +29,7 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["a2w"],
-    schedule_interval="0 14 * * *",
+    schedule="0 14 * * *",
     max_active_runs=2,
     max_active_tasks=6,
     catchup=False,

@@ -32,7 +32,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval="5 * * * *",
+    schedule="5 * * * *",
     tags=["cumulus", "airtemp"],
     max_active_runs=2,
     max_active_tasks=4,

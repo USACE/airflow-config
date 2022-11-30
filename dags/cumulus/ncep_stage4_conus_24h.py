@@ -28,7 +28,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval="5 12 * * *",
+    schedule="5 12 * * *",
     tags=["cumulus", "precip", "QPE", "CONUS", "stage4", "NCEP"],
     max_active_runs=2,
     max_active_tasks=4,

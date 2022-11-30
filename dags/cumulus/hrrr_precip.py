@@ -24,8 +24,7 @@ with DAG(
     # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
     start_date=(datetime.utcnow() - timedelta(hours=2)).replace(minute=0, second=0),
     tags=["cumulus", "precip", "forecast"],
-    # schedule_interval='*/15 * * * *'
-    schedule_interval="@hourly",
+    schedule="@hourly",
     catchup=False,
     max_active_runs=1,
     max_active_tasks=4,

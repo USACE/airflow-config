@@ -31,7 +31,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval="@hourly",
+    schedule="@hourly",
     tags=["cumulus", "airtemp"],
     max_active_runs=4,
 )
