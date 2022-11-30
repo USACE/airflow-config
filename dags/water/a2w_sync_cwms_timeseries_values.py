@@ -1,8 +1,6 @@
 import json
 from datetime import datetime, timedelta
 import logging
-from socket import timeout
-from uuid import uuid4
 
 from airflow import DAG
 from airflow.decorators import dag, task
@@ -37,7 +35,7 @@ default_args = {
     catchup=False,
     description="Extract Project Timeseries Measurments from RADAR, Post to Water API",
 )
-def a2w_sync_timeseries_measurements():
+def a2w_sync_cwms_timeseries_values():
     def create_task_group(**kwargs):
         office = kwargs["office"]
 
@@ -168,7 +166,9 @@ def a2w_sync_timeseries_measurements():
                         payload.append(ts_obj)
 
                 if len(payload) > 0:
-                    print(f"Posting {len(payload)} timeseries measurment objects")
+                    logging.info(
+                        f"Posting {len(payload)} timeseries measurment objects"
+                    )
                     water_hook = water.WaterHook(method="POST")
                     response = water_hook.request(
                         endpoint=f"/providers/{office.lower()}/timeseries/values",
@@ -194,4 +194,4 @@ def a2w_sync_timeseries_measurements():
     # ]
 
 
-timeseries_measurements_dag = a2w_sync_timeseries_measurements()
+timeseries_measurements_dag = a2w_sync_cwms_timeseries_values()
