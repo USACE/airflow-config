@@ -99,7 +99,6 @@ def a2w_sync_cwms_timeseries_values():
                 # print(r)
                 # print("-------------")
 
-                # r = radar.get_timeseries([tsid], begin, end, radar_office)
                 if r == None:
                     raise ValueError(f"Invalid Response: {r}")
 
