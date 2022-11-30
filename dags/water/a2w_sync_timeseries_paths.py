@@ -1,4 +1,12 @@
 """
+# A2W Sync CWMS Timeseries Paths
+
+Task groups created per District (MSC) each having the same tasks.
+MSC list order defines priority ranking.  Tasks are as follows:
+
+- water_tsid_keys: get TSID keys in Water DB
+- radar_timeseries: get RADAR TSIDs and compare with Water TSIDs
+- create_timeseries: create TSIDs not in Water DB
 """
 
 from datetime import datetime, timedelta
