@@ -14,11 +14,11 @@ x-airflow-common:
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   &airflow-common
-  image: apache/airflow:2.4.1-python3.8-usace
+  image: apache/airflow:2.4.3-python3.8-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.4.1
+      - AIRFLOW_VERSION=2.4.3
       - PYTHON_BASE_IMAGE=python:3.8-slim-bullseye
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
       - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
@@ -152,7 +152,7 @@ services:
   #############################################################################
   airflow_init:
     <<: *airflow-common
-    image: apache/airflow:2.4.1-python3.8-usace
+    image: apache/airflow:2.4.3-python3.8-usace
     depends_on:
       - airflowdb
     entrypoint: |-
@@ -215,7 +215,7 @@ services:
   #############################################################################
   airflow_ui:
     <<: *airflow-common
-    image: apache/airflow:2.4.1-python3.8-usace
+    image: apache/airflow:2.4.3-python3.8-usace
     command: webserver
     ports:
       - '8000:8080'
