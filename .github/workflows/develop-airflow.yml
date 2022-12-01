@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 jobs:
   DockerImage:
-    name: apache/airflow:2.4.2-python3.8
+    name: apache/airflow:2.4.3-python3.8
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -26,11 +26,11 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: apache/airflow
-          IMAGE_TAG: 2.4.2-python3.8-sqs
+          IMAGE_TAG: 2.4.3-python3.8-sqs
         run: |
           export DOCKER_BUILDKIT=1
           docker build _docker/airflow \
-          --build-arg AIRFLOW_VERSION="2.4.2" \
+          --build-arg AIRFLOW_VERSION="2.4.3" \
           --build-arg PYTHON_BASE_IMAGE="python:3.8-slim-bullseye" \
           --build-arg ADDITIONAL_DEV_APT_DEPS="libcurl4-openssl-dev libssl-dev" \
           --build-arg ADDITIONAL_PYTHON_DEPS="celery[sqs] apache-airflow[statsd]" \
