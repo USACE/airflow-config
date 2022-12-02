@@ -34,6 +34,7 @@ default_args = {
     "email_on_retry": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "execution_timeout": timedelta(hours=1),
 }
 
 
@@ -47,8 +48,7 @@ default_args = {
     doc_md=__doc__,
 )
 def a2w_sync_usgs_timeseries():
-    previous = None
-    for state in ["WV", "OH", "KY", "MN"]:  # US_STATES:
+    for state in US_STATES:
         with TaskGroup(group_id=f"{state}") as tg:
 
             @task(task_id=f"{state}_water_tsid_keys")
@@ -58,9 +58,6 @@ def a2w_sync_usgs_timeseries():
                 tsids = water_hook.request(
                     endpoint=f"/timeseries?datatype={DATATYPE}&provider={PROVIDER}&state={state}"
                 )
-
-                # if len(tsids) == 0:
-                #     raise AirflowSkipException(f"No tsids from water-api for {state}")
 
                 tsid_keys_asdict = {item["key"]: item for item in tsids}
 
@@ -109,11 +106,7 @@ def a2w_sync_usgs_timeseries():
             def create_timeseries(payload):
 
                 if len(payload) == 0:
-                    raise AirflowSkipException
-
-                print("----------")
-                print(payload)
-                print("----------")
+                    raise AirflowSkipException("Skipping...No new timeseries to post")
 
                 logging.info(f"POSTING {len(payload)} objects to water-api")
 
@@ -122,16 +115,14 @@ def a2w_sync_usgs_timeseries():
                     endpoint=f"/providers/{PROVIDER}/timeseries",
                     json=payload,
                 )
-                return resp
+
+                logging.info(f"{len(resp)} timeseries accepted by water-api")
+
+                return
 
             _water_tsid_keys = water_tsid_keys(state)
             _usgs_timeseries = usgs_timeseries(state, _water_tsid_keys)
-            _create_timeseries = create_timeseries(_usgs_timeseries)
-
-        if previous:
-            previous >> tg
-
-        previous = tg
+            create_timeseries(_usgs_timeseries)
 
 
 DAG_ = a2w_sync_usgs_timeseries()
