@@ -47,7 +47,7 @@ def create_dag(**kwargs):
         default_args=default_args,
         dag_id=kwargs["dag_id"],
         tags=kwargs["tags"],
-        schedule_interval=kwargs["schedule_interval"],
+        schedule=kwargs["schedule"],
         doc_md=__doc__,
         max_active_runs=2,
         max_active_tasks=4,
@@ -103,5 +103,5 @@ for key, val in implementation.items():
     d_tags = val["tags"]
     d_bucket = val["bucket"]
     globals()[d_id] = create_dag(
-        dag_id=d_id, tags=d_tags, s3_bucket=d_bucket, schedule_interval="8 * * * *"
+        dag_id=d_id, tags=d_tags, s3_bucket=d_bucket, schedule="8 * * * *"
     )

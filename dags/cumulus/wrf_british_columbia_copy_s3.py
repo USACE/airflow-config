@@ -34,7 +34,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval="@yearly",
+    schedule="@yearly",
     tags=["cumulus", "precip", "airtemp", "Weather Research and Forecasting"],
     max_active_runs=2,
     max_active_tasks=3,
