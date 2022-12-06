@@ -90,7 +90,7 @@ with DAG(
     dag_id="a2w_sync_usgs_measurements",
     default_args=default_args,
     tags=["a2w", "usgs", "measurements"],
-    schedule_interval="15 */1 * * *",
+    schedule="15 */1 * * *",
     max_active_runs=2,
     max_active_tasks=3,
     doc_md=__doc__,
