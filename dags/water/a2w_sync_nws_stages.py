@@ -40,7 +40,7 @@ default_args = {
     "email_on_retry": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=10),
-    "schedule_interval": "@daily"
+    "schedule": "@daily"
     # 'max_active_runs':1,
     # 'concurrency':4,
 }
