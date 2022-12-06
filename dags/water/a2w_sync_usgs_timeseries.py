@@ -23,7 +23,18 @@ from helpers import US_STATES
 
 DATATYPE = "usgs-timeseries"
 PROVIDER = "usgs"
-SUPPORTED_PARAM_CODES = ["00065", "000061", "62614", "62615", "00045", "00010", "00011"]
+SUPPORTED_PARAM_CODES = [
+    "00045",
+    "00060",
+    "00061",
+    "00062",
+    "00065",
+    "62614",
+    "62615",
+    "00045",
+    "00010",
+    "00011",
+]
 
 default_args = {
     "owner": "airflow",
@@ -41,7 +52,7 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["a2w", "usgs"],
-    schedule_interval="@daily",
+    schedule="@daily",
     max_active_runs=1,
     max_active_tasks=2,
     catchup=False,
