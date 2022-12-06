@@ -55,7 +55,7 @@ with DAG(
     default_args=default_args,
     dag_id="a2w_sync_usgs_sites",
     tags=["a2w", "usgs"],
-    schedule_interval="@daily",
+    schedule="@daily",
     doc_md=dedent(__doc__),
 ) as dag:
 
@@ -102,25 +102,13 @@ with DAG(
         for line in result:
 
             site = {}
-            site["site_number"] = line["site_no"].strip()
-            site["name"] = line["station_nm"].replace("'", "").strip()
-            site["state_abbrev"] = state_abbrev
-            site["elevation"] = (
-                float(line["alt_va"].strip()) if line["alt_va"].strip() != "" else None
-            )
-            try:
-                site["horizontal_datum_id"] = horizontal_datum[
-                    line["dec_coord_datum_cd"]
-                ]
-            except:
-                site["horizontal_datum_id"] = 4269
-            site["huc"] = (
-                f"{line['huc_cd'].strip()}" if line["huc_cd"].strip() != "" else None
-            )
-            try:
-                site["vertical_datum_id"] = vertical_datum[line["alt_datum_cd"]]
-            except:
-                site["vertical_datum_id"] = vertical_datum["UNKNOWN"]
+            site["provider"] = "usgs"
+            site["datatype"] = "usgs-site"
+            site["code"] = line["site_no"].strip()
+            site["state"] = state_abbrev
+
+            # Geometry
+            # --------
             geom = {}
             geom["type"] = "Point"
             try:
@@ -132,10 +120,42 @@ with DAG(
                 geom["coordinates"] = [0, 0]
             site["geometry"] = geom
 
+            # Attributes
+            # ---------
+            attributes = {}
+            attributes["station_name"] = line["station_nm"].strip()
+            attributes["site_type"] = line["site_tp_cd"].strip()
+            site["attributes"] = attributes
+
+            # site["site_number"] = line["site_no"].strip()
+            # site["name"] = line["station_nm"].replace("'", "").strip()
+            # site["state_abbrev"] = state_abbrev
+            # site["elevation"] = (
+            #     float(line["alt_va"].strip()) if line["alt_va"].strip() != "" else None
+            # )
+            # try:
+            #     site["horizontal_datum_id"] = horizontal_datum[
+            #         line["dec_coord_datum_cd"]
+            #     ]
+            # except:
+            #     site["horizontal_datum_id"] = 4269
+            # site["huc"] = (
+            #     f"{line['huc_cd'].strip()}" if line["huc_cd"].strip() != "" else None
+            # )
+            # try:
+            #     site["vertical_datum_id"] = vertical_datum[line["alt_datum_cd"]]
+            # except:
+            #     site["vertical_datum_id"] = vertical_datum["UNKNOWN"]
+
             state_sites.append(site)
 
         # POST to the water API
-        water.sync_usgs_sites(state_sites)
+        # water.sync_usgs_sites(state_sites)
+        water_hook = water.WaterHook(method="POST")
+        resp = water_hook.request(
+            endpoint="/providers/usgs/locations",
+            json=state_sites,
+        )
 
     states = water.get_states()
 

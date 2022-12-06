@@ -46,7 +46,7 @@ default_args = {
 }
 
 
-@dag(default_args=default_args, schedule_interval="@yearly", tags=["NSIDC", "snow"])
+@dag(default_args=default_args, schedule="@yearly", tags=["NSIDC", "snow"])
 def cumulus_nsidc_ua_swe_sd_v1():
     """
     Download 4 km SWE and Snow Depth netCDF files from NSIDC by water year

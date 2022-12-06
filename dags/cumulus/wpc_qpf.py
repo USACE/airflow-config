@@ -32,7 +32,7 @@ default_args = {
 # An Example Using the Taskflow API
 @dag(
     default_args=default_args,
-    schedule_interval="@hourly",
+    schedule="@hourly",
     tags=["cumulus", "forecast"],
     max_active_runs=2,
     max_active_tasks=4,

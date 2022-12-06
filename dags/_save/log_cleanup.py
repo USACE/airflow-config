@@ -85,7 +85,7 @@ default_args = {
 dag = DAG(
     DAG_ID,
     default_args=default_args,
-    schedule_interval=SCHEDULE_INTERVAL,
+    schedule=SCHEDULE_INTERVAL,
     start_date=START_DATE,
     tags=["maintenance"],
     template_undefined=jinja2.Undefined,

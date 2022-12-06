@@ -31,7 +31,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval="@monthly",
+    schedule="@monthly",
     tags=["cumulus", "precip"],
 )
 def cumulus_ndgd_rtma_precip_backload():

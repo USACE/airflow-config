@@ -26,7 +26,7 @@ with DAG(
     start_date=datetime(2021, 10, 1),
     end_date=datetime(2022, 5, 9),
     tags=["cumulus", "precip", "forecast"],
-    schedule_interval="@hourly",
+    schedule="@hourly",
     catchup=True,
     max_active_runs=5,
 ) as dag:

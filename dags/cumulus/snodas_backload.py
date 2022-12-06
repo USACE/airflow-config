@@ -33,7 +33,7 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["cumulus", "snow"],
-    schedule_interval="@daily",
+    schedule="@daily",
     max_active_runs=4,
 )
 def cumulus_snodas_unmasked_backload():

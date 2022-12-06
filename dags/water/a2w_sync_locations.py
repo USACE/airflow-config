@@ -1,33 +1,30 @@
 """
-# Sync Water database with RADAR Locations
+# A2W Sync CWMS Locations
 
-RADAR Locations retrieved as JSON string
+## Tasks
 
-## Parse:
+Task groups created per District (MSC) each having the same tasks.
+MSC list order defines priority ranking.  Tasks are as follows:
 
-Extract schema needed for posting to Water API
+- radar_locations: get radar locations
+- transform_radar: transform into usable JSON
+- water_locations: get locations in Water
+- create_post_sets: create a unique `set` of locations to post
+- create_update_sets: create a unique `set` of locations to update
+- post_sets: post the unique `set`
+- update_sets: update the unique `set`
 
-## Post:
+## Skipping Tasks
 
-Water API endpoint `/sync/locations`
-
-```{
-    'office_id',
-    'name',
-    'public_name',
-    'kind_id',
-    'geometry' : {
-        'type',
-        'coordinates': [
-            101, 47
-        ]
-    }
-}```
-
-__North America centroid default for missing coordinates__
+Airflow's skip exception (`AirflowSkipException`) is used when no data is available for a POST
+or a PUT.  A list of length == 0 for a post/update set assumes no data
+and the Water DB is up to date with what was returned from RADAR.  This
+skipping translates to the next task for the actual post/put sets.  Acquiring
+RADAR Locations (radar_locations) task and Water Locations (water_locations) task
+have a trigger rule == ALL_DONE to continue through each task group.
 """
-
 import json
+from dataclasses import asdict, astuple, dataclass, field
 from datetime import datetime, timedelta
 
 import helpers.radar as radar
@@ -35,14 +32,50 @@ import helpers.water as water
 import pandas as pd
 from airflow.decorators import dag, task
 from airflow.utils.task_group import TaskGroup
-from helpers.sharedApi import get_nwd_group, get_static_offices
+from airflow.utils.trigger_rule import TriggerRule
+from airflow.exceptions import AirflowSkipException
+from helpers import MSC, usace_office_group
+
+# CWMS Locations data type
+CWMS_LOCATION = "cwms-location"
+
+# dataclasses to help define defaults when RADAR results have 'None' values for attributes
+@dataclass
+class RadarPoint:
+    lon: float = 0.0
+    lat: float = 0.0
+
+
+@dataclass
+class RadarGeometry:
+    type: str = "Point"
+    coordinates: list = field(default_factory=list)
+
+
+@dataclass
+class RadarAttr:
+    public_name: str = "No public name"
+    kind: str = "SITE"
+
+
+@dataclass
+class RadarLocation:
+    provider: str = field(default="", metadata={"alias": "office"})
+    datatype: str = field(default=CWMS_LOCATION)
+    code: str = field(default="", metadata={"alias": "Location Code"})
+    geometry: dict = field(default_factory=dict)
+    attributes: dict = field(default_factory=dict)
+    state: str = "AK"
+
 
 # Default arguments
 default_args = {
     "owner": "airflow",
     "start_date": (datetime.utcnow() - timedelta(days=2)).replace(minute=0, second=0),
     "retries": 1,
-    "retry_delay": timedelta(minutes=5),
+    "retry_delay": timedelta(minutes=2),
+    "execution_timeout": timedelta(hours=4),
+    "tigger_rule": TriggerRule.DUMMY,
 }
 
 
@@ -70,149 +103,223 @@ def json_drop_duplicates(payload):
 
 @dag(
     default_args=default_args,
-    schedule_interval="@daily",
+    schedule="@daily",
     tags=["a2w", "radar"],
     max_active_runs=2,
     max_active_tasks=3,
     catchup=False,
     doc_md=__doc__,
 )
-def a2w_sync_locations():
-    @task
-    def get_a2w_office_ids():
-        water_office_ids = json.loads(water.get_offices())
-        office_ids = {item["symbol"]: item["id"] for item in water_office_ids}
-        return office_ids
+def a2w_sync_cwms_locations():
+    previous = None
+    for office in MSC:
+        with TaskGroup(group_id=f"{office}") as tg:
 
-    office_ids = get_a2w_office_ids()
-
-    @task
-    def get_a2w_office_kind_ids():
-        water_kind_ids = json.loads(water.get_location_kind())
-        kind_ids = {item["name"]: item["id"] for item in water_kind_ids}
-        return kind_ids
-
-    office_kind_ids = get_a2w_office_kind_ids()
-
-    def create_tasks_group(office):
-        with TaskGroup(group_id=f"{office}") as task_group:
-
-            @task(task_id=f"get_locations_{office}")
-            def list_locations(office):
-                the_office = (
-                    office if get_nwd_group(office) is None else get_nwd_group(office)
-                )
-
-                locations = radar.api_request(
-                    "locations", f"office={the_office}&names=@"
-                )
-                if locations is None or "DOCTYPE html" in locations:
+            @task(
+                task_id=f"{office}_radar_locations",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
+            def radar_locations(office):
+                try:
+                    water_hook = water.WaterHook(method="GET")
+                    resp = water_hook.request(
+                        endpoint=f"/datasources?provider={office.lower()}&datatype={CWMS_LOCATION}"
+                    )
+                    uri = resp[0]["datatype_uri"]
+                except (KeyError, IndexError) as err:
+                    print(err)
                     return list()
-                locations_str = locations.translate(
-                    locations.maketrans("", "", "\n\r\t")
+
+                office = usace_office_group(office)
+
+                radar_hook = radar.RadarHook()
+                radar_hook.response_type = "text"
+                response_payload = radar_hook.request_(
+                    method="GET",
+                    url=uri + f"?office={office}&names=@",
+                )
+
+                if response_payload is None or "DOCTYPE html" in response_payload:
+                    return list()
+                response_str = response_payload.translate(
+                    response_payload.maketrans("", "", "\n\r\t")
                 ).replace("None", "")
-                locations_json = json.loads(locations_str)
-                locations_list = locations_json["locations"]["locations"]
+                response_json = json.loads(response_str)
+                locations = response_json["locations"]["locations"]
 
-                return locations_list
+                return locations
 
-            @task(task_id=f"transform_locations_{office}")
-            def transform_locations(office_locations, office_ids, kind_ids):
-
+            @task(
+                task_id=f"{office}_transform_radar",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
+            def transform_radar(office, office_locations):
                 radar_locations = []
                 for location in office_locations:
-                    kind = location["classification"]["location-kind"]
-                    kind_id = kind_ids[kind.upper()]
-                    office = location["identity"]["office"]
-                    bounding_office = location["political"]["bounding-office"]
+                    try:
+                        identity_office = location["identity"]["office"]
+                        name = location["identity"]["name"]
+                        public_name = location["label"]["public-name"]
+                        lon = location["geolocation"]["longitude"]
+                        lat = location["geolocation"]["latitude"]
+                        state = location["political"]["state"]
+                        bounding_office = location["political"]["bounding-office"]
+                        location_kind = location["classification"]["location-kind"]
+                    except KeyError as ke:
+                        print(ke)
 
-                    if office == bounding_office or bounding_office is None:
-                        the_office = office
                     # If a division/region has the same location name as the district and sets the
                     # bounding office correctly to the district, we DON'T want to override the
                     # district office's meta-data with what the division/region sets UNLESS
                     # it's in the NWD regions.
-                    elif office != bounding_office and office.upper() in [
-                        "NWDM",
-                        "NWDP",
-                    ]:
-                        the_office = bounding_office
-                    else:
-                        the_office = office
+                    if (
+                        identity_office != bounding_office
+                        and identity_office.upper()
+                        in [
+                            "NWDM",
+                            "NWDP",
+                        ]
+                    ):
+                        identity_office = bounding_office
 
-                    # All office symbols are 3 chars
-                    try:
-                        office_id = office_ids[the_office[:3]]
-                    except KeyError as err:
-                        print(err)
-                        print(the_office)
+                    # only add those objects that coorespond to the office we want
+                    if identity_office != office:
                         continue
 
-                    # Dealing with missing geo location and a public name
-                    lon = (
-                        location["geolocation"]["longitude"]
-                        if location["geolocation"]["latitude"] is not None
-                        else 101
-                    )
-                    lat = (
-                        location["geolocation"]["latitude"]
-                        if location["geolocation"]["latitude"] is not None
-                        else 47
-                    )
-                    public_name = (
-                        location["label"]["public-name"]
-                        if location["label"]["public-name"] is not None
-                        else location["identity"]["name"]
-                    )
+                    # Points
+                    radar_pnt = RadarPoint()
+                    if lon is not None:
+                        radar_pnt.lon = lon
+                    if lat is not None:
+                        radar_pnt.lat = lat
+                    # Geometry
+                    radar_geo = RadarGeometry(coordinates=list(astuple(radar_pnt)))
+                    # Attributes
+                    radar_attr = RadarAttr()
+                    if public_name is not None:
+                        radar_attr.public_name = public_name
+                    if location_kind is not None:
+                        radar_attr.kind = location_kind
+                    # Location
+                    radar_loc = RadarLocation(geometry=radar_geo, attributes=radar_attr)
+                    if identity_office is not None:
+                        radar_loc.provider = identity_office[:3]
+                    if name is not None:
+                        radar_loc.code = name
+                    if state is not None:
+                        radar_loc.state = state
 
-                    # Appending dictionary to post
-                    radar_locations.append(
-                        {
-                            "office_id": office_id,
-                            "name": location["identity"]["name"],
-                            "public_name": public_name,
-                            "kind_id": kind_id,
-                            "geometry": {
-                                "type": "Point",
-                                "coordinates": [
-                                    lon,
-                                    lat,
-                                ],
-                            },
-                        }
-                    )
+                    radar_locations.append(asdict(radar_loc))
 
                 return radar_locations
 
-            @task(task_id=f"sync_locations_{office}")
-            def sync_locations(locations):
-                """
-                Loop through locations
-                """
-                water.sync_radar_locations(locations)
-                # loc = json_drop_duplicates(locations)
-                # for l in loc:
-                #     water.sync_radar_locations(l)
-
-            sync_locations(
-                transform_locations(
-                    office_locations=list_locations(office),
-                    office_ids=office_ids,
-                    kind_ids=office_kind_ids,
-                )
+            @task(
+                task_id=f"{office}_water_locations",
+                trigger_rule=TriggerRule.ALL_DONE,
             )
+            def water_locations(office):
+                water_hook = water.WaterHook(method="GET")
+                try:
+                    resp = water_hook.request(
+                        endpoint=f"/locations?provider={office.lower()}",
+                    )
+                    return resp
+                except Exception as e:
+                    print(e, f"Office ({office}) may not be a provider")
+                    return list()
 
-        return task_group
+            @task(
+                task_id=f"{office}_create_post_sets",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
+            def create_post_sets(radar, water):
+                radar_asdict = {(item["code"]).lower(): item for item in radar}
+                water_asdict = {(item["code"]).lower(): item for item in water}
+                radar_keys = set(radar_asdict.keys())
+                water_keys = set(water_asdict.keys())
+                create_codes = radar_keys.difference(water_keys)
 
-    task_groups = [create_tasks_group(office) for office in get_static_offices()]
+                try:
+                    post_objects = [
+                        v for k, v in radar_asdict.items() if k in create_codes
+                    ]
+                except TypeError as te:
+                    print(te, "; No codes to create, continue with empty list")
+                    post_objects = []
 
-    # Force task groups to run in serial instead of default parallel
-    for idx, tg in enumerate(task_groups):
-        if idx > 0:
-            last_task_group >> tg
-        last_task_group = tg
+                if len(post_objects) == 0:
+                    raise AirflowSkipException
 
-    office_ids >> office_kind_ids >> task_groups
+                return post_objects
+
+            @task(
+                task_id=f"{office}_create_update_sets",
+                trigger_rule=TriggerRule.ALL_DONE,
+            )
+            def create_update_sets(radar, water):
+                update_attr = ["geometry", "state", "attributes"]
+
+                radar_asdict = {(item["code"]).lower(): item for item in radar}
+                water_asdict = {(item["code"]).lower(): item for item in water}
+                radar_keys = set(radar_asdict.keys())
+                water_keys = set(water_asdict.keys())
+                shared_codes = radar_keys.intersection(water_keys)
+
+                update_list = []
+                for code in shared_codes:
+                    _radar_dict = {
+                        k: v for k, v in radar_asdict[code].items() if k in update_attr
+                    }
+                    _water_dict = {
+                        k: v for k, v in water_asdict[code].items() if k in update_attr
+                    }
+
+                    if _water_dict != _radar_dict:
+                        update_list.append({**water_asdict[code], **_radar_dict})
+
+                if len(update_list) == 0:
+                    raise AirflowSkipException
+
+                return update_list
+
+            # POST or PUT data sets
+            def post_put_sets(payload, office, method):
+                if len(payload) > 0:
+                    water_hook = water.WaterHook(method=method)
+                    resp = water_hook.request(
+                        endpoint=f"/providers/{office.lower()}/locations",
+                        json=payload,
+                    )
+                    return resp
+                else:
+                    raise AirflowSkipException
+
+            @task(
+                task_id=f"{office}_post_sets",
+                trigger_rule=TriggerRule.NONE_SKIPPED,
+            )
+            def post_sets(payload, office, method):
+                return post_put_sets(payload, office, method)
+
+            @task(
+                task_id=f"{office}_update_sets",
+                trigger_rule=TriggerRule.NONE_SKIPPED,
+            )
+            def update_sets(payload, office, method):
+                return post_put_sets(payload, office, method)
+
+            _radar_locations = radar_locations(office)
+            _transform_radar = transform_radar(office, _radar_locations)
+            _water_locations = water_locations(office)
+            _create_post_sets = create_post_sets(_transform_radar, _water_locations)
+            _create_update_sets = create_update_sets(_transform_radar, _water_locations)
+            _post_sets = post_sets(_create_post_sets, office, "POST")
+            _put_sets = update_sets(_create_update_sets, office, "PUT")
+
+        if previous:
+            previous >> tg
+
+        previous = tg
 
 
-sync_locations_dag = a2w_sync_locations()
+DAG_ = a2w_sync_cwms_locations()

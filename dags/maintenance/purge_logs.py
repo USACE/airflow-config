@@ -18,7 +18,7 @@ default_args = {"owner": "airflow", "retries": 1, "retry_delay": timedelta(minut
 with DAG(
     default_args=default_args,
     dag_id="maint_purge_logs",
-    schedule_interval="@daily",
+    schedule="@daily",
     start_date=datetime(2022, 6, 1),
     catchup=False,
     tags=["maintenance"],

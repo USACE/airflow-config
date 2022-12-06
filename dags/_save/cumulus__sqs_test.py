@@ -25,21 +25,18 @@ default_args = {
 }
 
 sqs_test = DAG(
-    'sqs_test',
+    "sqs_test",
     default_args=default_args,
-    schedule_interval='1 * * * *',
-    tags=['cumulus', 'experimental'],
+    schedule="1 * * * *",
+    tags=["cumulus", "experimental"],
 )
 
 test = PythonOperator(
-    task_id='sqstest',
+    task_id="sqstest",
     python_callable=trigger_sqs,
     op_kwargs={
-        'queue_name': 'cumulus-test',
-        'message': json.dumps(
-            {"msg": 'HAVE A NICE DAY'},
-            separators=(',', ':')
-            )
-        },
-    dag=sqs_test
+        "queue_name": "cumulus-test",
+        "message": json.dumps({"msg": "HAVE A NICE DAY"}, separators=(",", ":")),
+    },
+    dag=sqs_test,
 )
