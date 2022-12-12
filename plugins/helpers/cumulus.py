@@ -14,6 +14,7 @@ acquirables = {
     "cnrfc-qpe-06h": "34a89c35-090d-46e8-964a-c621403301b9",
     "cnrfc-qpf-06h": "c22785cd-400e-4664-aef8-426734825c2c",
     "cnrfc-nbm-qpf-06h": "40cfce36-cfad-4a10-8b2d-eb8862378ca5",
+    "cnrfc-nbm-qtf-01h": "0b1772a1-5567-4189-b892-750797ce02a1",
     "ncrfc-rtmat-01h": "6c879d18-2eca-4b35-9fab-2b5f78262fa6",
     "ncrfc-fmat-01h": "28d16afe-2834-4d2c-9df2-fdf2c40e510f",
     "ncep-mrms-v12-msqpe01h-p2-carib": "a483aa42-4388-4289-a41e-6b78998066a7",
