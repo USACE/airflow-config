@@ -1,11 +1,17 @@
 """
-## California Nevada River Forecast Center (CNRFC) NBM QPF (6 hourly)
+## California Nevada River Forecast Center (CNRFC) NBM QTF (1 hour)
 
-URL Structure: https://www.cnrfc.noaa.gov/archive/YYYY/MMM/netcdfQpfNbm/QPF.YYYYMMdd_HHMM.nc.gz
+6 Hour files are downloaded, hourly bands are extracted.
+
+URL Structure: https://www.cnrfc.noaa.gov/archive/YYYY/MMM/netcdfFcstTemp/fcstTemperature.YYYYMMdd_HHMM.nc.gz
 
 01/07/13/19Z runs of NBM, updated within about 1.5 hours of model time
 
-Index: Not found
+Additional Information: https://cnrfc.noaa.gov/documents/CNRFC_Archive_Download_Instructions.pdf
+
+Comment: Availability is at 0000, 0700, 1200, 1900. This is slightly different than the expected 01/07/13/19Z.
+
+Comment 2: Hourly data, issued every 6 hours, NetCDF, 4.7 km resolution. This was preferred to the NOMADS data; tradeoff of hourly timescale vs. spatial resolution.
 
 """
 
@@ -37,26 +43,24 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule="2 1,7,13,19 * * *",
-    tags=["cumulus", "precip", "QPF", "NBM", "CNRFC"],
+    schedule="3 0,7,12,19 * * *",
+    tags=["cumulus", "airtemp", "QTF", "NBM", "CNRFC"],
     max_active_runs=2,
     max_active_tasks=4,
     doc_md=__doc__,
 )
-def cumulus_cnrfc_nbm_qpf():
-
+def cumulus_cnrfc_nbm_qtf():
     URL_ROOT = f"https://www.cnrfc.noaa.gov/archive"
-    PRODUCT_SLUG = "cnrfc-nbm-qpf-06h"
+    PRODUCT_SLUG = "cnrfc-nbm-qtf-01h"
 
     @task()
-    def download_cnrfc_nbm_qpf():
+    def download_cnrfc_nbm_qtf():
         logical_date = get_current_context()["logical_date"]
         # logical_date = logical_date + timedelta(hours=6)
 
-        dirpath = (
-            f'{logical_date.strftime("%Y")}/{logical_date.strftime("%b")}/netcdfQpfNbm'
-        )
-        filename = f'QPF.{logical_date.strftime("%Y%m%d_%H00")}.nc.gz'
+        dirpath = f'{logical_date.strftime("%Y")}/{logical_date.strftime("%b")}/netcdfFcstTemp'
+
+        filename = f'fcstTemperature.{logical_date.strftime("%Y%m%d_%H00")}.nc.gz'
         filepath = f"{dirpath}/{filename}"
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
         print(f"Downloading {filepath}")
@@ -81,7 +85,7 @@ def cumulus_cnrfc_nbm_qpf():
             s3_key=payload["s3_key"],
         )
 
-    notify_cumulus(download_cnrfc_nbm_qpf())
+    notify_cumulus(download_cnrfc_nbm_qtf())
 
 
-DAG_ = cumulus_cnrfc_nbm_qpf()
+DAG_ = cumulus_cnrfc_nbm_qtf()
