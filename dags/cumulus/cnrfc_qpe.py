@@ -1,5 +1,13 @@
 """
-Acquire and Process CNRFC QPE
+# CNRFC QPE
+
+This pipeline handles download, processing, and derivative product creation for \n
+CNRFC QPF\n
+URL Dir - https://www.cnrfc.noaa.gov/archive/YYYY/MMM/netcdfqpf/qpf.YYYYMMdd_HHMM.nc.gz\n
+Files matching qpf.YYYYMMdd_HHMM.nc.gz - 6 hour\n
+Updated 1x/day summer and 2x/day winter except 1x/day weekends/holidays\n
+Skip failed attempts for 1800 if weekend day or is_summer (see code for logic)
+    
 """
 
 import json

@@ -1,5 +1,13 @@
 """
 Acquire and Process CNRFC QPE
+
+This pipeline handles download, processing, and derivative product creation for \n
+CNRFC QPF\n
+URL Dir - https://www.cnrfc.noaa.gov/archive/YYYY/MMM/netcdfqpf/qpf.YYYYMMdd_HHMM.nc.gz\n
+Files matching qpf.YYYYMMdd_HHMM.nc.gz - 6 hour\n
+Updated 1x/day summer and 2x/day winter except 1x/day weekends/holidays\n
+Skip failed attempts for 1800 if weekend day or is_summer (see code for logic)
+    
 """
 
 import json, logging
@@ -35,15 +43,9 @@ default_args = {
     tags=["cumulus", "precip", "QPF", "CNRFC"],
     max_active_runs=2,
     max_active_tasks=4,
+    doc_md=__doc__,
 )
 def cumulus_cnrfc_qpf():
-    """This pipeline handles download, processing, and derivative product creation for \n
-    CNRFC QPF\n
-    URL Dir - https://www.cnrfc.noaa.gov/archive/YYYY/MMM/netcdfqpf/qpe.YYYYMMdd_HHMM.nc.gz\n
-    Files matching qpf.YYYYMMdd_HHMM.nc.gz - 6 hour\n
-    Updated 1x/day summer and 2x/day winter except 1x/day weekends/holidays\n
-    Skip failed attempts for 1800 if weekend day or is_summer (see code for logic)
-    """
 
     URL_ROOT = f"https://www.cnrfc.noaa.gov/archive"
     PRODUCT_SLUG = "cnrfc-qpf-06h"
