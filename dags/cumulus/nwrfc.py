@@ -1,28 +1,28 @@
 """
-# NWRFC QPE, QPF, QTE, QTF
+## NWRFC QPE, QPF, QTE, QTF
 
 Browser view: https://www.nwrfc.noaa.gov/misc/downloads/index.php?type=netcdf_forcings&sortby=date&sortasc=true&filter=
 
 It looks like only current day is posted, so the link above may not be very durable for retrieving a sample file after today. 
 Will have to fiddle the date numbers in the URL.
 
-## QPE
+### QPE
 Example file: https://www.nwrfc.noaa.gov/weather/netcdf/2022/20221212/QPE.2022121212.nc.gz
 
 The QPE file contains 6hr grids (4 of them) - suspect this covers the past 24 hours of precipitation.
 
-## QPF
+### QPF
 Example file: https://www.nwrfc.noaa.gov/weather/netcdf/2022/20221212/QPF.2022121212.nc.gz
 
 Sample file contains 6-hour interval grids, covering approximately 10 days into the future. 
 
-## QTE
+### QTE
 
 Sample file: https://www.nwrfc.noaa.gov/weather/netcdf/2022/20221212/QTE.2022121212.nc.gz
 
 Contains 6-hour interval grids, 4 total. Covering the past 24 hour period.
 
-## QTF
+### QTF
 
 Sample file: https://www.nwrfc.noaa.gov/weather/netcdf/2022/20221212/QTF.2022121212.nc.gz
 
@@ -32,7 +32,6 @@ Sample file contains 6-hour interval grids, covering approximately 10 days into 
 
 import json
 from datetime import datetime, timedelta
-import calendar
 
 from airflow import DAG
 from airflow.decorators import dag, task

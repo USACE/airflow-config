@@ -45,6 +45,7 @@ acquirables = {
     "ncep-stage4-mosaic-01h": "29b1e90b-3f8c-484f-a7fa-7055aec4d5b8",
     "ncep-stage4-mosaic-06h": "1011b702-9cb7-4b86-9638-ccbf2c19086f",
     "ncep-stage4-mosaic-24h": "758958c4-0938-428e-8221-621bd07e9a34",
+    "nerfc-qpe-01h": "7fdc5c49-ae1d-4492-b8d2-1eb2c3dd5010",
     "nwrfc-qpe-06h": "faeb67de-0b9c-496c-88d4-b1513056b149",
     "nwrfc-qpf-06h": "ad7b4457-f46f-453c-9370-29773d28c423",
     "nwrfc-qte-06h": "09c9ff0c-c49d-47fd-b4cd-9696480dc0da",
