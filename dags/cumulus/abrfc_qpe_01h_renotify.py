@@ -32,9 +32,7 @@ def cumulus_abrfc_qpe_01h_renotify():
     """
     # Arkansas-Red Basin River Forecast Center QPE 1-hour
 
-    Re-notification is a process that takes the DAG's logical date as the starting point, checks the S3 bucket for ABRFC products and notifies the Cumulus database it exists.
-
-    Notifying the database there is an existing product initiates a Geo Processing of that product.
+    Notifying the database there is an existing product to initiate a Geo Processing of that product.
 
     This DAG is a way to re-process existing raw products with an updated/modified geo processor
     """
@@ -42,32 +40,18 @@ def cumulus_abrfc_qpe_01h_renotify():
     product_slug = "abrfc-qpe-01h"
 
     @task()
-    def check_bucket():
+    def notify():
         logical_date = get_current_context()["logical_date"]
         filename = logical_date.strftime("abrfc_qpe_01hr_%Y%m%d%HZ.nc")
         key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
         s3_key = f"{key_prefix}/{product_slug}/{filename}"
 
-        if downloads.check_key_exists(s3_key, cumulus.S3_BUCKET):
-            return json.dumps(
-                {
-                    "datetime": logical_date.isoformat(),
-                    "s3_key": s3_key,
-                    "product_slug": product_slug,
-                }
-            )
+        result = cumulus.notify_acquirablefile(
+            acquirable_id=cumulus.acquirables[product_slug],
+            datetime=logical_date.isoformat(),
+            s3_key=s3_key,
+        )
 
-    @task()
-    def notify(payload):
-        if payload:
-            payload_json = json.loads(payload)
-            result = cumulus.notify_acquirablefile(
-                acquirable_id=cumulus.acquirables[payload_json["product_slug"]],
-                datetime=payload_json["datetime"],
-                s3_key=payload_json["s3_key"],
-            )
-
-    notify(check_bucket())
-
+    notify()
 
 DAG_ = cumulus_abrfc_qpe_01h_renotify()
