@@ -13,7 +13,7 @@ from helpers import downloads
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2023, 4, 25),
+    "start_date": datetime(2022, 8, 21),
     "catchup_by_default": True,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -53,6 +53,5 @@ def cumulus_abrfc_qpe_01h_renotify():
         )
 
     notify()
-
 
 DAG_ = cumulus_abrfc_qpe_01h_renotify()
