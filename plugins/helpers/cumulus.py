@@ -28,6 +28,11 @@ acquirables = {
     "cbrfc-mpe": "2429db9a-9872-488a-b7e3-de37afc52ca4",
     "hrrr-total-precip": "d4e67bee-2320-4281-b6ef-a040cdeafeb8",
     "nbm-co-01h": "d4aa1d8d-ce06-47a0-9768-e817b43a20dd",
+    "nbm-co-qpf-01h": "23220ba0-0190-467d-81f7-fd240faa20d6",
+    "nbm-co-qpf-06h": "6ddb2d43-f880-49a2-b0f4-3ddc7ed9e3d8",
+    "nbm-co-qtf-01h": "1e755c6f-1410-4e72-af5d-53237d248681",
+    "nbm-co-qtf-03h": "e1119f5a-e57e-4513-ab01-daa875b910a2",
+    "nbm-co-qtf-06h": "8f7330cd-dfc4-4085-bb5b-ecaa9e597c39",
     "nohrsc-snodas-unmasked": "87819ceb-72ee-496d-87db-70eb302302dc",
     "ncep-rtma-ru-anl-airtemp": "22678c3d-8ac0-4060-b750-6d27a91d0fb3",
     "ncep-mrms-v12-multisensor-qpe-01h-pass1": "87a8efb7-af6f-4ece-a97f-53272d1a151d",
@@ -67,7 +72,6 @@ def get_connection():
 
 
 def notify_acquirablefile(acquirable_id, datetime, s3_key):
-
     payload = {"datetime": datetime, "file": s3_key, "acquirable_id": acquirable_id}
     print(f"Sending payload: {payload}")
 
