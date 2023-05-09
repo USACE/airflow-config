@@ -32,7 +32,7 @@ default_args = {
 
 URL_NOMADS = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/v4.1"
 
-S3_ACQUIRABLE = "nbm-conus"
+S3_ACQUIRABLE = "nbm-co-01h"
 
 MAX_HOUR = 265
 
@@ -54,7 +54,7 @@ def acceptable_forecast_hours(start, finish, step):
 
 
 def acquirable_slug(variable, interval):
-    # acquire_qpf_01h = "nbm-co-qpf-01h"
+    # acquire_qpf_01h = "nbm-co-01h"
     # acquire_qpf_03h = "nbm-co-qpf-03h"
     # acquire_qpf_06h = "nbm-co-qpf-06h"
     # acquire_qpf_12h = "nbm-co-qpf-12h"
@@ -63,7 +63,10 @@ def acquirable_slug(variable, interval):
     # acquire_qtf_06h = "nbm-co-qtf-06h"
     variables = {"TMP": "qtf", "APCP": "qpf"}
     try:
-        return "nbm-co-{}-{:02d}h".format(variables[variable], interval)
+        if variable == "APCP" and interval == 1:
+            return "nbm-co-{:02d}h".format(interval)
+        else:
+            return "nbm-co-{}-{:02d}h".format(variables[variable], interval)
     except Exception as ex:
         print(ex)
 
