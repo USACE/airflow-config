@@ -207,6 +207,8 @@ def cumulus_national_blend_models():
                     url = url_variables["url"]
                     variables = url_variables["variables"]
                     filename = Path(url).name
+                    filename_parts = filename.split(".")
+                    filename_parts.insert(1, "")
 
                     # the download part
                     for var in variables:
@@ -220,8 +222,9 @@ def cumulus_national_blend_models():
 
                         slug = acquirable_slug(variable_code, forecast_interval)
                         if slug:
+                            filename_parts[1] = date_time.strftime("%Y%m%d")
                             s3_key = "{}/{}/{}".format(
-                                key_prefix, S3_ACQUIRABLE, filename
+                                key_prefix, S3_ACQUIRABLE, ".".join(filename_parts)
                             )
                             trigger_download(
                                 url=url,
