@@ -117,7 +117,7 @@ def read_data_csv(fname: str, lookup: str = "", column: int = -1, delim: str = "
             for row in csv_reader:
                 if row[0] == lookup:
                     try:
-                        result = row[column]
+                        result = row[column].strip()
                     except Exception as ex:
                         print(ex)
                     break
