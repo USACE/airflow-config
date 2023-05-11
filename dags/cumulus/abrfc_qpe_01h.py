@@ -4,14 +4,11 @@ Acquire and Process ABRFC 01h
 
 import json
 from datetime import datetime, timedelta
-import calendar
 
-from airflow import DAG
+import helpers.cumulus as cumulus
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
 from helpers.downloads import trigger_download
-
-import helpers.cumulus as cumulus
 
 default_args = {
     "owner": "airflow",
@@ -61,12 +58,12 @@ def cumulus_abrfc_qpe_01h():
 
     @task()
     def notify_cumulus(payload):
-
+        uuid = cumulus.read_data_csv("acquirables.csv", PRODUCT_SLUG)
         # Airflow will convert the parameter to a string, convert it back
         payload = json.loads(payload)
 
         cumulus.notify_acquirablefile(
-            acquirable_id=cumulus.acquirables[PRODUCT_SLUG],
+            acquirable_id=uuid,
             datetime=payload["datetime"],
             s3_key=payload["s3_key"],
         )

@@ -1,4 +1,6 @@
+import csv
 import json
+from pathlib import Path
 
 # from airflow import AirflowException
 import requests
@@ -83,3 +85,41 @@ def notify_acquirablefile(acquirable_id, datetime, s3_key):
     r = h.run(endpoint=endpoint, json=payload, headers=headers)
 
     return json.dumps(r.json())
+
+
+def read_data_csv(fname: str, lookup: str = "", column: int = -1, delim: str = ","):
+    """read_data_csv
+
+    Parameters
+    ----------
+    fname : str
+        filename
+    lookup : str, optional
+        lookup value in first column of csv file, by default ""
+    column : int, optional
+        column of return value; default last column, by default -1
+    delim : str, optional
+        delimiter other than default, by default ","
+
+    Returns
+    -------
+    str
+        return value found
+    """
+    airflow_data = Path("/opt/airflow/data/")
+    airflow_data_file = airflow_data.joinpath(fname)
+    result = "00000000-0000-0000-0000-000000000000"
+    if not airflow_data_file.exists():
+        print("File does not exist: {}".format(airflow_data_file))
+    else:
+        with airflow_data_file.open(mode="r", encoding="utf-8") as fpntr:
+            csv_reader = csv.reader(fpntr, delimiter=delim)
+            for row in csv_reader:
+                if row[0] == lookup:
+                    try:
+                        result = row[column]
+                    except Exception as ex:
+                        print(ex)
+                    break
+
+    return result
