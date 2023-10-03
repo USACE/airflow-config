@@ -45,7 +45,7 @@ def qpf_filenames(edate):
     d = edate.strftime("%Y%m%d")
     # d = "20230926"
     # hh = 12
-    for fff in range(6, 72, 6):
+    for fff in range(6, 78, 6):
         # forecast_date = (edate + timedelta(hours=fff)).strftime("%Y%m%d%H")
         yield f"QPF6_{d}{hh:02d}f{fff:03d}.cdf"
 
