@@ -5,6 +5,7 @@ networks:
     name: airflow-config_default
   cumulus:
     name: cumulus-api_default
+    external: true
   water:
     name: water-api_default
   instrumentation:
