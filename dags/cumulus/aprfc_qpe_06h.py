@@ -17,7 +17,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow()).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow() - timedelta(hours=72)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
