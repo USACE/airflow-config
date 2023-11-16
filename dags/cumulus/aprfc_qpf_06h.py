@@ -20,7 +20,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=72)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow()).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -36,13 +36,16 @@ def get_filenames(edate, url):
     scraping data from website and finding all matching filenames
     for the sprcified date.
     """
-    d = edate.strftime("%Y%m%d")
+    d_t1 = edate.strftime("%Y%m%d")
+    d_t2 = (edate - timedelta(hours=24)).strftime("%Y%m%d")
 
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     links = [node.get("href") for node in soup.find_all("a")]
-    regex = f"^qpf06f_has_.*.awips_{d}\d+.grb.gz$"
-    filenames = [link for link in links if re.match(regex, link)]
+    filenames = []
+    for d in [d_t2, d_t1]:
+        regex = f"^qpf06f_has_.*.awips_{d}\d+.grb.gz$"
+        filenames = filenames + [link for link in links if re.match(regex, link)]
 
     return filenames
 

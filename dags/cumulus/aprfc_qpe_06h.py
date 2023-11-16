@@ -17,7 +17,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=72)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow()).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -28,10 +28,13 @@ default_args = {
 
 # ALR QPF filename generator
 def get_filenames(edate):
-    times = ["00_06", "06_12", "12_18", "18_00"]
-    d = edate.strftime("%Y%m%d")
-    for time in times:
-        yield f"precip_acr_grid_{time}_{d}.grb.gz"
+    times = ["00", "06", "12", "18"]
+
+    d_t1 = edate.strftime("%Y%m%d")
+    d_t2 = (edate - timedelta(hours=24)).strftime("%Y%m%d")
+    for date in [d_t1, d_t2]:
+        for time in times:
+            yield f"akurma.{date}/pcpurma_ak.{date}{time}.06h.grb2"
 
 
 @dag(
@@ -44,11 +47,11 @@ def get_filenames(edate):
 def cumulus_aprfc_qpe_06h():
     """This pipeline handles download, processing, and derivative product creation for \n
     APRFC QPE\n
-    URL Dir - https://cbt.crohms.org/akgrids
-    Files matching precip_acr_grid_00_06_YYYYMMDD.grb.gz - 6 hour\n
+    URL Dir - https://nomads.ncep.noaa.gov/pub/data/nccf/com/urma/prod/akurma.YYYYMMDD/
+    Files matching pcpurma_ak.YYYMMDDHH.06h.grb2 - 6 hour\n
     """
     key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
-    URL_ROOT = f"https://cbt.crohms.org/akgrids"
+    URL_ROOT = f"https://nomads.ncep.noaa.gov/pub/data/nccf/com/urma/prod"
     PRODUCT_SLUG = "aprfc-qpe-06h"
 
     @task()
@@ -58,6 +61,7 @@ def cumulus_aprfc_qpe_06h():
         return_list = list()
         for filename in get_filenames(logical_date):
             url = f"{URL_ROOT}/{filename}"
+            filename = filename.split("/")[1]
             s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
             print(f"Downloading file: {filename}")
             try:
