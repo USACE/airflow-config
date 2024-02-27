@@ -7,7 +7,7 @@ from airflow.models import Variable
 from airflow.providers.http.hooks.http import HttpHook
 
 S3_ACQUIRABLE_PREFIX = "cumulus/acquirables"
-S3_BUCKET = Variable.get("S3_BUCKET")
+S3_BUCKET = Variable.get("CUMULUS_S3_BUCKET")
 
 acquirables = {
     "abrfc-qpe-01h": "f7500b0e-5227-44fb-bcf1-746be7574cf0",

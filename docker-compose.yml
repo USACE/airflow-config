@@ -82,6 +82,7 @@ x-airflow-common:
     # VARIABLES
     AIRFLOW_VAR_CWMSDATA: https://cwms-data.usace.army.mil/cwms-data
     AIRFLOW_VAR_S3_BUCKET: castle-data-develop
+    AIRFLOW_VAR_CUMULUS_S3_BUCKET: castle-data-develop
     # How Downloads are Handled (Download or Fire Lambda Function to Handle Download
     DOWNLOAD_OPERATOR_USE_CONNECTION: LOCAL_MINIO
     DOWNLOAD_OPERATOR_USE_LAMBDA: FALSE
