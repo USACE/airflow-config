@@ -8,9 +8,9 @@ default_args = {"owner": "airflow", "retries": 1, "retry_delay": timedelta(minut
 
 with DAG(
     default_args=default_args,
-    dag_id="check_disk_space",
+    dag_id="maint_check_disk_space",
     schedule="@hourly",
-    start_date=datetime(2022, 4, 6),
+    start_date=(datetime.utcnow() - timedelta(hours=2)).replace(minute=0, second=0),
     catchup=False,
     tags=["maintenance"],
 ) as dag:
