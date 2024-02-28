@@ -3,4 +3,3 @@ _save/*
 _to_be_migrated/*
 /__pycache__/*
 water/*
-cumulus/*

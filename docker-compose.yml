@@ -1,26 +1,24 @@
 # Adapted from Airflow's docker-compose.yml file:
-# https://airflow.apache.org/docs/apache-airflow/stable/docker-compose.yaml
+# https://airflow.apache.org/docs/apache-airflow/2.8.1/docker-compose.yaml
 networks:
   default:
     name: airflow-config_default
   cumulus:
     name: cumulus-api_default
-    # external: true
-  water:
-    name: water-api_default
-  instrumentation:
-    name: instrumentation-api_default
+    external: true
 x-airflow-common:
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   &airflow-common
-  image: apache/airflow:2.4.3-python3.8-usace
+  #
+  # image: apache/airflow:2.8.1-python3.8-usace
+  image: airflow-common:2.8.1-python3.10-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.4.3
-      - PYTHON_BASE_IMAGE=python:3.8-slim-bullseye
+      - AIRFLOW_VERSION=2.8.1
+      - PYTHON_BASE_IMAGE=python:3.10-slim-bookworm
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
       - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
       - INSTALL_MYSQL_CLIENT=false
@@ -35,11 +33,21 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     # Prevent the 30+ connections from being loaded
     AIRFLOW__DATABASE__LOAD_DEFAULT_CONNECTIONS: False
-    # NOTE: AIRFLOW__CORE__SQL_ALCHEMY_CONN (previously used) has been deprecated in-lieu
-    #       of AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@pgbouncer:5432/airflow
+    #--> AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@pgbouncer:5432/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://
+    PGUSER: airflow
+    PGPASSWORD: airflow
+    PGHOST: pgbouncer
+    PGPORT: 5432
+    PGDATABASE: airflow
+
     # CELERY
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@pgbouncer/airflow
+    # AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@pgbouncer/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://
+    # DB_USER_NAME: airflow
+    # DB_USER_PASSWORD: airflow
+    DB_HOST: pgbouncer
+    DB_PORT: 5432
     # AIRFLOW__CELERY__BROKER_URL: sqs://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@elasticmq
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CELERY__CELERY_CONFIG_OPTIONS: celery_config.CELERY_CONFIG
@@ -57,7 +65,9 @@ x-airflow-common:
     AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
     AIRFLOW__LOGGING__REMOTE_LOGGING: TRUE
     AIRFLOW__LOGGING__REMOTE_LOG_CONN_ID: LOCAL_MINIO
-    AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: s3://castle-data-develop/airflow/logs
+    AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: s3://cwbi-airflow-dev/airflow/logs
+    # Whether the local log files for S3 remote logging should be deleted after they are uploaded to the remote location.
+    AIRFLOW__LOGGING__DELETE_LOCAL_LOGS: False
     # METRICS
     AIRFLOW__METRICS__STATSD_ON: True
     AIRFLOW__METRICS__STATSD_HOST: airflow-statsd-exporter
@@ -74,11 +84,10 @@ x-airflow-common:
     CELERY_QUEUE_URL_AIRFLOW: http://elasticmq:9324/queue/airflow
     # CONNECTIONS
     AIRFLOW_CONN_SQS: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?region_name=elasticmq&host=http%3A%2F%2Felasticmq%3A9324
-    AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?host=http%3A%2F%2Fminio%3A9000&region=us-east-1
+    # Host is deprecated in connections - use "endpoint_url"
+    # AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?host=http%3A%2F%2Fminio%3A9000&region=us-east-1
+    AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?endpoint_url=http%3A%2F%2Fminio%3A9000&region=us-east-1
     AIRFLOW_CONN_CUMULUS: http://nologin:appkey@api
-    AIRFLOW_CONN_MIDAS: http://nologin:appkey@api
-    AIRFLOW_CONN_WATER: http://nologin:appkey@water-api
-    AIRFLOW_CONN_SHARED: https://nologin:appkey@develop-shared-api.corps.cloud/https
     # VARIABLES
     AIRFLOW_VAR_CWMSDATA: https://cwms-data.usace.army.mil/cwms-data
     AIRFLOW_VAR_S3_BUCKET: castle-data-develop
@@ -88,6 +97,21 @@ x-airflow-common:
     DOWNLOAD_OPERATOR_USE_LAMBDA: FALSE
     DOWNLOAD_OPERATOR_USE_LAMBDA_NAME: ''
     DOWNLOAD_OPERATOR_USE_LAMBDA_REGION: us-east-1
+    ###############################
+    # Things I'm unsure if we need
+    ###############################
+    # Use simple http server on scheduler for health checks
+    # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    ###############################
+    # AWS Only things
+    ###############################
+    # https://airflow.apache.org/docs/apache-airflow-providers-amazon/stable/_api/airflow/providers/amazon/aws/secrets/secrets_manager/index.html#airflow.providers.amazon.aws.secrets.secrets_manager.SecretsManagerBackend
+    # AIRFLOW__SECRETS__BACKEND: airflow.providers.amazon.aws.secrets.secrets_manager.SecretsManagerBackend
+    # AIRFLOW__SECRETS__BACKEND_KWARGS: '{"connections_prefix": "airflow/connections", "region_name": "us-east-1"}'
+    # AIRFLOW__SECRETS__USE_CACHE: 'True'
+    # AIRFLOW__SECRETS__CACHE_TTL_SECONDS: 900 # Default 900
   volumes:
     # volumes are attached to any container with <<: *airflow-common
     - ./dags:/opt/airflow/dags
@@ -99,13 +123,16 @@ x-airflow-common:
       condition: service_healthy
     pgbouncer:
       condition: service_started
+    redis:
+      condition: service_healthy
 
 services:
   #############################################################################
   # Postgres Database
   #############################################################################
   airflowdb:
-    image: postgres:13
+    image: postgres:15
+    container_name: airflow-db
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -121,11 +148,12 @@ services:
   #############################################################################
   pgbouncer:
     image: pgbouncer:latest
+    container_name: airflow-pgbouncer
     build:
       context: _docker/pgbouncer
       args:
-        - PGBOUNCER_VERSION=1.16.1
-        - PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_16_1/pgbouncer-1.16.1.tar.gz
+        - PGBOUNCER_VERSION=1.21.0
+        - PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_21_0/pgbouncer-1.21.0.tar.gz
     environment:
       DB_HOST: airflowdb
       DB_USER: airflow
@@ -140,26 +168,29 @@ services:
   #############################################################################
   redis:
     image: redis:latest
+    container_name: airflow-redis
     expose:
       - 6379
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
+      interval: 10s
       timeout: 30s
       retries: 50
+      start_period: 30s
     restart: always
   #############################################################################
   # Airflow Init
   #############################################################################
   airflow_init:
     <<: *airflow-common
-    image: apache/airflow:2.4.3-python3.8-usace
+    # image: apache/airflow:2.4.3-python3.8-usace
+    container_name: airflow-init
     depends_on:
       - airflowdb
     entrypoint: |-
       /bin/sh -c "
       /entrypoint db reset -y;
-      /entrypoint db init;
+      /entrypoint db migrate;
       /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
       exit 0;
       "
@@ -168,16 +199,19 @@ services:
   #############################################################################
   airflow_scheduler:
     <<: *airflow-common
+    container_name: airflow-scheduler
     command: scheduler
     healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"',
-        ]
-      interval: 10s
+      # test:
+      #   [
+      #     'CMD-SHELL',
+      #     'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"',
+      #   ]
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8974/health']
+      interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
@@ -188,14 +222,19 @@ services:
   #############################################################################
   airflow_worker:
     <<: *airflow-common
+    container_name: airflow-worker
     command: celery worker
     healthcheck:
+      # test:
+      #   - 'CMD-SHELL'
+      #   - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
       test:
         - 'CMD-SHELL'
-        - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
       interval: 10s
       timeout: 10s
       retries: 5
+      start_period: 30s
     environment:
       <<: *airflow-common-env
       # Required to handle warm shutdown of the celery workers properly
@@ -209,22 +248,68 @@ services:
     networks:
       - default
       - cumulus
-      - water
-      - instrumentation
+  #############################################################################
+  # Airflow Triggerer
+  #############################################################################
+  # airflow_triggerer:
+  #   <<: *airflow-common
+  #   container_name: airflow-triggerer
+  #   command: triggerer
+  #   healthcheck:
+  #     test:
+  #       [
+  #         'CMD-SHELL',
+  #         'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"',
+  #       ]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow_init:
+  #       condition: service_completed_successfully
   #############################################################################
   # Airflow User Interface
   #############################################################################
   airflow_ui:
     <<: *airflow-common
-    image: apache/airflow:2.4.3-python3.8-usace
+    container_name: airflow-ui
+    # image: apache/airflow:2.4.3-python3.8-usace
     command: webserver
     ports:
       - '8000:8080'
+    environment:
+      <<: *airflow-common-env
+      AIRFLOW__WEBSERVER__ACCESS_LOGFILE: '/dev/null' # <-- stop spewing http logs to console
     healthcheck:
       test: ['CMD', 'curl', '--fail', 'http://localhost:8080/health']
       interval: 10s
       timeout: 10s
       retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow_init:
+        condition: service_completed_successfully
+  #############################################################################
+  # Celery Dashboard - local only
+  #############################################################################
+  airflow_flower:
+    <<: *airflow-common
+    container_name: airflow-flower
+    command: celery flower
+    # profiles:
+    #   - flower
+    ports:
+      - '5555:5555'
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', 'http://localhost:5555/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: always
     depends_on:
       <<: *airflow-common-depends-on

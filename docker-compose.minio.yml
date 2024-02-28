@@ -2,12 +2,15 @@ version: '3'
 
 networks:
   default:
+    name: airflow-config_default
+  cumulus:
     name: cumulus-api_default
-    # name: water-api_default
+    external: true
 
 services:
   minio:
     image: minio/minio
+    container_name: airflow-minio
     environment:
       - MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE
       - MINIO_ROOT_PASSWORD=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
@@ -20,6 +23,7 @@ services:
   # and         https://gist.github.com/haxoza/22afe7cc4a9da7e8bdc09aad393a99cc
   minio_init:
     image: minio/mc
+    container_name: airflow-minio-init
     depends_on:
       - minio
     entrypoint: |-
@@ -27,8 +31,8 @@ services:
       echo 'sleeping for 10 seconds while minio starts...';
       sleep 10;
       /usr/bin/mc config host add minio http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY;
-      /usr/bin/mc mb minio/castle-data-develop minio/castle-data-stable;
-      /usr/bin/mc policy set public minio/castle-data-develop;
+      /usr/bin/mc mb minio/cwbi-data-dev minio/cwbi-airflow-dev minio/castle-data-develop;
+      /usr/bin/mc policy set public minio/castle-data-dev minio/castle-data-develop;
       exit 0;
       "
     volumes:
