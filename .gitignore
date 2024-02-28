@@ -1,0 +1,21 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.zip
+
+**.DS_Store
+
+# VS Code settings
+**/.vscode
+
+**.pyc
+**__pycache__
+
+**/__debug*
+
+# Airflow Logs Directory
+logs/**
+!logs/readme.md
