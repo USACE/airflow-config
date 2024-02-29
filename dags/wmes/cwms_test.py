@@ -40,7 +40,8 @@ default_args = {
 )
 def wmes_cda_test():
 
-    API_ROOT = f"https://cwms-data.usace.army.mil/cwms-data"
+    # API_ROOT = f"https://cwms-data.usace.army.mil/cwms-data"
+    API_ROOT = "https://cwms-data-test.cwbi.us/cwms-data"
 
     @task()
     def download_timeseries():
@@ -68,7 +69,7 @@ def wmes_cda_test():
         return json.dumps(
             {"datetime": logical_date.isoformat(), "data": ts_df},
         )
-        return
+        # return
 
     @task()
     def do_something(payload):
