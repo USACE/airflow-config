@@ -10,6 +10,7 @@ QPF --> ORN_QPF_SFC_20210822ZZ_FFF_2021082306fFFF.grb.gz
 """
 
 from datetime import datetime, timedelta
+import logging
 
 from airflow import DAG
 
@@ -31,13 +32,14 @@ implementation = {
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=12)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow() - timedelta(hours=24)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 2,
     "retry_delay": timedelta(minutes=30),
 }
+
 
 # ALR QPF filename generator
 def qpf_filenames(edate):
@@ -85,16 +87,29 @@ def create_dag(**kwargs):
             for filename in qpf_filenames(execution_date):
                 url = f"{base_url}/{filename}"
                 s3_key = f"{key_prefix}/{slug}/{filename}"
-                result = trigger_download(url=url, s3_bucket=s3_bucket, s3_key=s3_key)
-                return_list.append(
-                    {
-                        "execution": execution_date.isoformat(),
-                        "url": url,
-                        "s3_key": s3_key,
-                        "s3_bucket": s3_bucket,
-                        "slug": slug,
-                    }
-                )
+                # This RFC has been known to not include all files each time - this is a patch
+                try:
+                    result = trigger_download(
+                        url=url, s3_bucket=s3_bucket, s3_key=s3_key
+                    )
+
+                    return_list.append(
+                        {
+                            "execution": execution_date.isoformat(),
+                            "url": url,
+                            "s3_key": s3_key,
+                            "s3_bucket": s3_bucket,
+                            "slug": slug,
+                        }
+                    )
+                except:
+
+                    # There have been successfull downloads, don't blow up the whole task
+                    logging.warning(f"Unable to download {url}")
+                    pass
+
+            if len(return_list) == 0:
+                raise Exception(f"No files available for download.")
 
             return return_list
 
@@ -126,5 +141,5 @@ for key, val in implementation.items():
         dag_id=d_id,
         tags=d_tags,
         s3_bucket=d_bucket,
-        schedule="8 */3 * * *",
+        schedule="15 */3 * * *",
     )
