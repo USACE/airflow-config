@@ -36,7 +36,7 @@ default_args = {
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 4,
+    "retries": 2,
     "retry_delay": timedelta(minutes=30),
 }
 
@@ -83,9 +83,6 @@ def create_dag(**kwargs):
             ti = context["ti"]
             execution_date = ti.execution_date
 
-            # Force the window forward 6 hours to get the latest forecast set now and not from the prev interval
-            execution_date = execution_date + timedelta(hours=6)
-
             return_list = list()
             for filename in qpf_filenames(execution_date):
                 url = f"{base_url}/{filename}"
@@ -95,20 +92,24 @@ def create_dag(**kwargs):
                     result = trigger_download(
                         url=url, s3_bucket=s3_bucket, s3_key=s3_key
                     )
+
+                    return_list.append(
+                        {
+                            "execution": execution_date.isoformat(),
+                            "url": url,
+                            "s3_key": s3_key,
+                            "s3_bucket": s3_bucket,
+                            "slug": slug,
+                        }
+                    )
                 except:
-                    if len(return_list) > 0:
-                        # There have been successfull downloads, don't blow up the whole task
-                        logging.warning(f"Unable to download {url}")
-                        pass
-                return_list.append(
-                    {
-                        "execution": execution_date.isoformat(),
-                        "url": url,
-                        "s3_key": s3_key,
-                        "s3_bucket": s3_bucket,
-                        "slug": slug,
-                    }
-                )
+
+                    # There have been successfull downloads, don't blow up the whole task
+                    logging.warning(f"Unable to download {url}")
+                    pass
+
+            if len(return_list) == 0:
+                raise Exception(f"No files available for download.")
 
             return return_list
 
@@ -140,5 +141,5 @@ for key, val in implementation.items():
         dag_id=d_id,
         tags=d_tags,
         s3_bucket=d_bucket,
-        schedule="8 0,12,18 * * *",
+        schedule="15 */3 * * *",
     )
