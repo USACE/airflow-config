@@ -19,6 +19,7 @@ from helpers.downloads import trigger_download
 
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
+from airflow.exceptions import AirflowSkipException
 
 implementation = {
     "default": {
@@ -83,6 +84,14 @@ def create_dag(**kwargs):
             ti = context["ti"]
             execution_date = ti.execution_date
 
+            # push the time forward by 6 hours to get the latest data possible
+            execution_date = execution_date + timedelta(hours=6)
+
+            # There are no 6th hour products, but we want to keep the 6 hour interval in place
+            # just skip the 6th hour
+            if execution_date.hour == 6:
+                raise AirflowSkipException
+
             return_list = list()
             for filename in qpf_filenames(execution_date):
                 url = f"{base_url}/{filename}"
@@ -141,5 +150,5 @@ for key, val in implementation.items():
         dag_id=d_id,
         tags=d_tags,
         s3_bucket=d_bucket,
-        schedule="15 */3 * * *",
+        schedule="15 0,6,12,18 * * *",
     )
