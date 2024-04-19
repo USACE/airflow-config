@@ -7,8 +7,6 @@ File matching for:
 
 QPF --> ORN_QPF_SFC_20210822ZZ_FFF_2021082306fFFF.grb.gz
     , where ZZ is the forecast cycle and FFF is the forecast hour
-
-This newer DAG is designed to get the latest QPF faster than previous version
 """
 
 from datetime import datetime, timedelta
@@ -21,11 +19,12 @@ from helpers.downloads import trigger_download
 
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
+from airflow.exceptions import AirflowSkipException
 
 implementation = {
     "default": {
         "bucket": cumulus.S3_BUCKET,
-        "dag_id": "cumulus_lmrfc_qpf",
+        "dag_id": "cumulus_lmrfc_qpf_latest",
         "tags": ["cumulus", "precip", "LMRFC", "QPF"],
     },
 }
@@ -85,6 +84,14 @@ def create_dag(**kwargs):
             ti = context["ti"]
             execution_date = ti.execution_date
 
+            # push the time forward by 6 hours to get the latest data possible
+            execution_date = execution_date + timedelta(hours=6)
+
+            # There are no 6th hour products, but we want to keep the 6 hour interval in place
+            # just skip the 6th hour
+            if execution_date.hour == 6:
+                raise AirflowSkipException
+
             return_list = list()
             for filename in qpf_filenames(execution_date):
                 url = f"{base_url}/{filename}"
@@ -143,5 +150,5 @@ for key, val in implementation.items():
         dag_id=d_id,
         tags=d_tags,
         s3_bucket=d_bucket,
-        schedule="15 */3 * * *",
+        schedule="15 0,6,12,18 * * *",
     )
