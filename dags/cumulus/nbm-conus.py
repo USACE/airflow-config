@@ -30,7 +30,8 @@ default_args = {
     "retry_delay": timedelta(minutes=10),
 }
 
-URL_NOMADS = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/v4.1"
+# url changed to 4.2 during May 2024
+URL_NOMADS = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/v4.2"
 
 S3_ACQUIRABLE = "nbm-co-01h"
 
@@ -106,7 +107,7 @@ def cumulus_national_blend_models():
 
     - [NBM Information](https://vlab.ncep.noaa.gov/web/mdl/nbm-download)
 
-    - [NBM Product Source](https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/v4.1)
+    - [NBM Product Source](https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/v4.2)
 
     Filename Pattern:
 
