@@ -1,3 +1,5 @@
+import os
+import zipfile
 from airflow.decorators import dag, task
 
 import pendulum
@@ -7,14 +9,19 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, timezone
 from airflow.operators.python import get_current_context
 from typing import List, Literal
+from tempfile import TemporaryDirectory
 
 import helpers.cumulus as cumulus
 import helpers.downloads as downloads
 
-import subprocess
-import certifi
-
 AorcType = Literal["precip", "temp"]
+
+
+def get_date_prefix_from_zip(zip_filename: str):
+    base_filename = zip_filename.split(".")[0]
+    year = base_filename[-6:-2]
+    month = base_filename[-2:]
+    return f"{year}/{month}"
 
 
 def get_aorc_url(base_url: str, rfc: str, type: AorcType) -> str:
@@ -91,7 +98,8 @@ def cumulus_aorc_precip_ohrfc():
     def download_new_rfc_precip_files(rfc: str):
         rfc_prefix = f"{key_prefix}/{PRODUCT_SLUG}/{rfc}"
         hosted_files = get_hosted_rfc_precip_files(rfc)
-        stored_files = downloads.s3_list_keys(cumulus.S3_BUCKET, rfc_prefix)
+        stored_files_w_prefix = downloads.s3_list_keys(cumulus.S3_BUCKET, rfc_prefix)
+        stored_files = [file.split("/")[-1] for file in stored_files_w_prefix]
         new_files = [file for file in hosted_files if file not in stored_files]
         zip_keys = []
         for file in new_files:
@@ -103,7 +111,26 @@ def cumulus_aorc_precip_ohrfc():
             zip_keys.append(s3_key)
         return zip_keys
 
-    download_new_rfc_precip_files("OHRFC")
+    @task()
+    def unzip_rfc_files(rfc: str, zip_keys: List[str]):
+        rfc_prefix = f"{key_prefix}/{PRODUCT_SLUG}/{rfc}"
+        for zip_key in zip_keys:
+            date_prefix = get_date_prefix_from_zip(zip_key)
+            dated_prefix = f"{rfc_prefix}/{date_prefix}"
+            with TemporaryDirectory() as temp_dir:
+                with downloads.S3TempDownload(cumulus.S3_BUCKET, zip_key) as s3_zip:
+                    try:
+                        zip = zipfile.ZipFile(s3_zip)
+                        zip.extractall(temp_dir)
+                    finally:
+                        zip.close()
+                for filename in os.listdir(temp_dir):
+                    filepath = os.path.join(temp_dir, filename)
+                    key = f"{dated_prefix}/{filename}"
+                    downloads.upload_file(filepath, cumulus.S3_BUCKET, key)
+
+    zip_keys = download_new_rfc_precip_files("OHRFC")
+    unzip_rfc_files("OHRFC", zip_keys)
 
 
 aorc_precip_dag = cumulus_aorc_precip_ohrfc()
