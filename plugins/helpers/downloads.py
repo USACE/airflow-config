@@ -2,7 +2,7 @@ import boto3
 from botocore.exceptions import ClientError
 import json
 import logging
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from pathlib import Path
 import os
 from urllib.request import urlretrieve
@@ -25,6 +25,37 @@ DOWNLOAD_OPERATOR_USE_LAMBDA_NAME = os.getenv(
 DOWNLOAD_OPERATOR_USE_LAMBDA_REGION = os.getenv(
     "DOWNLOAD_OPERATOR_USE_LAMBDA_REGION", default=None
 )
+
+
+class S3TempDownload:
+    """A class providing temporary local file access to an S3 object."""
+
+    def __init__(self, bucket: str, key: str):
+        """Download the specified object into a temporary local file.
+
+        S3TempDownload is typically intended for use with a "with" statement, e.g.:
+            with S3TempDownload(bucket, key) as temp_file:
+
+        Args:
+            bucket (str): The bucket containing the desired object.
+            key (str): The key of the desired object.
+        """
+        hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
+        s3_obj = hook.get_key(key, bucket)
+        self.temp_file = NamedTemporaryFile(mode="w+b", prefix="airflow_tmp_")
+        s3_obj.download_fileobj(self.temp_file)
+
+    def __enter__(self):
+        """Return temporary local file when "with" statement initializes.
+
+        Returns:
+            IO[bytes]: Temporary local binary file containing the S3 object.
+        """
+        return self.temp_file
+
+    def __exit__(self, type, value, tb):
+        """Close the temporary local file when "with" statement exits."""
+        self.temp_file.close()
 
 
 def upload_string_s3(data, bucket, key, replace=True):
