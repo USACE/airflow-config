@@ -40,7 +40,6 @@ def get_filenames(base_url: str, rfc: str, type: AorcType) -> List[str]:
     Returns:
         List[str]: A list of filenames available for the given RFC and data type
     """
-    # TODO: Fix certs in container so that verify=False isn't needed for request
     page = requests.get(get_aorc_url(base_url, rfc, type))
     soup = BeautifulSoup(page.content, "html.parser")
     links = [node.get("href") for node in soup.find_all("a")]
