@@ -1,3 +1,4 @@
+from typing import List
 import boto3
 from botocore.exceptions import ClientError
 import json
@@ -74,6 +75,30 @@ def upload_file(filename, bucket, key):
         filename=filename, key=key, bucket_name=bucket, replace=True
     )
     return load_file
+
+
+def upload_directory(directory: str, bucket: str, prefix: str):
+    """Upload all files in a directory to an S3 bucket.  Prefix optional.
+
+    Object keys match the original filename by default (with optional prefix prepended).
+
+    Args:
+        directory (str): Path of the local directory to upload.
+        bucket (str): S3 bucket to upload to.
+        prefix (str): Optional prefix to prepend to the uploaded key.
+
+    Returns:
+        List: A list of returns from each S3Hook.load_file call.
+    """
+    hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
+    results = []
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        key = f"{prefix}/{filename}" if prefix else filename
+        results.append(
+            hook.load_file(filename=filepath, key=key, bucket_name=bucket, replace=True)
+        )
+    return results
 
 
 def copy_s3_file(src_bucket, src_key, dst_bucket, dst_key):
