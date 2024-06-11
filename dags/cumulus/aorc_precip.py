@@ -79,7 +79,7 @@ def cumulus_aorc_precip():
     """
     key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
     URL_ROOT = "https://hydrology.nws.noaa.gov/pub/AORC/V1.1/"
-    PRODUCT_SLUG = "aorc_precip"
+    PRODUCT_SLUG = "aorc-precip"
 
     @task()
     def get_new_rfc_precip_files(rfc: str):

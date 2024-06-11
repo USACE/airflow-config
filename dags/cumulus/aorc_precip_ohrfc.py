@@ -78,7 +78,7 @@ def cumulus_aorc_precip_ohrfc():
     """
     key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
     URL_ROOT = "https://hydrology.nws.noaa.gov/pub/AORC/V1.1/"
-    PRODUCT_SLUG = "aorc_precip"
+    PRODUCT_SLUG = "aorc-precip-ohrfc"
 
     def get_hosted_rfc_precip_files(rfc: str):
         logical_date = get_current_context()["logical_date"]
