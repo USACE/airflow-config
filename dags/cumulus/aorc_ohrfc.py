@@ -124,10 +124,7 @@ def cumulus_aorc_precip_ohrfc():
                         zip.extractall(temp_dir)
                     finally:
                         zip.close()
-                for filename in os.listdir(temp_dir):
-                    filepath = os.path.join(temp_dir, filename)
-                    key = f"{dated_prefix}/{filename}"
-                    downloads.upload_file(filepath, cumulus.S3_BUCKET, key)
+                downloads.upload_directory(temp_dir, cumulus.S3_BUCKET, dated_prefix)
 
     zip_keys = download_new_rfc_precip_files("OHRFC")
     unzip_rfc_files("OHRFC", zip_keys)
