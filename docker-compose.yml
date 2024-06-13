@@ -13,21 +13,29 @@ x-airflow-common:
   &airflow-common
   #
   # image: apache/airflow:2.8.1-python3.8-usace
-  image: airflow-common:2.8.4-python3.11-usace
+  image: airflow-common:2.9.0-python3.11-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.8.4
+      - AIRFLOW_VERSION=2.9.0
       - PYTHON_BASE_IMAGE=python:3.11-slim-bookworm
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
       - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
       - INSTALL_MYSQL_CLIENT=false
       - INSTALL_MSSQL_CLIENT=false
   environment:
+    #
+    &airflow-common-env
+    #######################################
+    # AWS LOCAL MOCK
+    #######################################
+    AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+    AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    AWS_DEFAULT_REGION: us-east-1 # aws default env var
+    AWS_ENDPOINT_URL_SQS: http://airflow-elasticmq:9324 # aws default env var
     #######################################
     # VARIABLES DEFINED BY AIRFLOW SOFTWARE
     #######################################
-    &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__CORE__FERNET_KEY: u1rsP4UVZf5_uREVUhAjqYYygN328ASxeNYdy0yd6_Q=
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
@@ -78,12 +86,12 @@ x-airflow-common:
     ######################
     # VARIABLES WE CREATED
     ######################
-    SQS_BASE_URL: http://elasticmq:9324/queue
+    SQS_BASE_URL: http://airflow-elasticmq:9324/queue
     # SQS_IS_ELASTICMQ: true
     # CELERY QUEUES
-    CELERY_QUEUE_URL_AIRFLOW: http://elasticmq:9324/queue/airflow
+    CELERY_QUEUE_URL_AIRFLOW: http://airflow-elasticmq:9324/queue/airflow
     # CONNECTIONS
-    AIRFLOW_CONN_SQS: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?region_name=elasticmq&host=http%3A%2F%2Felasticmq%3A9324
+    AIRFLOW_CONN_SQS: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?region_name=elasticmq&host=http%3A%2F%2Fairflow-elasticmq%3A9324
     # Host is deprecated in connections - use "endpoint_url"
     # AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?host=http%3A%2F%2Fminio%3A9000&region=us-east-1
     AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?endpoint_url=http%3A%2F%2Fminio%3A9000&region=us-east-1
@@ -92,6 +100,9 @@ x-airflow-common:
     AIRFLOW_VAR_CWMSDATA: https://cwms-data.usace.army.mil/cwms-data
     AIRFLOW_VAR_S3_BUCKET: castle-data-develop
     AIRFLOW_VAR_CUMULUS_S3_BUCKET: castle-data-develop
+    AIRFLOW_VAR_WMES_SHEF_QUEUE_NAME: wmes-shef-service
+    # AWS_ENDPOINT_URL_SQS: http://airflow-elasticmq:9324
+    # AWS_DEFAULT_REGION: us-east-1
     # How Downloads are Handled (Download or Fire Lambda Function to Handle Download
     DOWNLOAD_OPERATOR_USE_CONNECTION: LOCAL_MINIO
     DOWNLOAD_OPERATOR_USE_LAMBDA: FALSE
@@ -179,6 +190,19 @@ services:
       start_period: 30s
     restart: always
   #############################################################################
+  # elasticmq
+  #############################################################################
+  airflow-elasticmq:
+    container_name: airflow-elasticmq
+    build:
+      context: ./_docker/elasticmq
+    ports:
+      - '19324:9324'
+      - '19325:9325'
+    networks:
+      - default
+    restart: always
+  #############################################################################
   # Airflow Init
   #############################################################################
   airflow_init:
@@ -217,6 +241,8 @@ services:
       <<: *airflow-common-depends-on
       airflow_init:
         condition: service_completed_successfully
+      airflow-elasticmq:
+        condition: service_started
   #############################################################################
   # Airflow Celery Worker
   #############################################################################
@@ -245,6 +271,8 @@ services:
       <<: *airflow-common-depends-on
       airflow_init:
         condition: service_completed_successfully
+      airflow-elasticmq:
+        condition: service_started
     networks:
       - default
       - cumulus
