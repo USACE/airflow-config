@@ -1,6 +1,6 @@
-apache-airflow~=2.8.1
-apache-airflow-providers-amazon~=8.17.0
-pytest~=8.0.0
+apache-airflow~=2.9.0
+apache-airflow-providers-amazon~=8.24.0
+pytest~=8.2.2
 #pendulum~=2.1.2 # Pin to older version for compatibility
 beautifulsoup4
 pandas

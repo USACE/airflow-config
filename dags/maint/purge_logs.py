@@ -23,6 +23,8 @@ with DAG(
     catchup=False,
     tags=["maintenance"],
     doc_md=dedent(__doc__),
+    max_active_runs=1,
+    max_active_tasks=1,
 ) as dag:
 
     def display_storage():

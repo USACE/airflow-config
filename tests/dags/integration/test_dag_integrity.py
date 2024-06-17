@@ -24,6 +24,22 @@ def test_at_least_one_retry():
             assert retries > 0, error_msg
 
 
+def test_max_active_runs_less_than_3():
+    dag_bag = DagBag(include_examples=False)
+    for dag_id, dag in dag_bag.dags.items():
+        assert (
+            dag.max_active_runs < 3
+        ), f"Max active runs for DAG {dag_id} is {dag.max_active_runs}, which is not less than 3"
+
+
+def test_max_active_tasks_less_than_5():
+    dag_bag = DagBag(include_examples=False)
+    for dag_id, dag in dag_bag.dags.items():
+        assert (
+            dag.max_active_tasks < 5
+        ), f"Max active tasks for DAG {dag_id} is {dag.max_active_tasks}, which is not less than 5"
+
+
 def test_dag_owner_is_airflow():
     dag_bag = DagBag(include_examples=False)
     for dag in dag_bag.dags:

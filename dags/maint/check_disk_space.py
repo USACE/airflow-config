@@ -13,6 +13,8 @@ with DAG(
     start_date=(datetime.utcnow() - timedelta(hours=2)).replace(minute=0, second=0),
     catchup=False,
     tags=["maintenance"],
+    max_active_runs=1,
+    max_active_tasks=1,
 ) as dag:
 
     def run_cmd():

@@ -1,0 +1,15 @@
+name: pytest
+
+on:
+  push:
+    branches: [cwbi-dev]
+  pull_request:
+    branches: ['cwbi-dev']
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Build and Run; Test DAGS
+        run: ./tests.sh
