@@ -12,6 +12,7 @@ S3_BUCKET = Variable.get("S3_BUCKET")
 acquirables = {
     "abrfc-qpe-01h": "f7500b0e-5227-44fb-bcf1-746be7574cf0",
     "abrfc-qpf-06h": "b1a4754c-5971-11ee-8c99-0242ac120002",
+    "aorc-precip-csu": "de840786-5c2d-4d94-baf9-5f9195f42463",
     "aprfc-qpe-06h": "1f67d822-7cbc-11ee-b962-0242ac120002",
     "aprfc-qpf-06h": "a64cb16f-01a8-45c0-a069-9afda805d3a7",
     "cnrfc-qpe-06h": "34a89c35-090d-46e8-964a-c621403301b9",
