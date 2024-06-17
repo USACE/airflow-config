@@ -6,6 +6,7 @@ import logging
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from pathlib import Path
 import os
+import re
 from urllib.request import urlretrieve
 
 from airflow.providers.amazon.aws.hooks.lambda_function import LambdaHook
@@ -77,7 +78,7 @@ def upload_file(filename, bucket, key):
     return load_file
 
 
-def upload_directory(directory: str, bucket: str, prefix: str):
+def upload_directory(directory: str, bucket: str, prefix: str, filter: str):
     """Upload all files in a directory to an S3 bucket.  Prefix optional.
 
     Object keys match the original filename by default (with optional prefix prepended).
@@ -86,13 +87,18 @@ def upload_directory(directory: str, bucket: str, prefix: str):
         directory (str): Path of the local directory to upload.
         bucket (str): S3 bucket to upload to.
         prefix (str): Optional prefix to prepend to the uploaded key.
+        filter (str): Optional regex string to filter uploaded files
 
     Returns:
         List: A list of returns from each S3Hook.load_file call.
     """
     hook = S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION)
     results = []
+    if filter:
+        regex = re.compile(filter)
     for filename in os.listdir(directory):
+        if filter and not regex.match(filename):
+            continue
         filepath = os.path.join(directory, filename)
         key = f"{prefix}/{filename}" if prefix else filename
         results.append(
