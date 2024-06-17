@@ -100,16 +100,10 @@ def cumulus_aorc_precip_csu():
                     finally:
                         tar.close()
                     nested_dir = os.path.join(monthly_dir, year, f"{year}{month}")
-                    all_files = os.listdir(nested_dir)
-                    logging.debug(
-                        f"Found {len(all_files)} total files for {year}/{month}"
+                    dst_prefix = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{CUMULUS_ACQUIRABLE}/{year}/{month}"
+                    downloads.upload_directory(
+                        nested_dir, S3_DST_BUCKET, dst_prefix, ".*\.nc4$"
                     )
-                    nc_files = [file for file in all_files if file[-4:] == ".nc4"]
-                    logging.info(f"Found {len(nc_files)} .nc4 files for {year}/{month}")
-                    for file in nc_files:
-                        dst_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{CUMULUS_ACQUIRABLE}/{year}/{month}/{file}"
-                        filepath = os.path.join(nested_dir, file)
-                        downloads.upload_file(filepath, S3_DST_BUCKET, dst_key)
 
     load_annual_zip()
 
