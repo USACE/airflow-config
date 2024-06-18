@@ -105,7 +105,21 @@ def cumulus_aorc_precip_csu():
                         nested_dir, S3_DST_BUCKET, dst_prefix, ".*\.nc4$"
                     )
 
-    load_annual_zip()
+    @task()
+    def notify_cumulus_annual_grids():
+        logical_date = get_current_context()["logical_date"]
+        year_str = logical_date.format("YYYY")
+        prefix_year = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{CUMULUS_ACQUIRABLE}/{year_str}"
+        for month_str in [f"{num:02d}" for num in range(1, 13)]:
+            prefix = f"{prefix_year}/{month_str}"
+            for key in downloads.s3_list_keys(S3_DST_BUCKET, prefix):
+                cumulus.notify_acquirablefile(
+                    acquirable_id=cumulus.acquirables[CUMULUS_ACQUIRABLE],
+                    datetime=logical_date.isoformat(),
+                    s3_key=key,
+                )
+
+    load_annual_zip() >> notify_cumulus_annual_grids()
 
 
 csu_dag = cumulus_aorc_precip_csu()
