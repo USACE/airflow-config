@@ -41,7 +41,7 @@ default_args = {
 @dag(
     default_args=default_args,
     schedule="@yearly",
-    tags=["cumulus", "aorc", "precip", "archive"],
+    tags=["cumulus", "AORC", "precip", "archive"],
     max_active_runs=1,
     max_active_tasks=10,
 )
