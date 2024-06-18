@@ -55,7 +55,9 @@ def cumulus_aorc_precip_csu():
 
     The first task, load_annual_zip(), will pull annual AORC precip .zip files from
     the source bucket, unzip them, untar the nested monthly precip .tgz files, and
-    upload the contained .nc4 files to the destination acquirables bucket.
+    upload the contained .nc4 files to the destination acquirables bucket. The
+    destination objects are organized under the acquirable prefix using the prefix
+    `{yyyy}/{mm}/{filename}`.
 
     ## S3 Bucket and Key
 
