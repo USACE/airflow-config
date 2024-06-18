@@ -45,7 +45,7 @@ default_args = {
     max_active_runs=1,
     max_active_tasks=10,
 )
-def cumulus_aorc_precip_csu():
+def cumulus_aorc_csu_precip():
     """
     # AORC - CSU Archive
 
@@ -67,9 +67,9 @@ def cumulus_aorc_precip_csu():
 
     ## Cumulus Acquirable
 
-    AORC CSU acquirable slug: `aorc-precip-csu`
+    AORC CSU acquirable slug: `aorc-csu-precip`
     """
-    CUMULUS_ACQUIRABLE = "aorc-precip-csu"
+    CUMULUS_ACQUIRABLE = "aorc-csu-precip"
 
     S3_SRC_BUCKET = "aorc-csu"
     S3_DST_BUCKET = "castle-data-develop"
@@ -124,4 +124,4 @@ def cumulus_aorc_precip_csu():
     load_annual_zip() >> notify_cumulus_annual_grids()
 
 
-csu_dag = cumulus_aorc_precip_csu()
+csu_dag = cumulus_aorc_csu_precip()
