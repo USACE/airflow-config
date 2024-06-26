@@ -36,7 +36,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule="5 * * * *",
+    schedule="*/5 * * * *",
     tags=["wmes", "shef", "sqs"],
     max_active_runs=1,
     max_active_tasks=1,
