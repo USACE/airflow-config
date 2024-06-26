@@ -22,7 +22,7 @@ WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc) - timedelta(hours=1)).replace(
+    "start_date": (datetime.now(timezone.utc) - timedelta(minutes=15)).replace(
         minute=0, second=0
     ),
     # "start_date": datetime(2022, 7, 1),
