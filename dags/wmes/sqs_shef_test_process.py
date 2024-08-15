@@ -1,0 +1,133 @@
+import io
+import json
+import os
+import traceback
+import requests
+import time
+
+
+from airflow import DAG
+
+# from airflow.operators.python_operator import PythonOperator
+from datetime import datetime, timedelta, timezone
+from airflow.decorators import dag, task
+from airflow.operators.python import get_current_context
+from helpers.sqs import receive_sqs_messages, delete_sqs_message
+from shef import shef_parser
+
+# from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
+# from airflow.operators.dummy import DummyOperator
+from airflow.exceptions import AirflowSkipException
+
+from airflow.models import Variable
+
+WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
+LDM_URL = "https://ldm.rsgis.dev/api/ldm"
+
+
+default_args = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "start_date": (datetime.now(timezone.utc) - timedelta(minutes=15)).replace(
+        minute=0, second=0
+    ),
+    # "start_date": datetime(2022, 7, 1),
+    "catchup_by_default": True,
+    "email_on_failure": False,
+    "email_on_retry": False,
+    "retries": 1,
+    "retry_delay": timedelta(minutes=1),
+}
+
+
+@dag(
+    default_args=default_args,
+    schedule="*/5 * * * *",
+    tags=["wmes", "shef", "sqs"],
+    max_active_runs=1,
+    max_active_tasks=1,
+)
+def sqs_shef_test_process_messages():
+    """This pipeline will read available messages from the WMES SQS queue and process them as specified based on the provided stub.  The SQS message is subsequently deleted if processing completes successfully."""
+
+    @task()
+    def read_shef_queue():
+
+        # Check queue for messages
+        # response will be None if no messages are available
+        response = receive_sqs_messages(queue_name=WMES_SHEF_QUEUE_NAME)
+
+        if response is not None and "Messages" in response:
+            # Process messages
+            print(f'Received {len(response["Messages"])} messages from SQS queue.')
+            messages = []
+            for message in response["Messages"]:
+                print("FULL MESSAGE CONTENTS")
+                print("--------------")
+                print(message)
+                print("--------------")
+                # Print message body
+                print(f"Received message: {message['Body']}")
+                messages.append(message)
+
+            return messages
+
+        else:
+            print("WithinDAG - No messages received from SQS queue.")
+            raise AirflowSkipException("No messages received from SQS queue.")
+
+    @task
+    def process_messages(messages):
+        processed_messages = []
+        for message in messages:
+            try:
+                message_body = json.loads(message["Body"])
+                slug = message_body["product"]["slug"]
+                try:
+                    if slug == "ohrfc-lrl-qpf-res":
+                        process_ohrfc_lrl_res(message_body)
+                    else:
+                        print(f"Unhandled slug: {slug} -- Skipping processing")
+                    processed_messages.append(message)
+                except Exception:
+                    print(
+                        f"Exception occured while processing {message_body['metadata']['filename']}"
+                    )
+                    print(traceback.format_exc())
+            except json.JSONDecodeError:
+                print(
+                    f"Unrecognized message format for MessageId {message['MessageId']} - Adding to delete queue"
+                )
+                processed_messages.append(message)
+        return processed_messages
+
+    def process_ohrfc_lrl_res(message):
+        CDA_API_KEY = "foo"  # Provide dummy value for mock-post
+        print(f"Processing SHEF file: {message['metadata']['filename']}")
+        crit_file = "plugins/data/crit/OHRFC_ResIn_crit"
+        file_key = message["key"]
+        file_url = LDM_URL + "/" + file_key
+        params = dict()
+        params["disposition"] = "inline"
+        response = requests.get(file_url, params=params)
+        input = io.StringIO(response.text)
+        shef_parser.parse(
+            input_stream=input,
+            loader_spec=f"cda[{crit_file}][{CDA_API_KEY}]",
+        )
+
+    @task
+    def delete_processed_messages(processed_messages):
+        for message in processed_messages:
+            print(f"Deleting SQS MessageId {message['MessageId']}")
+            receipt = message["ReceiptHandle"]
+            delete_response = delete_sqs_message(
+                queue_name=WMES_SHEF_QUEUE_NAME,
+                receipt_handle=receipt,
+            )
+            print(f"Delete response: {delete_response}")
+
+    delete_processed_messages(process_messages(read_shef_queue()))
+
+
+sqs_shef_test_process_messages()
