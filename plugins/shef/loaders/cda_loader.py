@@ -140,7 +140,7 @@ class CdaLoader(base_loader.BaseLoader):
                     f"{str(e)} on line [{line_number}] in {critfile_name}"
                 )
                 raise
-        cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
+        # cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
     @property
     def transform_key(self) -> str:
@@ -211,8 +211,14 @@ class CdaLoader(base_loader.BaseLoader):
         Create an async CDA POST request coroutine for provided post_data
         """
         return asyncio.to_thread(
-            cwms.store_timeseries, data=post_data, store_rule="REPLACE WITH NON MISSING"
+            # cwms.store_timeseries, data=post_data, store_rule="REPLACE WITH NON MISSING"
+            self.mock_post,
+            post_data,
         )
+
+    def mock_post(self, post_data: TimeseriesPayload):
+        if self._logger:
+            self._logger.info(f"MOCK CDA-POST: {post_data}")
 
     async def process_write_tasks(self) -> None:
         """
