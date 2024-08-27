@@ -22,7 +22,6 @@ from airflow.exceptions import AirflowSkipException
 from airflow.models import Variable
 
 WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
-LDM_URL = "https://ldm.rsgis.dev/api/ldm"
 
 
 default_args = {
@@ -105,11 +104,10 @@ def sqs_shef_test_process_messages():
         CDA_API_KEY = "foo"  # Provide dummy value for mock-post
         print(f"Processing SHEF file: {message['metadata']['filename']}")
         crit_file = "plugins/data/crit/OHRFC_ResIn_crit"
-        file_key = message["key"]
-        file_url = LDM_URL + "/" + file_key
+        callback_url = message["callback_url"]
         params = dict()
         params["disposition"] = "inline"
-        response = requests.get(file_url, params=params)
+        response = requests.get(callback_url, params=params)
         input = io.StringIO(response.text)
         shef_parser.parse(
             input_stream=input,
