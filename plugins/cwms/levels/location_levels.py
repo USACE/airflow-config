@@ -101,9 +101,11 @@ def get_location_level(
     """
 
     if level_id is None:
-        raise ValueError("Cannot retrieve a single location level without an id")
+        raise ValueError(
+            "Cannot retrieve a single location level without an id")
     if office_id is None:
-        raise ValueError("Cannot retrieve a single location level without an office id")
+        raise ValueError(
+            "Cannot retrieve a single location level without an office id")
     if effective_date is None:
         raise ValueError(
             "Cannot retrieve a single location level without an effective date"
@@ -129,7 +131,8 @@ def store_location_level(data: JSON) -> None:
 
     """
     if data is None:
-        raise ValueError("Cannot store a location level without a JSON data dictionary")
+        raise ValueError(
+            "Cannot store a location level without a JSON data dictionary")
 
     endpoint = "levels"
     return api.post(endpoint, data, params=None)
@@ -218,4 +221,4 @@ def get_level_as_timeseries(
         "unit": unit,
     }
     response = api.get(endpoint, params)
-    return Data(response)
+    return Data(response, selector="values")
