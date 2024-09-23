@@ -263,7 +263,8 @@ def post(
     if isinstance(data, dict):
         data = json.dumps(data)
 
-    response = SESSION.post(endpoint, params=params, headers=headers, data=data)
+    response = SESSION.post(endpoint, params=params,
+                            headers=headers, data=data)
 
     if response.status_code < 200 or response.status_code >= 300:
         logging.error(f"CDA Error: response={response}")
@@ -301,7 +302,8 @@ def patch(
     else:
         if isinstance(data, dict):
             data = json.dumps(data)
-        response = SESSION.patch(endpoint, params=params, headers=headers, data=data)
+        response = SESSION.patch(
+            endpoint, params=params, headers=headers, data=data)
 
     if response.status_code < 200 or response.status_code >= 300:
         logging.error(f"CDA Error: response={response}")

@@ -8,7 +8,7 @@ from cwms.cwms_types import JSON, Data
 
 
 def get_timeseries_group(group_id: str, category_id: str, office_id: str) -> Data:
-    """Retreives time series stored in the requested time series group as a dictionary
+    """Retreives time series stored in the requested time series group
 
     Parameters
         ----------
@@ -21,8 +21,7 @@ def get_timeseries_group(group_id: str, category_id: str, office_id: str) -> Dat
 
         Returns
         -------
-        response : dict
-            The JSON response containing the time series group information.
+            cwms data type.  data.json will return the JSON output and data.df will return a dataframe
     """
 
     endpoint = f"timeseries/group/{group_id}"
@@ -33,7 +32,7 @@ def get_timeseries_group(group_id: str, category_id: str, office_id: str) -> Dat
 
 
 def get_timeseries(
-    tsId: str,
+    ts_id: str,
     office_id: str,
     unit: str = "EN",
     datum: Optional[str] = None,
@@ -41,13 +40,14 @@ def get_timeseries(
     end: Optional[datetime] = None,
     page_size: int = 500000,
     version_date: Optional[datetime] = None,
+    trim: Optional[bool] = True,
 ) -> Data:
-    """Retrieves time series data from a specified time series and time window.  Value date-times
+    """Retrieves time series values from a specified time series and time window.  Value date-times
     obtained are always in UTC.
 
     Parameters
     ----------
-        tsId: string
+        ts_id: string
             Name(s) of the time series whose data is to be included in the response.
         office_id: string
             The owning office of the time series(s).
@@ -77,17 +77,18 @@ def get_timeseries(
         version_date: datetime, optional, default is None
             Version date of time series values being requested. If this field is not specified and
             the timeseries is versioned, the query will return the max aggregate for the time period.
+        trim: boolean, optional, default is True
+            Specifies whether to trim missing values from the beginning and end of the retrieved values.
     Returns
     -------
-    response : dict
-        The JSON response containing the time series information.  Values are always in UTC.
+        cwms data type.  data.json will return the JSON output and data.df will return a dataframe. dates are all in UTC
     """
 
     # creates the dataframe from the timeseries data
     endpoint = "timeseries"
     params = {
         "office": office_id,
-        "name": tsId,
+        "name": ts_id,
         "unit": unit,
         "datum": datum,
         "begin": begin.isoformat() if begin else None,
@@ -102,7 +103,7 @@ def get_timeseries(
 
 def timeseries_df_to_json(
     data: pd.DataFrame,
-    tsId: str,
+    ts_id: str,
     units: str,
     office_id: str,
     version_date: Optional[datetime] = None,
@@ -112,20 +113,17 @@ def timeseries_df_to_json(
     Parameters
     ----------
         data: pd.Dataframe
-            Time Series data to be stored.  If dataframe data must be provided in the following format
-                df.tsId = timeseried id:specified name of the time series to be posted to
-                df.office = the owning office of the time series
-                df.units = units of values to be stored (ie. ft, in, m, cfs....)
+            Time Series data to be stored.  Data must be provided in the following format
                 dataframe should have three columns date-time, value, quality-code. date-time values
-                can be a string in ISO8601 formate or a datetime field. if quality-code column is not
+                can be a string in ISO8601 format or a datetime field. if quality-code column is not
                 present is will be set to 0.
                                         date-time value  quality-code
                 0   2023-12-20T14:45:00.000-05:00  93.1           0
                 1   2023-12-20T15:00:00.000-05:00  99.8           0
                 2   2023-12-20T15:15:00.000-05:00  98.5           0
                 3   2023-12-20T15:30:00.000-05:00  98.5           0
-        tsId: str
-            timeseried id:specified name of the time series to be posted to
+        ts_id: str
+            timeseried id:specified name of the timeseries to be posted to
         office_id: str
             the owning office of the time series
         units: str
@@ -149,13 +147,14 @@ def timeseries_df_to_json(
         )
 
     # make sure that dataTime column is in iso8601 formate.
-    data["date-time"] = pd.to_datetime(data["date-time"]).apply(pd.Timestamp.isoformat)
+    data["date-time"] = pd.to_datetime(data["date-time"]
+                                       ).apply(pd.Timestamp.isoformat)
     data = data.reindex(columns=["date-time", "value", "quality-code"])
     if data.isnull().values.any():
         raise ValueError("Null/NaN data must be removed from the dataframe")
 
     ts_dict = {
-        "name": tsId,
+        "name": ts_id,
         "office-id": office_id,
         "units": units,
         "values": data.values.tolist(),
@@ -202,6 +201,75 @@ def store_timeseries(
     }
 
     if not isinstance(data, dict):
-        raise ValueError("Cannot store a timeseries without a JSON data dictionary")
+        raise ValueError(
+            "Cannot store a timeseries without a JSON data dictionary")
 
     return api.post(endpoint, data, params)
+
+
+def delete_timeseries(
+    ts_id: str,
+    office_id: str,
+    begin: datetime,
+    end: datetime,
+    version_date: Optional[datetime] = None,
+) -> None:
+    """
+    Deletes binary timeseries data with the given ID,
+    office ID and time range.
+
+    Parameters
+    ----------
+    timeseries_id : str
+        The ID of the binary time series data to be deleted.
+    office_id : str
+        The ID of the office that the binary time series belongs to.
+    begin : datetime
+        The start date and time of the time range.
+        If the datetime has a timezone it will be used,
+        otherwise it is assumed to be in UTC.
+    end : datetime
+        The end date and time of the time range.
+        If the datetime has a timezone it will be used,
+        otherwise it is assumed to be in UTC.
+    version_date : Optional[datetime]
+        The time series date version to retrieve. If not supplied,
+        the maximum date version for each time step in the retrieval
+        window will be deleted.
+
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If any of timeseries_id, office_id, begin, or end is None.
+    ClientError
+        If a 400 range error code response is returned from the server.
+    NoDataFoundError
+        If a 404 range error code response is returned from the server.
+    ServerError
+        If a 500 range error code response is returned from the server.
+    """
+
+    if ts_id is None:
+        raise ValueError("Deleting binary timeseries requires an id")
+    if office_id is None:
+        raise ValueError("Deleting binary timeseries requires an office")
+    if begin is None:
+        raise ValueError("Deleting binary timeseries requires a time window")
+    if end is None:
+        raise ValueError("Deleting binary timeseries requires a time window")
+
+    endpoint = f"timeseries/{ts_id}"
+    version_date_str = version_date.isoformat() if version_date else None
+    params = {
+        "office": office_id,
+        "begin": begin.isoformat(),
+        "end": end.isoformat(),
+        "version-date": version_date_str,
+    }
+
+    return api.delete(endpoint, params=params)

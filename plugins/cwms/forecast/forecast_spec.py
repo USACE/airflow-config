@@ -125,7 +125,8 @@ def store_forecast_spec(data: JSON) -> None:
         If a 500 range error code response is returned from the server.
     """
     if data is None:
-        raise ValueError("Storing a forecast spec requires a JSON data dictionary")
+        raise ValueError(
+            "Storing a forecast spec requires a JSON data dictionary")
     endpoint = "forecast-spec"
 
     return api.post(endpoint, data)
