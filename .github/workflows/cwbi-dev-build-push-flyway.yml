@@ -44,7 +44,7 @@ jobs:
           ECR_REPOSITORY: wmes-airflow-flyway
           IMAGE_TAG: latest
         run: |
-          docker build _docker/flyway \          
+          docker build _docker/flyway \
           --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
           --tag $ECR_REGISTRY/$ECR_REPOSITORY:dev 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
