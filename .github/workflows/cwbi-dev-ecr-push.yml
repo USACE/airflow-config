@@ -7,8 +7,6 @@ on:
     branches: [cwbi-dev]
     paths:
       - .github/workflows/cwbi-dev-ecr-push.yml
-  pull_request:
-    branches: [cwbi-dev]
 
 env:
   AWS_REGION: aws-us-gov #Change to reflect your Region
