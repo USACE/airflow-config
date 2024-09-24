@@ -1,5 +1,5 @@
-# FROM flyway/flyway
-FROM ghcr.io/usace/flyway:latest
+FROM flyway/flyway
+# FROM ghcr.io/usace/flyway:latest
 
 COPY . /flyway/sql/
 
