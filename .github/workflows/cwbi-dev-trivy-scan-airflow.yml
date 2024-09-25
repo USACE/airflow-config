@@ -1,0 +1,44 @@
+name: Trivy Scan Airflow - Dev
+
+on:
+  push:
+    branches: ['develop']
+    paths:
+      - '_docker/airflow/**'
+      - '.github/workflows/cwbi-dev-trivy-scan-airflow.yml'
+  schedule:
+    - cron: '0 12 * * 2'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build an image from Dockerfile
+        run: |
+          docker build -t airflow:${{ github.sha }} _docker/airflow
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
+        with:
+          image-ref: 'api:${{ github.sha }}'
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          # format: 'sarif'
+          output: 'trivy-results.sarif'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
