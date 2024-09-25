@@ -8,7 +8,7 @@ on:
     paths:
       - .github/workflows/cwbi-dev-build-push-flyway.yml
       - _docker/flyway/common/*
-      - _docker/flyway/Dockerfile/*
+      - _docker/flyway/Dockerfile
 
 env:
   AWS_REGION: aws-us-gov #Change to reflect your Region
