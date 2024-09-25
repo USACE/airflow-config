@@ -2,7 +2,7 @@ name: Trivy Scan Airflow - Dev
 
 on:
   push:
-    branches: ['develop']
+    branches: ['cwbi-dev']
     paths:
       - '_docker/airflow/**'
       - '.github/workflows/cwbi-dev-trivy-scan-airflow.yml'
