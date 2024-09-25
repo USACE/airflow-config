@@ -1,5 +1,6 @@
-FROM flyway/flyway
+# FROM flyway/flyway
 # FROM ghcr.io/usace/flyway:latest
+FROM redgate/flyway:latest-alpine
 
 COPY . /flyway/sql/
 
