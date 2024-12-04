@@ -27,7 +27,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-gov-west-1
-          role-to-assume: arn:aws-us-gov:iam::718787032875:role/github-actions-ecr-airflow1
+          role-to-assume: arn:aws-us-gov:iam::718787032875:role/github-actions-ecr-wmes-airflow
           output-credentials: true
       # Hello from AWS: WhoAmI
       - name: Sts GetCallerIdentity
