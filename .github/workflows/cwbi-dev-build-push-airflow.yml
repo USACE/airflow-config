@@ -41,7 +41,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: wmes-airflow
-          IMAGE_TAG: 2.9.0-python3.8-sqs
+          IMAGE_TAG: 2.9.0-python3.11-sqs
         run: |
           docker build _docker/airflow \
           --build-arg AIRFLOW_VERSION="2.9.0" \
