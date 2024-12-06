@@ -6,7 +6,7 @@ on:
   push:
     branches: [cwbi-dev]
     paths:
-      - .github/workflows/cwbi-dev-ecr-push.yml
+      - .github/workflows/cwbi-dev-build-push-airflow.yml
       - _docker/airflow/Dockerfile
 
 env:
