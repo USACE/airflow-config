@@ -178,8 +178,8 @@ services:
     build:
       context: _docker/pgbouncer
       args:
-        - PGBOUNCER_VERSION=1.21.0
-        - PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_21_0/pgbouncer-1.21.0.tar.gz
+        - PGBOUNCER_VERSION=1.22.1
+        - PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_22_1/pgbouncer-1.22.1.tar.gz
     environment:
       DB_HOST: airflowdb
       DB_USER: airflow
