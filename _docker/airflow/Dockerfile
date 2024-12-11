@@ -678,6 +678,7 @@ function install_additional_dependencies() {
         echo
         set -x
         pip install --root-user-action ignore --upgrade --upgrade-strategy eager \
+        --constraint "${AIRFLOW_CONSTRAINTS_LOCATION}" \
             ${ADDITIONAL_PIP_INSTALL_FLAGS} \
             ${ADDITIONAL_PYTHON_DEPS} ${EAGER_UPGRADE_ADDITIONAL_REQUIREMENTS}
         # make sure correct PIP version is used
@@ -693,6 +694,7 @@ function install_additional_dependencies() {
         echo
         set -x
         pip install --root-user-action ignore --upgrade --upgrade-strategy only-if-needed \
+        --constraint "${AIRFLOW_CONSTRAINTS_LOCATION}" \
             ${ADDITIONAL_PIP_INSTALL_FLAGS} \
             ${ADDITIONAL_PYTHON_DEPS}
         # make sure correct PIP version is used
