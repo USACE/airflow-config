@@ -81,7 +81,7 @@ def notify_acquirablefile(acquirable_id, datetime, s3_key):
     conn = get_connection()
 
     h = HttpHook(http_conn_id=conn.conn_id, method="POST")
-    endpoint = f"/acquirablefiles?key={conn.password}"
+    endpoint = f"/api/acquirablefiles?key={conn.password}"
     headers = {"Content-Type": "application/json"}
     r = h.run(endpoint=endpoint, json=payload, headers=headers)
 
