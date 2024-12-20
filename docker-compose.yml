@@ -92,6 +92,10 @@ x-airflow-common:
     # WEBSERVER
     # ----------
     AIRFLOW__WEBSERVER__INSTANCE_NAME: 'Local Dev'
+    AIRFLOW__WEBSERVER__NAVBAR_COLOR: '#006600'
+    AIRFLOW__WEBSERVER__NAVBAR_LOGO_TEXT_COLOR: '#fff'
+    AIRFLOW__WEBSERVER__NAVBAR_TEXT_COLOR: '#fff'
+
     ######################
     # VARIABLES WE CREATED
     ######################
