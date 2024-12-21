@@ -13,11 +13,11 @@ x-airflow-common:
   &airflow-common
   #
   # image: apache/airflow:2.8.1-python3.8-usace
-  image: airflow-common:2.9.0-python3.11-usace
+  image: airflow-common:2.9.3-python3.11-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.9.0
+      - AIRFLOW_VERSION=2.9.3
       - PYTHON_BASE_IMAGE=python:3.11-slim-bookworm
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
       - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
@@ -43,6 +43,7 @@ x-airflow-common:
     AIRFLOW__DATABASE__LOAD_DEFAULT_CONNECTIONS: False
     #--> AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@pgbouncer:5432/airflow
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://
+    AIRFLOW__DATABASE__SQL_ALCHEMY_POOL_PRE_PING: 'True'
     PGUSER: airflow
     PGPASSWORD: airflow
     PGHOST: pgbouncer

@@ -44,11 +44,11 @@ ARG AIRFLOW_UID="50000"
 ARG AIRFLOW_USER_HOME_DIR=/home/airflow
 
 # latest released version here
-ARG AIRFLOW_VERSION="2.9.0"
+ARG AIRFLOW_VERSION="2.9.3"
 
 ARG PYTHON_BASE_IMAGE="python:3.11-slim-bookworm"
 
-ARG AIRFLOW_PIP_VERSION=24.0
+ARG AIRFLOW_PIP_VERSION=24.1.2
 ARG AIRFLOW_IMAGE_REPOSITORY="https://github.com/apache/airflow"
 ARG AIRFLOW_IMAGE_README_URL="https://raw.githubusercontent.com/apache/airflow/main/docs/docker-stack/README.md"
 
