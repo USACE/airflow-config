@@ -13,11 +13,11 @@ x-airflow-common:
   &airflow-common
   #
   # image: apache/airflow:2.8.1-python3.8-usace
-  image: airflow-common:2.9.3-python3.11-usace
+  image: airflow-common:2.10.0-python3.11-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.9.3
+      - AIRFLOW_VERSION=2.10.4
       - PYTHON_BASE_IMAGE=python:3.11-slim-bookworm
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
       - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
@@ -93,7 +93,7 @@ x-airflow-common:
     # WEBSERVER
     # ----------
     AIRFLOW__WEBSERVER__INSTANCE_NAME: 'Local Dev'
-    AIRFLOW__WEBSERVER__NAVBAR_COLOR: '#006600'
+    AIRFLOW__WEBSERVER__NAVBAR_COLOR: '#044e14'
     AIRFLOW__WEBSERVER__NAVBAR_LOGO_TEXT_COLOR: '#fff'
     AIRFLOW__WEBSERVER__NAVBAR_TEXT_COLOR: '#fff'
 
@@ -106,7 +106,7 @@ x-airflow-common:
     # CELERY QUEUES
     # ----------
     CELERY_QUEUE_URL_AIRFLOW: http://airflow-elasticmq:9324/queue/airflow
-    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: True
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: 'True'
     # ----------
     # CONNECTIONS
     # ----------
@@ -129,6 +129,10 @@ x-airflow-common:
     DOWNLOAD_OPERATOR_USE_LAMBDA: FALSE
     DOWNLOAD_OPERATOR_USE_LAMBDA_NAME: ''
     DOWNLOAD_OPERATOR_USE_LAMBDA_REGION: us-east-1
+    # ----------
+    # TELEMETRY (back to airflow devs)
+    # ----------
+    SCARF_ANALYTICS: False
     ###############################
     # Things I'm unsure if we need
     ###############################
@@ -300,25 +304,25 @@ services:
   #############################################################################
   # Airflow Triggerer
   #############################################################################
-  # airflow_triggerer:
-  #   <<: *airflow-common
-  #   container_name: airflow-triggerer
-  #   command: triggerer
-  #   healthcheck:
-  #     test:
-  #       [
-  #         'CMD-SHELL',
-  #         'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"',
-  #       ]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #     start_period: 30s
-  #   restart: always
-  #   depends_on:
-  #     <<: *airflow-common-depends-on
-  #     airflow_init:
-  #       condition: service_completed_successfully
+  airflow_triggerer:
+    <<: *airflow-common
+    container_name: airflow-triggerer
+    command: triggerer
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow_init:
+        condition: service_completed_successfully
   #############################################################################
   # Airflow User Interface
   #############################################################################
