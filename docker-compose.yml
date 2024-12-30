@@ -87,7 +87,7 @@ x-airflow-common:
     # ----------
     AIRFLOW__METRICS__STATSD_ON: True
     AIRFLOW__METRICS__STATSD_HOST: airflow-statsd-exporter
-    AIRFLOW__METRICS__STATSD_PORT: 9125
+    AIRFLOW__METRICS__STATSD_PORT: 9102
     AIRFLOW__METRICS__STATSD_PREFIX: airflow
     # ----------
     # WEBSERVER
@@ -106,6 +106,7 @@ x-airflow-common:
     # CELERY QUEUES
     # ----------
     CELERY_QUEUE_URL_AIRFLOW: http://airflow-elasticmq:9324/queue/airflow
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: True
     # ----------
     # CONNECTIONS
     # ----------
@@ -162,7 +163,7 @@ services:
   # Postgres Database
   #############################################################################
   airflowdb:
-    image: postgres:15
+    image: postgres:16
     container_name: airflow-db
     environment:
       POSTGRES_USER: airflow
