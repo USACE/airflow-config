@@ -1,5 +1,6 @@
 apache-airflow~=2.10.4
 apache-airflow-providers-amazon~=9.2.0
+black
 pytest~=8.3.4
 #pendulum~=2.1.2 # Pin to older version for compatibility
 beautifulsoup4

@@ -268,6 +268,9 @@ services:
         condition: service_completed_successfully
       airflow-elasticmq:
         condition: service_started
+    networks:
+      - default
+      - cumulus
   #############################################################################
   # Airflow Celery Worker
   #############################################################################
@@ -346,6 +349,9 @@ services:
       <<: *airflow-common-depends-on
       airflow_init:
         condition: service_completed_successfully
+    networks:
+      - default
+      - cumulus
   #############################################################################
   # Celery Dashboard - local only
   #############################################################################

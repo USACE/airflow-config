@@ -1,10 +1,20 @@
 import json
+import re
 
 # from airflow import AirflowException
 import requests
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable
 from airflow.providers.http.hooks.http import HttpHook
+
+import logging
+from helpers.custom_logging import MaskSensitiveInfoFilter
+
+
+# Setup custom logging configuration
+logging.basicConfig()
+logger = logging.getLogger()
+logger.addFilter(MaskSensitiveInfoFilter())
 
 S3_ACQUIRABLE_PREFIX = "cumulus/acquirables"
 S3_BUCKET = Variable.get("CUMULUS_S3_BUCKET")

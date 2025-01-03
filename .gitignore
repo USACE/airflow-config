@@ -22,3 +22,7 @@
 # Airflow Logs Directory
 logs/**
 !logs/readme.md
+
+# Ignore virtual environment
+venv
+.venv
