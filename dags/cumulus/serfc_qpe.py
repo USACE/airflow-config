@@ -8,7 +8,7 @@ File matching for:
 QPE --> xmrgMMDDYYYYHHz.grb.gz
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from textwrap import dedent
 
 from airflow import DAG
@@ -31,7 +31,9 @@ implementation = {
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(days=2)).replace(minute=0, second=0),
+    "start_date": (datetime.now(timezone.utc) - timedelta(days=2)).replace(
+        minute=0, second=0
+    ),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
