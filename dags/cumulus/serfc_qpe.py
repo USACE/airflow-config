@@ -65,15 +65,14 @@ def create_dag(**kwargs):
         @task()
         def download_serfc():
             context = get_current_context()
-            ti = context["ti"]
-            execution_date = ti.execution_date
-            filename = f'xmrg{execution_date.strftime("%m%d%Y%H")}z.grb.gz'
+            logical_date = context["logical_date"]
+            filename = f'xmrg{logical_date.strftime("%m%d%Y%H")}z.grb.gz'
             url = f"{base_url}/{filename}"
             s3_key = f"{key_prefix}/{slug}/{filename}"
             result = trigger_download(url=url, s3_bucket=s3_bucket, s3_key=s3_key)
             return [
                 {
-                    "execution": execution_date.isoformat(),
+                    "execution": logical_date.isoformat(),
                     "url": url,
                     "s3_key": s3_key,
                     "s3_bucket": s3_bucket,

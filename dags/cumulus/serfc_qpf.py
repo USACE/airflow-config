@@ -89,17 +89,16 @@ def create_dag(**kwargs):
         @task()
         def generate_filenames():
             context = get_current_context()
-            ti = context["ti"]
-            execution_date = ti.execution_date + timedelta(hours=6)
+            logical_date = context["logical_date"] + timedelta(hours=6)
             # This task generates the list of filenames
-            return list(alr_qpf_filenames(execution_date))
+            return list(alr_qpf_filenames(logical_date))
 
         @task()
         def check_first_file():
             context = get_current_context()
             ti = context["ti"]
-            execution_date = ti.execution_date + timedelta(hours=6)
-            filename = next(alr_qpf_filenames(execution_date))
+            logical_date = context["logical_date"] + timedelta(hours=6)
+            filename = next(alr_qpf_filenames(logical_date))
             url = f"{base_url}/{filename}"
 
             try:
@@ -111,7 +110,7 @@ def create_dag(**kwargs):
             except Exception as e:
                 # If we don't always get a product for this time period
                 # AND we've reached the try limit, skip the task instead of failing for better metrics analysis
-                if execution_date.hour not in [0, 12] and ti.try_number >= ti.max_tries:
+                if logical_date.hour not in [0, 12] and ti.try_number >= ti.max_tries:
                     raise AirflowSkipException(
                         f"Skipping task due to no files available and max_tries ({ti.max_tries}) reached: {e}"
                     )
@@ -121,8 +120,7 @@ def create_dag(**kwargs):
         @task(map_index_template="{{ task_id }}")
         def download_file(filename):
             context = get_current_context()
-            ti = context["ti"]
-            execution_date = ti.execution_date + timedelta(hours=6)
+            logical_date = context["logical_date"] + timedelta(hours=6)
 
             # Name the dynamic task instead of leaving the index number
             context["task_id"] = filename
@@ -131,7 +129,7 @@ def create_dag(**kwargs):
             s3_key = f"{key_prefix}/{slug}/{filename}"
             result = trigger_download(url=url, s3_bucket=s3_bucket, s3_key=s3_key)
             return {
-                "execution": execution_date.isoformat(),
+                "execution": logical_date.isoformat(),
                 "url": url,
                 "s3_key": s3_key,
                 "s3_bucket": s3_bucket,

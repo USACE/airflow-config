@@ -55,6 +55,7 @@ def qpf_filenames(edate):
     default_args=default_args,
     schedule="8 */6 * * *",
     tags=["cumulus", "precip", "QPF", "ABRFC"],
+    doc_md=__doc__,
     max_active_runs=2,
     max_active_tasks=4,
 )
@@ -67,25 +68,25 @@ def cumulus_abrfc_qpf_06h():
 
     """
     Because this is a forecast product, we don't want to wait to get the product based
-    on the last time period, but rather based on the current.  This is why the execution
+    on the last time period, but rather based on the current.  This is why the logical
     date is being shifted forward by 6 hours.
     """
 
     @task()
     def generate_filenames():
-        context = get_current_context()
-        ti = context["ti"]
-        execution_date = ti.execution_date + timedelta(hours=6)
+        # Overwrite the logical date to be 6 hours in the future
+        logical_date = get_current_context()["logical_date"] + timedelta(hours=6)
+
         # This task generates the list of filenames
-        return list(qpf_filenames(execution_date))
+        return list(qpf_filenames(logical_date))
 
     ###########################################################################
     @task()
     def check_first_file():
         context = get_current_context()
-        ti = context["ti"]
-        execution_date = ti.execution_date + timedelta(hours=6)
-        filename = next(qpf_filenames(execution_date))
+        logical_date = context["logical_date"] + timedelta(hours=6)
+        ti = context["ti"]  # task instance
+        filename = next(qpf_filenames(logical_date))
         url = f"{URL_ROOT}/{filename}"
 
         try:
@@ -97,7 +98,7 @@ def cumulus_abrfc_qpf_06h():
         except Exception as e:
             # If we don't always get a product for this time period
             # AND we've reached the try limit, skip the task instead of failing for better metrics analysis
-            if execution_date.hour not in [0, 12, 18] and ti.try_number >= ti.max_tries:
+            if logical_date.hour not in [0, 12, 18] and ti.try_number >= ti.max_tries:
                 raise AirflowSkipException(
                     f"Skipping task due to no files available and max_tries ({ti.max_tries}) reached: {e}"
                 )
@@ -109,8 +110,7 @@ def cumulus_abrfc_qpf_06h():
     def download_file(filename):
         print(f"Downloading {filename}")
         context = get_current_context()
-        ti = context["ti"]
-        execution_date = ti.execution_date + timedelta(hours=6)
+        logical_date = context["logical_date"] + timedelta(hours=6)
 
         # Name the dynamic task instead of leaving the index number
         context["task_id"] = filename
@@ -119,7 +119,7 @@ def cumulus_abrfc_qpf_06h():
         s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
         result = trigger_download(url=url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
         return {
-            "execution": execution_date.isoformat(),
+            "execution": logical_date.isoformat(),
             "url": url,
             "s3_key": s3_key,
             "s3_bucket": cumulus.S3_BUCKET,
