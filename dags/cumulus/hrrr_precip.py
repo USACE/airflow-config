@@ -2,8 +2,7 @@ import json
 
 
 # The DAG object; we'll need this to instantiate a DAG
-from airflow import DAG
-from airflow.decorators import task
+from airflow.decorators import dag, task
 
 from datetime import datetime, timedelta
 from airflow.operators.python import get_current_context
@@ -14,8 +13,9 @@ import helpers.cumulus as cumulus
 # These args will get passed on to each operator
 # You can override them on a per-task basis during operator initialization
 default_args = {"owner": "airflow", "retries": 6, "retry_delay": timedelta(minutes=10)}
-with DAG(
-    "cumulus_hrrr_precip",
+
+
+@dag(
     default_args=default_args,
     description="HRRR Forecast Precip",
     # start_date=(datetime.utcnow()-timedelta(hours=72)).replace(minute=0, second=0),
@@ -25,13 +25,14 @@ with DAG(
     catchup=False,
     max_active_runs=1,
     max_active_tasks=4,
-) as dag:
-    dag.doc_md = """This pipeline handles download and API notification for HRRR hourly forecast products. \n
-    High-Resolution Rapid Refresh (HRRR) \n
-    Info: https://rapidrefresh.noaa.gov/hrrr/\n
-    Multiple sources:\n
-    - https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/\n
-    - https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.20210414/conus/\n
+)
+def cumulus_hrrr_precip():
+    """This pipeline handles download and API notification for HRRR hourly forecast products.
+    High-Resolution Rapid Refresh (HRRR)
+    Info: https://rapidrefresh.noaa.gov/hrrr/
+    Multiple sources:
+    - https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/
+    - https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.20210414/conus/
     Files matching hrrr.t{HH}z.wrfsfcf{HH}.grib2 - Multiple hourly files (second variable) per forecast file (first variable)
     """
 
@@ -113,3 +114,6 @@ with DAG(
     product_hours = get_product_hours()
     product_payloads = download_precip_fcst_hour.expand(hour=product_hours)
     notify_api.expand(payload=product_payloads)
+
+
+cumulus_hrrr_precip()
