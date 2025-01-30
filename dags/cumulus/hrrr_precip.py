@@ -3,13 +3,10 @@ import json
 
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
+from airflow.decorators import task
 
-from airflow import AirflowException
 from datetime import datetime, timedelta
 from airflow.operators.python import get_current_context
-
-# Operators; we need this to operate!
-from airflow.operators.python import PythonOperator
 
 from helpers.downloads import trigger_download
 import helpers.cumulus as cumulus
@@ -40,7 +37,9 @@ with DAG(
 
     URL_ROOT = f"https://noaa-hrrr-bdp-pds.s3.amazonaws.com"
     PRODUCT_SLUG = "hrrr-total-precip"
+
     ##############################################################################
+    @task()
     def download_precip_fcst_hour(hour):
 
         exec_dt = get_current_context()["logical_date"]
@@ -76,6 +75,7 @@ with DAG(
         )
 
     ##############################################################################
+    @task()
     def notify_api(payload):
 
         # Airflow will convert the parameter to a string, convert it back
@@ -91,26 +91,25 @@ with DAG(
         return
 
     ##############################################################################
-    for fcst_hour in range(0, 19):
+    @task()
+    def get_product_hours():
+        """Get a list of forecast hours available for the current execution time
 
-        download_task_id = f"download_fcst_hr_{str(fcst_hour).zfill(2)}"
+        HRRR forecast products are generated for 49 hours at each 6-hour interval
+        (0000, 0600, 1200, 1800 GMT) and for 19 hours otherwise.
 
-        download_task = PythonOperator(
-            task_id=download_task_id,
-            python_callable=download_precip_fcst_hour,
-            op_kwargs={
-                "hour": str(fcst_hour).zfill(2),
-            },
-        )
+        Returns:
+            list[str]: A list of available hours in %H format
+        """
+        exec_dt = get_current_context()["logical_date"]
+        exec_hr = exec_dt.strftime("%H")
+        if exec_hr in ["00", "06", "12", "18"]:
+            product_hours = list(range(0, 49))
+        else:
+            product_hours = list(range(0, 19))
 
-        notify_api_task = PythonOperator(
-            task_id=f"notify_api_fcst_hr_{str(fcst_hour).zfill(2)}",
-            python_callable=notify_api,
-            op_kwargs={
-                "payload": "{{{{task_instance.xcom_pull(task_ids='{}')}}}}".format(
-                    download_task_id
-                )
-            },
-        )
+        return product_hours
 
-        download_task >> notify_api_task
+    product_hours = get_product_hours()
+    product_payloads = download_precip_fcst_hour.expand(hour=product_hours)
+    notify_api.expand(payload=product_payloads)
