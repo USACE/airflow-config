@@ -35,7 +35,7 @@ with DAG(
     Files matching hrrr.t{HH}z.wrfsfcf{HH}.grib2 - Multiple hourly files (second variable) per forecast file (first variable)
     """
 
-    URL_ROOT = f"https://noaa-hrrr-bdp-pds.s3.amazonaws.com"
+    URL_ROOT = "https://noaa-hrrr-bdp-pds.s3.amazonaws.com"
     PRODUCT_SLUG = "hrrr-total-precip"
 
     ##############################################################################
