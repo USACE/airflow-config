@@ -105,4 +105,4 @@ def cumulus_aprfc_qpf_06h():
     notify_cumulus(download_raw_qpf())
 
 
-aprfc_qpe_dag = cumulus_aprfc_qpf_06h()
+aprfc_qpf_dag = cumulus_aprfc_qpf_06h()
