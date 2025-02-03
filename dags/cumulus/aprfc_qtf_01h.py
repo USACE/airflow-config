@@ -28,31 +28,51 @@ default_args = {
     "retry_delay": timedelta(minutes=30),
 }
 
+def get_latest_files(filenames):
+    # Dictionary to store the latest file for each unique timestamp
+    latest_files = {}
+    
+    # Regular expression to extract the timestamp
+    pattern = r'ta01f_has_\d+f_(\d{8}_\d{2})_awips_(\d+)'
+    
+    for filename in filenames:
+        match = re.search(pattern, filename)
+        if match:
+            key = match.group(1) + '_' + match.group(2)
+            if key not in latest_files or filename > latest_files[key]:
+                latest_files[key] = filename
+    
+    # Return the list of latest files
+    return list(latest_files.values())
 
-# ALR qtf filename generator
+# APRFC qtf filename generator
 def get_filenames(edate, url):
     """
     date at end of filename hour and min can not be predicted
     scraping data from website and finding all matching filenames
-    for the sprcified date.
+    for the specified date.
     """
     d_t1 = edate.strftime("%Y%m%d")
-    d_t2 = (edate - timedelta(hours=24)).strftime("%Y%m%d")
 
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     links = [node.get("href") for node in soup.find_all("a")]
     filenames = []
-    for d in [d_t2, d_t1]:
-        regex = r"^ta01f_has_\d+f_\d{8}_\d{2}_awips.*?\.grb(\.gz)?$"
-        filenames = filenames + [link for link in links if re.match(regex, link)]
 
-    return filenames
+    
+    regex = f"^ta01f_has_\\d+f_\\d{{8}}_\\d{{2}}_awips_{d_t1}.*\\.grb(\\.gz)?$"
+    filenames = [link for link in links if re.match(regex, link)]
+
+
+
+
+    return get_latest_files(filenames)
+
 
 
 @dag(
     default_args=default_args,
-    schedule="40 22,5 * * *",
+    schedule="40 5,23 * * *",
     tags=["cumulus", "temp", "QTF", "APRFC"],
     max_active_runs=1,
     max_active_tasks=1,
