@@ -3,7 +3,7 @@ Acquire and Process APRFC QPF 06h
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import calendar
 from bs4 import BeautifulSoup
 import re
@@ -20,7 +20,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=36)).replace(minute=0, second=0),
+    "start_date": (datetime.now(timezone.utc) - timedelta(hours=36)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
