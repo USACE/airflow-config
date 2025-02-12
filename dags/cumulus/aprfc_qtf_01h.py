@@ -72,7 +72,7 @@ def get_filenames(edate, url):
 
 @dag(
     default_args=default_args,
-    schedule="40 5,23 * * *",
+    schedule="21 9,15,19 * * *",
     tags=["cumulus", "temp", "QTF", "APRFC"],
     max_active_runs=1,
     max_active_tasks=1,
