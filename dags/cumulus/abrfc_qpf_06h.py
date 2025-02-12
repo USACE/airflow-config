@@ -56,8 +56,8 @@ def qpf_filenames(edate):
     schedule="8 */6 * * *",
     tags=["cumulus", "precip", "QPF", "ABRFC"],
     doc_md=__doc__,
-    max_active_runs=2,
-    max_active_tasks=4,
+    max_active_runs=1,
+    max_active_tasks=2,
 )
 def cumulus_abrfc_qpf_06h():
     key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
