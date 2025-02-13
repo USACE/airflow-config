@@ -3,7 +3,7 @@ Acquire and Process APRFC QPF 06h
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import calendar
 from bs4 import BeautifulSoup
 import re
@@ -20,7 +20,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=72)).replace(minute=0, second=0),
+    "start_date": (datetime.now(timezone.utc) - timedelta(hours=36)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -28,6 +28,22 @@ default_args = {
     "retry_delay": timedelta(minutes=30),
 }
 
+def get_latest_files(filenames):
+    # Dictionary to store the latest file for each unique timestamp
+    latest_files = {}
+    
+    # Regular expression to extract the timestamp
+    pattern = r'qpf06f_has_\d+f_(\d{8}_\d{2})_awips_(\d+)'
+    
+    for filename in filenames:
+        match = re.search(pattern, filename)
+        if match:
+            key = match.group(1) + '_' + match.group(2)
+            if key not in latest_files or filename > latest_files[key]:
+                latest_files[key] = filename
+    
+    # Return the list of latest files
+    return list(latest_files.values())
 
 # ALR QPF filename generator
 def get_filenames(edate, url):
@@ -37,25 +53,24 @@ def get_filenames(edate, url):
     for the sprcified date.
     """
     d_t1 = edate.strftime("%Y%m%d")
-    d_t2 = (edate - timedelta(hours=24)).strftime("%Y%m%d")
+
 
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     links = [node.get("href") for node in soup.find_all("a")]
     filenames = []
-    for d in [d_t2, d_t1]:
-        regex = f"^qpf06f_has_.*.awips_{d}\d+.grb.gz$"
-        filenames = filenames + [link for link in links if re.match(regex, link)]
+    regex = f"^qpf06f_has_\\d+f_\\d{{8}}_\\d{{2}}_awips_{d_t1}.*\\.grb(\\.gz)?$"
+    filenames = [link for link in links if re.match(regex, link)]
 
-    return filenames
+    return get_latest_files(filenames)
 
 
 @dag(
     default_args=default_args,
-    schedule="40 14,5 * * *",
+    schedule="20 9,15,19 * * *",
     tags=["cumulus", "precip", "QPF", "APRFC"],
-    max_active_runs=2,
-    max_active_tasks=4,
+    max_active_runs=1,
+    max_active_tasks=1,
 )
 def cumulus_aprfc_qpf_06h():
     """This pipeline handles download, processing, and derivative product creation for \n
