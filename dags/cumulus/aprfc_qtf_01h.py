@@ -1,9 +1,9 @@
 """
-Acquire and Process APRFC QPF 06h
+Acquire and Process APRFC qtf 01h
 """
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import calendar
 from bs4 import BeautifulSoup
 import re
@@ -20,7 +20,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc) - timedelta(hours=36)).replace(minute=0, second=0),
+    "start_date": (datetime.utcnow() - timedelta(hours=36)).replace(minute=0, second=0),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -33,7 +33,7 @@ def get_latest_files(filenames):
     latest_files = {}
     
     # Regular expression to extract the timestamp
-    pattern = r'qpf06f_has_\d+f_(\d{8}_\d{2})_awips_(\d+)'
+    pattern = r'ta01f_has_\d+f_(\d{8}_\d{2})_awips_(\d+)'
     
     for filename in filenames:
         match = re.search(pattern, filename)
@@ -45,45 +45,50 @@ def get_latest_files(filenames):
     # Return the list of latest files
     return list(latest_files.values())
 
-# ALR QPF filename generator
+# APRFC qtf filename generator
 def get_filenames(edate, url):
     """
     date at end of filename hour and min can not be predicted
     scraping data from website and finding all matching filenames
-    for the sprcified date.
+    for the specified date.
     """
     d_t1 = edate.strftime("%Y%m%d")
-
 
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     links = [node.get("href") for node in soup.find_all("a")]
     filenames = []
-    regex = f"^qpf06f_has_\\d+f_\\d{{8}}_\\d{{2}}_awips_{d_t1}.*\\.grb(\\.gz)?$"
+
+    
+    regex = f"^ta01f_has_\\d+f_\\d{{8}}_\\d{{2}}_awips_{d_t1}.*\\.grb(\\.gz)?$"
     filenames = [link for link in links if re.match(regex, link)]
+
+
+
 
     return get_latest_files(filenames)
 
 
+
 @dag(
     default_args=default_args,
-    schedule="20 9,15,19 * * *",
-    tags=["cumulus", "precip", "QPF", "APRFC"],
+    schedule="21 9,15,19 * * *",
+    tags=["cumulus", "temp", "QTF", "APRFC"],
     max_active_runs=1,
     max_active_tasks=1,
 )
-def cumulus_aprfc_qpf_06h():
+def cumulus_aprfc_qtf_01h():
     """This pipeline handles download, processing, and derivative product creation for \n
-    APRFC QPE\n
+    APRFC QTF\n
     URL Dir - https://cbt.crohms.org/akgrids
-    Files matching qpf06f_has_6f_20200917_18_awips_202009170949.grb - 6 hour\n
+    Files matching ta01f_has_92f_20241219_08_awips_202412150008.grb. - 1 hour\n
     """
     key_prefix = cumulus.S3_ACQUIRABLE_PREFIX
     URL_ROOT = f"https://cbt.crohms.org/akgrids"
-    PRODUCT_SLUG = "aprfc-qpf-06h"
+    PRODUCT_SLUG = "aprfc-qtf-01h"
 
     @task()
-    def download_raw_qpf():
+    def download_raw_qtf():
         logical_date = get_current_context()["logical_date"]
 
         return_list = list()
@@ -117,7 +122,7 @@ def cumulus_aprfc_qpf_06h():
                 s3_key=item["s3_key"],
             )
 
-    notify_cumulus(download_raw_qpf())
+    notify_cumulus(download_raw_qtf())
 
 
-aprfc_qpf_dag = cumulus_aprfc_qpf_06h()
+aprfc_qtf_dag = cumulus_aprfc_qtf_01h()

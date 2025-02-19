@@ -15,6 +15,7 @@ acquirables = {
     "aprfc-qpe-06h": "1f67d822-7cbc-11ee-b962-0242ac120002",
     "aprfc-qpf-06h": "a64cb16f-01a8-45c0-a069-9afda805d3a7",
     "aprfc-qte-01h": "7f8b2d6a-1f3e-11ee-be56-0242ac120002",
+    "aprfc-qtf-01h": "80f33047-6234-4949-9c2f-eec6bfcf7b0f",
     "cnrfc-qpe-06h": "34a89c35-090d-46e8-964a-c621403301b9",
     "cnrfc-qpf-06h": "c22785cd-400e-4664-aef8-426734825c2c",
     "cnrfc-nbm-qpf-06h": "40cfce36-cfad-4a10-8b2d-eb8862378ca5",
