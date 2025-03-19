@@ -6,8 +6,11 @@ ARG AIRFLOW_HOME=/opt/airflow
 ENV PYTEST_ADDOPTS="--color=yes"
 ENV AIRFLOW_HOME=${AIRFLOW_HOME}
 
+# Fix local build issue
+RUN echo "Acquire::http::Pipeline-Depth 0;\nAcquire::http::No-Cache true;\nAcquire::BrokenProxy true;" > /etc/apt/apt.conf.d/99fixbadproxy
+
 RUN apt-get update -y && apt-get install -y \
-  python3-pip \
+  python3-pip libxmlsec1-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Pip Requirements
