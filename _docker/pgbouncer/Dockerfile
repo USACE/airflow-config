@@ -1,5 +1,5 @@
 # Using https://github.com/brainsam/pgbouncer as a starting point
-FROM alpine:3.21.0 AS build_stage
+FROM alpine:3.21.3 AS build_stage
 
 ARG PGBOUNCER_VERSION=1.22.1
 ARG PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_22_1/pgbouncer-1.22.1.tar.gz
@@ -23,7 +23,7 @@ RUN pipx install docutils \
 WORKDIR /bin
 RUN ln -s ../usr/bin/rst2man.py rst2man
 
-FROM alpine:3.21.0
+FROM alpine:3.21.3
 
 RUN apk --update add libevent openssl c-ares
 
