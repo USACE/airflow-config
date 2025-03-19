@@ -127,8 +127,7 @@ def store_timeseries_identifier(
     """
 
     if data is None:
-        raise ValueError(
-            "Cannot store a time series identifier with out json data")
+        raise ValueError("Cannot store a time series identifier with out json data")
 
     endpoint = "timeseries/identifier-descriptor/"
     params = {"fail-if-exists": fail_if_exists}

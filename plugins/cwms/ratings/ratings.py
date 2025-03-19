@@ -5,8 +5,10 @@ from typing import Any, Optional
 import pandas as pd
 
 import cwms.api as api
-from cwms.ratings.ratings_spec import get_rating_spec
 from cwms.cwms_types import JSON, Data
+from cwms.ratings.ratings_spec import get_rating_spec
+
+xml_heading = "<?xml"
 
 
 def rating_current_effective_date(rating_id: str, office_id: str) -> Any:
@@ -220,6 +222,7 @@ def rating_simple_df_to_json(
     effective_date: datetime,
     transition_start_date: Optional[datetime] = None,
     description: Optional[str] = None,
+    active: Optional[bool] = True,
 ) -> JSON:
     """This function converts a dataframe to a json dictionary in the correct format to be posted using the store_ratings function. Can
     only be used for simple ratings with a indenpendant and 1 dependant variable.
@@ -253,6 +256,8 @@ def rating_simple_df_to_json(
             The transitional start date of the rating curve to be stored
         description: str Optional = None
             a description to be added to the rating curve
+        active: Boolean Optional = True
+            store the rating as active as True of False
 
     Returns:
         JSON
@@ -286,7 +291,7 @@ def rating_simple_df_to_json(
             "transition-start-date": (
                 transition_start_date.isoformat() if transition_start_date else None
             ),
-            "active": True,
+            "active": active,
             "description": description,
             "rating-points": {"point": points_json},
         }
@@ -318,12 +323,12 @@ def update_ratings(
     endpoint = f"ratings/{rating_id}"
     params = {"store-template": store_template}
 
-    if not isinstance(data, dict) and "<?xml" not in data:
+    if not isinstance(data, dict) and xml_heading not in data:
         raise ValueError(
-            "Cannot store a timeseries without a JSON data dictionaryor in XML"
+            "Cannot store a rating without a JSON data dictionary or in XML"
         )
 
-    if "<?xml" in data:
+    if xml_heading in data:
         api_version = 102
     else:
         api_version = 2
@@ -376,3 +381,33 @@ def delete_ratings(
     }
 
     return api.delete(endpoint, params)
+
+
+def store_rating(data: Any, store_template: Optional[bool] = True) -> None:
+    """Will create a new ratingset including template/spec and rating
+
+    Parameters
+    ----------
+        data: JSON dictionary or XML
+            rating data to be stored.
+        store_template: Boolean Default = True
+            Store updates to the rating template.  Default = True
+
+    Returns
+    -------
+    response
+    """
+
+    endpoint = "ratings"
+    params = {"store-template": store_template}
+
+    if not isinstance(data, dict) and xml_heading not in data:
+        raise ValueError(
+            "Cannot store a timeseries without a JSON data dictionaryor in XML"
+        )
+
+    if xml_heading in data:
+        api_version = 102
+    else:
+        api_version = 2
+    return api.post(endpoint, data, params, api_version=api_version)
