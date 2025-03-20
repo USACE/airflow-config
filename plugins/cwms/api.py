@@ -1,4 +1,4 @@
-""" Session management and REST functions for CWMS Data API.
+"""Session management and REST functions for CWMS Data API.
 
 This module provides functions for making REST calls to the CWMS Data API (CDA). These
 functions should be used internally to interact with the API. The user should not have to
@@ -31,7 +31,7 @@ import logging
 from json import JSONDecodeError
 from typing import Any, Optional, cast
 
-from requests import Response
+from requests import Response, adapters
 from requests_toolbelt import sessions  # type: ignore
 from requests_toolbelt.sessions import BaseUrlSession  # type: ignore
 
@@ -41,8 +41,10 @@ from cwms.cwms_types import JSON, RequestParams
 API_ROOT = "https://cwms-data.usace.army.mil/cwms-data/"
 API_VERSION = 2
 
-# Initialize a non-authenticated session with the default root URL.
+# Initialize a non-authenticated session with the default root URL and set default pool connections.
 SESSION = sessions.BaseUrlSession(base_url=API_ROOT)
+adapter = adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+SESSION.mount("https://", adapter)
 
 
 class InvalidVersion(Exception):
@@ -91,7 +93,10 @@ class ApiError(Exception):
 
 
 def init_session(
-    *, api_root: Optional[str] = None, api_key: Optional[str] = None
+    *,
+    api_root: Optional[str] = None,
+    api_key: Optional[str] = None,
+    pool_connections: int = 100,
 ) -> BaseUrlSession:
     """Specify a root URL and authentication key for the CWMS Data API.
 
@@ -112,7 +117,10 @@ def init_session(
     if api_root:
         logging.debug(f"Initializing root URL: api_root={api_root}")
         SESSION = sessions.BaseUrlSession(base_url=api_root)
-
+        adapter = adapters.HTTPAdapter(
+            pool_connections=pool_connections, pool_maxsize=pool_connections
+        )
+        SESSION.mount("https://", adapter)
     if api_key:
         logging.debug(f"Setting authorization key: api_key={api_key}")
         SESSION.headers.update({"Authorization": api_key})
@@ -183,6 +191,7 @@ def get_xml(
 
     headers = {"Accept": api_version_text(api_version)}
     response = SESSION.get(endpoint, params=params, headers=headers)
+    response.close()
 
     if response.status_code < 200 or response.status_code >= 300:
         logging.error(f"CDA Error: response={response}")
@@ -220,7 +229,7 @@ def get(
 
     headers = {"Accept": api_version_text(api_version)}
     response = SESSION.get(endpoint, params=params, headers=headers)
-
+    response.close()
     if response.status_code < 200 or response.status_code >= 300:
         logging.error(f"CDA Error: response={response}")
         raise ApiError(response)
@@ -230,6 +239,46 @@ def get(
     except JSONDecodeError as error:
         logging.error(f"Error decoding CDA response as json: {error}")
         return {}
+
+
+def get_with_paging(
+    selector: str,
+    endpoint: str,
+    params: RequestParams,
+    *,
+    api_version: int = API_VERSION,
+) -> JSON:
+    """Make a GET request to the CWMS Data API with paging.
+
+    Args:
+        endpoint: The CDA endpoint for the record(s).
+        selector: The json key that will be merged though each page call
+        params (optional): Query parameters for the request.
+
+    Keyword Args:
+        api_version (optional): The CDA version to use for the request. If not specified,
+            the default API_VERSION will be used.
+
+    Returns:
+        The deserialized JSON response data.
+
+    Raises:
+        ApiError: If an error response is return by the API.
+    """
+
+    first_pass = True
+    while (params["page"] is not None) or first_pass:
+        temp = get(endpoint, params, api_version=api_version)
+        if first_pass:
+            response = temp
+        else:
+            response[selector] = response[selector] + temp[selector]
+        if "next-page" in temp.keys():
+            params["page"] = temp["next-page"]
+        else:
+            params["page"] = None
+        first_pass = False
+    return response
 
 
 def post(
@@ -260,11 +309,11 @@ def post(
     # post requires different headers than get for
     headers = {"accept": "*/*", "Content-Type": api_version_text(api_version)}
 
-    if isinstance(data, dict):
+    if isinstance(data, dict) or isinstance(data, list):
         data = json.dumps(data)
 
-    response = SESSION.post(endpoint, params=params,
-                            headers=headers, data=data)
+    response = SESSION.post(endpoint, params=params, headers=headers, data=data)
+    response.close()
 
     if response.status_code < 200 or response.status_code >= 300:
         logging.error(f"CDA Error: response={response}")
@@ -300,11 +349,10 @@ def patch(
     if data is None:
         response = SESSION.patch(endpoint, params=params, headers=headers)
     else:
-        if isinstance(data, dict):
+        if isinstance(data, dict) or isinstance(data, list):
             data = json.dumps(data)
-        response = SESSION.patch(
-            endpoint, params=params, headers=headers, data=data)
-
+        response = SESSION.patch(endpoint, params=params, headers=headers, data=data)
+    response.close()
     if response.status_code < 200 or response.status_code >= 300:
         logging.error(f"CDA Error: response={response}")
         raise ApiError(response)
@@ -332,7 +380,7 @@ def delete(
 
     headers = {"Accept": api_version_text(api_version)}
     response = SESSION.delete(endpoint, params=params, headers=headers)
-
+    response.close()
     if response.status_code < 200 or response.status_code >= 300:
         logging.error(f"CDA Error: response={response}")
         raise ApiError(response)

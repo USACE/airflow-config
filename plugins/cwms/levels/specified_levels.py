@@ -86,8 +86,7 @@ def delete_specified_level(specified_level_id: str, office_id: str) -> None:
     if specified_level_id is None:
         raise ValueError("Cannot delete a specified level without an id")
     if office_id is None:
-        raise ValueError(
-            "Cannot delete a specified level without an office id")
+        raise ValueError("Cannot delete a specified level without an office id")
     endpoint = f"specified-levels/{specified_level_id}"
 
     params = {"office": office_id}
@@ -117,8 +116,7 @@ def update_specified_level(
     if new_specified_level_id is None:
         raise ValueError("Cannot update a specified level without a new id")
     if office_id is None:
-        raise ValueError(
-            "Cannot update a specified level without an office id")
+        raise ValueError("Cannot update a specified level without an office id")
     endpoint = f"specified-levels/{old_specified_level_id}"
 
     params = {
