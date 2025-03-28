@@ -115,6 +115,8 @@ x-airflow-common:
     # AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?host=http%3A%2F%2Fminio%3A9000&region=us-east-1
     AIRFLOW_CONN_LOCAL_MINIO: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@?endpoint_url=http%3A%2F%2Fminio%3A9000&region=us-east-1
     AIRFLOW_CONN_CUMULUS: http://nologin:appkey@api
+    # AWS_DEFAULT - Used for localstack mocking
+    AIRFLOW_CONN_AWS_DEFAULT: aws://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@localstack:4566?region_name=us-east-1
     # ----------
     # VARIABLES
     # ----------

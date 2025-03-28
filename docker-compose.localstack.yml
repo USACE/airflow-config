@@ -1,0 +1,19 @@
+networks:
+  default:
+    name: airflow-config_default
+
+# Health Endpoint: http://localhost:4566/_localstack/health
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack
+    ports:
+      - '4566:4566' # LocalStack AWS services
+      - '4510-4559:4510-4559'
+    environment:
+      - SERVICES=batch,logs,iam,ec2
+      - AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+      - AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'

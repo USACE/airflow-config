@@ -2,8 +2,10 @@
 # Usage using comment after ')' for each argument
 usage(){ echo "$0 usage:" && grep " .)\ #" $0; exit 0;}
 dc="docker compose"
+m="" # MinIO compose file
+l="" # LocalStack compose file
 # getopts
-while getopts "bdmshu" arg; do
+while getopts "bdmshlu" arg; do
     case $arg in
         s) # Stop Docker
             s="stop"
@@ -13,6 +15,9 @@ while getopts "bdmshu" arg; do
             ;;
         m) # Add minio '-f docker-compose.yml -f docker-compose.minio.yml'
             m="-f docker-compose.yml -f docker-compose.minio.yml"
+            ;;
+        l) # Add localstack '-f docker-compose.yml -f docker-compose.localstack.yml'
+            l="-f docker-compose.yml -f docker-compose.localstack.yml"
             ;;
         u) # Docker compose up
             u="up"
@@ -27,21 +32,23 @@ while getopts "bdmshu" arg; do
     esac
 done
 
-if [[ ! -z ${s} && ! -z ${m} ]]
+# Combine compose file options
+compose_files="-f docker-compose.yml"
+[ ! -z "$m" ] && compose_files+=" -f docker-compose.minio.yml"
+[ ! -z "$l" ] && compose_files+=" -f docker-compose.localstack.yml"
+
+# Construct command
+if [[ ! -z ${s} ]]
 then
-    cmd="$dc $m $s"
-elif [ ! -z ${s} ]
+    cmd="$dc $compose_files $s"
+elif [[ ! -z ${d} ]]
 then
-    cmd="$dc $s"
-elif [[ ! -z ${d} && ! -z ${m} ]]
+    cmd="$dc $compose_files $d"
+elif [[ ! -z ${b} ]]
 then
-    cmd="$dc $m $d"
-elif [ ! -z ${d} ]
-then
-    cmd="$dc $d"
-elif [[  ! -z ${m} || ! -z ${b} ]]
-then
-    cmd="$dc $m up $b"
+    cmd="$dc $compose_files up $b"
+else
+    cmd="$dc $compose_files up"
 fi
 
 [ $# -eq 0 ] && cmd="$dc up"
