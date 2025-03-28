@@ -13,7 +13,7 @@ x-airflow-common:
   &airflow-common
   #
   # image: apache/airflow:2.8.1-python3.8-usace
-  image: airflow-common:2.10.0-python3.11-usace
+  image: airflow-common:2.10.4-python3.11-usace
   build:
     context: _docker/airflow
     args:
