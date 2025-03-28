@@ -7,7 +7,7 @@ on:
     branches: [cwbi-dev]
     paths:
       - .github/workflows/cwbi-dev-build-push-migration.yml
-      - _docker/flyway/common/*
+      - _docker/flyway/common/**
       - _docker/flyway/Dockerfile
 
 env:

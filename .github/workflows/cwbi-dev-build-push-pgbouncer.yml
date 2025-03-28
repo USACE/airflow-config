@@ -7,7 +7,7 @@ on:
     branches: [cwbi-dev]
     paths:
       - .github/workflows/cwbi-dev-build-push-pgbouncer.yml
-      - _docker/pgbouncer/*
+      - _docker/pgbouncer/**
 
 env:
   AWS_REGION: aws-us-gov #Change to reflect your Region
