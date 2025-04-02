@@ -100,7 +100,7 @@ def get_forecast_interval(interval: str, forecast_hour: int):
     tags=["cumulus", "precip", "airtemp", "NBM"],
     schedule="3 * * * *",
     max_active_runs=1,
-    max_active_tasks=6,
+    max_active_tasks=4,
 )
 def cumulus_national_blend_models():
     """
