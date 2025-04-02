@@ -19,7 +19,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc) - timedelta(days=7)).replace(
+    "start_date": (datetime.now(timezone.utc) - timedelta(hours=24)).replace(
         minute=0, second=0
     ),
     "catchup_by_default": False,
