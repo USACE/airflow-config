@@ -81,7 +81,7 @@ ARG PIP_PROGRESS_BAR="on"
 ##############################################################################################
 # This is the script image where we keep all inlined bash scripts needed in other segments
 ##############################################################################################
-FROM scratch as scripts
+FROM scratch AS scripts
 
 ##############################################################################################
 # Please DO NOT modify the inlined scripts manually. The content of those files will be
