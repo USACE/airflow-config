@@ -38,7 +38,7 @@ def batch_operator(dag, task_id, command, **kwargs):
         return BatchOperator(
             task_id=task_id,
             # The job name in AWS Batch is a temporary, unique identifier for each individual job run
-            job_name=f"{task_id}-{now.strftime("%Y%m%d-%H%M")}",
+            job_name=f"{task_id}-{now.strftime('%Y%m%d-%H%M')}",
             job_definition=kwargs.get(
                 "job_definition",
                 "arn:aws:batch:REGION:ACCOUNT_ID:job-definition/YOUR_JOB_DEFINITION_NAME",
