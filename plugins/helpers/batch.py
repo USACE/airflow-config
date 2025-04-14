@@ -4,16 +4,20 @@ from airflow.providers.docker.operators.docker import DockerOperator
 
 from airflow import DAG
 from datetime import datetime
+from typing import Any, Dict, List
 
 
 # Check if running in AWS (check environment variable for AWS_REGION or AWS_DEFAULT_REGION)
-def batch_operator(dag, task_id, command, **kwargs):
+def batch_operator(
+    dag: DAG, task_id: str, command: List[str], **kwargs: Dict[str, Any]
+):
     """
     Wrapper function for AWSBatchOperator that will default to using DockerOperator in local mode for mocking/testing.
 
     :param dag: DAG instance
     :param task_id: Task ID for the operator
     :param kwargs: Additional arguments for the operator (like job name, queue, job definition, etc.)
+    :return: Either a DockerOperator or AWSBatchOperator instance based on environment
     """
 
     # Check the AWS_DEFAULT_REGION environment variable
@@ -47,7 +51,7 @@ def batch_operator(dag, task_id, command, **kwargs):
                 "job_queue",
                 "arn:aws:batch:REGION:ACCOUNT_ID:job-queue/YOUR_JOB_QUEUE_NAME",
             ),  # Default ARN
-            overrides=kwargs.get(
+            container_overrides=kwargs.get(
                 "overrides",
                 {
                     "vcpus": 1,  # Default vCPUs
@@ -62,5 +66,4 @@ def batch_operator(dag, task_id, command, **kwargs):
             #     "region_name", os.getenv("AWS_DEFAULT_REGION", "us-east-1")
             # ),  # Default to the environment's AWS region
             dag=dag,
-            **kwargs,
         )

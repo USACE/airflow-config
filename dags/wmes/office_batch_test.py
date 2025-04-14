@@ -19,7 +19,7 @@ dag = DAG(
     "my_docker_task_dag",
     default_args=default_args,
     description="A simple DAG to test the batch operator",
-    schedule_interval="@hourly",  # Run hourly
+    schedule="@hourly",  # Run hourly
     catchup=False,  # Set to False to avoid running past dates
     tags=["testing"],
     max_active_runs=1,
@@ -29,13 +29,13 @@ dag = DAG(
 batch_task1 = batch.batch_operator(
     dag=dag,
     task_id="run_local_docker_container1",
+    command=["hello_world"],
     local_image="district-tasks",  # The Docker image you want to run
-    command="hello_world",
 )
 
 batch_task2 = batch.batch_operator(
     dag=dag,
     task_id="run_local_docker_container2",
+    command=["second_script"],
     local_image="district-tasks",  # The Docker image you want to run
-    command="second_script",
 )
