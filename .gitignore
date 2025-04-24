@@ -5,6 +5,7 @@
 *.so
 *.dylib
 *.zip
+.env
 
 **.DS_Store
 
