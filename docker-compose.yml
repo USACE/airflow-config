@@ -150,6 +150,8 @@ x-airflow-common:
     # AIRFLOW__SECRETS__BACKEND_KWARGS: '{"connections_prefix": "airflow/connections", "region_name": "us-east-1"}'
     # AIRFLOW__SECRETS__USE_CACHE: 'True'
     # AIRFLOW__SECRETS__CACHE_TTL_SECONDS: 900 # Default 900
+  env_file:
+    - .env
   volumes:
     # volumes are attached to any container with <<: *airflow-common
     - ./dags:/opt/airflow/dags

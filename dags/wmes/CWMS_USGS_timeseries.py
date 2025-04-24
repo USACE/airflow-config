@@ -9,10 +9,14 @@ from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
 from airflow.utils.task_group import TaskGroup
 from airflow.operators.python import get_current_context
+from airflow.models import Variable
+
+APIKEY = Variable.get("API_KEY")
+APIROOT = Variable.get("CDA_URL")
 
 
-APIROOT = "https://cwms-data-test.cwbi.us/cwms-data/"
-APIKEY = "foo"
+# APIROOT = "https://cwms-data-test.cwbi.us/cwms-data/"
+# APIKEY = "foo"
 DAYSBACK = 5
 
 
@@ -347,7 +351,7 @@ def CWMS_writeData(USGS_ts, USGS_data, USGS_data_method):
     doc_md=__doc__,
 )
 def cwms_usgs_timeseries():
-    office_ids = ["LRL", "MVP", "SAJ", "SWF", "SWG"]
+    office_ids = ["LRL"]
     for office_id in office_ids:
         with TaskGroup(group_id=f"{office_id}_usgs") as tg:
 
