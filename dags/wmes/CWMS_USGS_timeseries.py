@@ -37,7 +37,7 @@ default_args = {
 
 def getusgs_cda(api_root, office_id, days_back, api_key):
     api_key = "apikey " + api_key
-    api = cwms.api.init_session(api_root=api_root, api_key=api_key)
+    cwms.api.init_session(api_root=api_root, api_key=api_key)
     logging.info(f"CDA connection: {api_root}")
     logging.info(f"Data will be grabbed and stored from USGS for past {days_back} days")
     execution_date = datetime.now()
@@ -112,6 +112,16 @@ def get_CMWS_TS_Loc_Data(office):
     get time series group and location alias information and combine into singe dataframe
 
     """
+
+    def find_usgsparam(attribute, param):
+        if attribute > 0:
+            usgs_param = str(attribute).split(".")[0]
+        elif param in USGS_Params.index:
+            usgs_param = USGS_Params.at[param, "USGS_PARAMETER"]
+        else:
+            usgs_param = "Not Found"
+        return usgs_param
+
     df = cwms.get_timeseries_group(
         group_id="USGS TS Data Acquisition",
         category_id="Data Acquisition",
@@ -140,6 +150,8 @@ def get_CMWS_TS_Loc_Data(office):
     ).df.set_index("location-id")
 
     Locdf = Locdf[Locdf["office-id"] == office]
+    if "attribute" not in Locdf.columns:
+        Locdf["attribute"] = np.nan
     # Grab all of the locations that have a USGS station number assigned to them
     USGS_alias = Locdf[Locdf["alias-id"].notnull()]
     # rename the columns
@@ -170,18 +182,13 @@ def get_CMWS_TS_Loc_Data(office):
     # this code fills in the USGS_Params field with values in the Time Series Group Attribute if it exists.  If it does not exist it
     # grabs the default USGS paramter for the coresponding CWMS parameter
     USGS_ts.attribute = USGS_ts.apply(
-        lambda x: np.where(
-            x.attribute > 0,
-            str(x.attribute).split(".")[0],
-            USGS_Params.at[x.param, "USGS_PARAMETER"],
-        ),
-        axis=1,
+        lambda x: find_usgsparam(x.attribute, x.param), axis=1
     ).astype("string")
     USGS_ts.attribute = USGS_ts.attribute.str.rjust(5, "0")
     # renames the attribute column to USGS_PARAMETER
     USGS_ts = USGS_ts.rename(columns={"attribute": "USGS_PARAMETER"})
 
-    logging.info(f"CWMS TS Groups and Location Data Obtained")
+    logging.info("CWMS TS Groups and Location Data Obtained")
     return USGS_ts
 
 
@@ -216,7 +223,7 @@ def getUSGS_ts(sites, startDT, endDT, access=None):
     )
     USGS_data = USGS_data.set_index("Id.param")
 
-    logging.info(f"Data obtained from USGS")
+    logging.info("Data obtained from USGS")
     return USGS_data
 
 
@@ -310,7 +317,7 @@ def CWMS_writeData(USGS_ts, USGS_data, USGS_data_method):
                         data = cwms.timeseries_df_to_json(
                             data=values, ts_id=ts_id, units=units, office_id=office
                         )
-                        x = cwms.store_timeseries(data)
+                        cwms.store_timeseries(data)
                         logging.info(
                             f"SUCCESS Data stored in CWMS database for -->  {ts_id},{USGS_Id_param}"
                         )

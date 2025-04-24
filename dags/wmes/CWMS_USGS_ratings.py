@@ -38,7 +38,7 @@ default_args = {
 
 def getusgs_rating_cda(api_root, office_id, days_back, api_key):
     api_key = "apikey " + api_key
-    api = cwms.api.init_session(api_root=api_root, api_key=api_key)
+    cwms.api.init_session(api_root=api_root, api_key=api_key)
     logging.info(f"CDA connection: {api_root}")
     logging.info(
         f"Updated Ratings will be check from the USGS for the past {days_back} days"
@@ -46,7 +46,7 @@ def getusgs_rating_cda(api_root, office_id, days_back, api_key):
     execution_date = datetime.now()
     logging.info(f"Execution date {execution_date}")
 
-    logging.info(f"Get Rating Spec information from CWMS Database")
+    logging.info("Get Rating Spec information from CWMS Database")
     rating_specs = get_rating_ids_from_specs(office_id)
     USGS_ratings = get_location_aliases(
         rating_specs, "USGS Station Number", "Agency Aliases", "CWMS", None, None
@@ -86,6 +86,8 @@ def getusgs_rating_cda(api_root, office_id, days_back, api_key):
 def get_rating_ids_from_specs(office_id):
     rating_types = ["EXSA", "CORR", "BASE"]
     rating_specs = cwms.get_rating_specs(office_id=office_id).df
+    if "effective-dates" not in rating_specs.columns:
+        rating_specs["effective-dates"] = np.nan
     rating_specs = rating_specs.dropna(subset=["description"])
     for rating_type in rating_types:
         rating_specs.loc[
@@ -94,8 +96,8 @@ def get_rating_ids_from_specs(office_id):
         ] = rating_type
     rating_specs = rating_specs[
         (rating_specs["rating-type"].isin(rating_types))
-        & (rating_specs["active"] == True)
-        & (rating_specs["auto-update"] == True)
+        & (rating_specs["active"])
+        & (rating_specs["auto-update"])
     ]
     return rating_specs
 
@@ -284,7 +286,7 @@ def cwms_write_ratings(updated_ratings):
                         usgs_rating, row["rating-type"]
                     )
 
-                    if row["effective-dates"] and row["auto-migrate-extension"]:
+                    if row["auto-migrate-extension"] and pd.notna(cwms_effective_date):
                         current_rating = cwms.get_ratings(
                             rating_id=row["rating-id"],
                             office_id=row["office-id"],
