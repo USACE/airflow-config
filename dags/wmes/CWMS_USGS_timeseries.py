@@ -31,7 +31,7 @@ default_args = {
     "email_on_retry": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
-    "execution_timeout": timedelta(hours=1),
+    "execution_timeout": timedelta(minutes=25),
 }
 
 
@@ -350,10 +350,10 @@ def CWMS_writeData(USGS_ts, USGS_data, USGS_data_method):
 
 @dag(
     default_args=default_args,
-    tags=["CWMS", "USGS"],
+    tags=["CWMS", "USGS", "Timeseries"],
     schedule="@hourly",
     max_active_runs=1,
-    max_active_tasks=4,
+    max_active_tasks=10,
     catchup=False,
     doc_md=__doc__,
 )

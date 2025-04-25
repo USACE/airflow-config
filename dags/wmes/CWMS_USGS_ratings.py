@@ -25,14 +25,14 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": (datetime.now(timezone.utc) - timedelta(hours=4)).replace(
-        minute=0, second=0
+        minute=30, second=0
     ),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
-    "execution_timeout": timedelta(hours=1),
+    "execution_timeout": timedelta(minutes=25),
 }
 
 
@@ -356,10 +356,10 @@ def cwms_write_ratings(updated_ratings):
 
 @dag(
     default_args=default_args,
-    tags=["CWMS", "USGS"],
-    schedule="@hourly",
+    tags=["CWMS", "USGS", "Ratings"],
+    schedule="30 0,6,12,18 * * *",
     max_active_runs=1,
-    max_active_tasks=4,
+    max_active_tasks=10,
     catchup=False,
     doc_md=__doc__,
 )
