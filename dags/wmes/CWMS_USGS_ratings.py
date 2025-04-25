@@ -359,7 +359,7 @@ def cwms_write_ratings(updated_ratings):
     tags=["CWMS", "USGS", "Ratings"],
     schedule="30 0,6,12,18 * * *",
     max_active_runs=1,
-    max_active_tasks=10,
+    max_active_tasks=4,
     catchup=False,
     doc_md=__doc__,
 )

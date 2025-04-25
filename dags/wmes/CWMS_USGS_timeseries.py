@@ -353,7 +353,7 @@ def CWMS_writeData(USGS_ts, USGS_data, USGS_data_method):
     tags=["CWMS", "USGS", "Timeseries"],
     schedule="@hourly",
     max_active_runs=1,
-    max_active_tasks=10,
+    max_active_tasks=4,
     catchup=False,
     doc_md=__doc__,
 )
