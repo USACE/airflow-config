@@ -22,7 +22,8 @@ from airflow.exceptions import AirflowSkipException
 from airflow.models import Variable
 
 WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
-
+CDA_API_KEY = Variable.get("API_KEY")
+CDA_URL = Variable.get("CDA_URL")
 
 default_args = {
     "owner": "airflow",
@@ -101,9 +102,7 @@ def sqs_shef_test_process_messages():
         return processed_messages
 
     def process_ohrfc_lrl_res(message):
-        CDA_API_KEY = "foo"  # Provide dummy value for mock-post
         print(f"Processing SHEF file: {message['metadata']['filename']}")
-        crit_file = "plugins/data/crit/OHRFC_ResIn_crit"
         callback_url = message["callback_url"]
         params = dict()
         params["disposition"] = "inline"
@@ -111,7 +110,7 @@ def sqs_shef_test_process_messages():
         input = io.StringIO(response.text)
         shef_parser.parse(
             input_stream=input,
-            loader_spec=f"cda[{crit_file}][{CDA_API_KEY}]",
+            loader_spec=f"cda[LRL][{CDA_URL}][{CDA_API_KEY}]",
         )
 
     @task
