@@ -25,6 +25,24 @@ WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
 CDA_API_KEY = Variable.get("API_KEY")
 CDA_URL = Variable.get("CDA_URL")
 
+# Associate offices with product slugs for use in CDA requests
+OFFICE_PRODUCTS = {
+    "LRL": [
+        "ohrfc-lrl-qpf-locals",
+        "ohrfc-lrl-qpf-res",
+        "ohrfc-lrl-qpf-stages",
+        "ohrfc-lrl-qpf-totals",
+    ]
+}
+
+
+def get_office_from_slug(slug: str):
+    for office, slugs in OFFICE_PRODUCTS.items():
+        if slug in slugs:
+            return office
+    return None
+
+
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -84,8 +102,9 @@ def sqs_shef_test_process_messages():
                 message_body = json.loads(message["Body"])
                 slug = message_body["product"]["slug"]
                 try:
-                    if slug == "ohrfc-lrl-qpf-res":
-                        process_ohrfc_lrl_res(message_body)
+                    office_code = get_office_from_slug(slug)
+                    if office_code:
+                        process_shef_file(message_body, office_code)
                     else:
                         print(f"Unhandled slug: {slug} -- Skipping processing")
                     processed_messages.append(message)
@@ -101,8 +120,9 @@ def sqs_shef_test_process_messages():
                 processed_messages.append(message)
         return processed_messages
 
-    def process_ohrfc_lrl_res(message):
+    def process_shef_file(message, office_code):
         print(f"Processing SHEF file: {message['metadata']['filename']}")
+        print(f"Associated office: {office_code}")
         callback_url = message["callback_url"]
         params = dict()
         params["disposition"] = "inline"
@@ -110,7 +130,7 @@ def sqs_shef_test_process_messages():
         input = io.StringIO(response.text)
         shef_parser.parse(
             input_stream=input,
-            loader_spec=f"cda[LRL][{CDA_URL}][{CDA_API_KEY}]",
+            loader_spec=f"cda[{office_code}][{CDA_URL}][{CDA_API_KEY}]",
         )
 
     @task
