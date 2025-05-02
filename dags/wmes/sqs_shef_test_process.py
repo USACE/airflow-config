@@ -1,24 +1,14 @@
+from datetime import datetime, timedelta, timezone
 import io
 import json
-import os
-import traceback
 import requests
-import time
+import traceback
 
-
-from airflow import DAG
-
-# from airflow.operators.python_operator import PythonOperator
-from datetime import datetime, timedelta, timezone
-from airflow.decorators import dag, task
-from airflow.operators.python import get_current_context
 from helpers.sqs import receive_sqs_messages, delete_sqs_message
 from shef import shef_parser
 
-# from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
-# from airflow.operators.dummy import DummyOperator
+from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
-
 from airflow.models import Variable
 
 WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
