@@ -55,8 +55,10 @@ default_args = {
     max_active_runs=1,
     max_active_tasks=1,
 )
-def sqs_shef_test_process_messages():
-    """This pipeline will read available messages from the WMES SQS queue and process them as specified based on the provided stub.  The SQS message is subsequently deleted if processing completes successfully."""
+def sqs_shef_process_messages():
+    """This pipeline will read available messages from the WMES SHEF queue and
+    process them as specified based on the provided slug.  The SQS message is
+    subsequently deleted if processing completes successfully."""
 
     @task()
     def read_shef_queue():
@@ -137,4 +139,4 @@ def sqs_shef_test_process_messages():
     delete_processed_messages(process_messages(read_shef_queue()))
 
 
-sqs_shef_test_process_messages()
+sqs_shef_process_messages()
