@@ -52,7 +52,7 @@ def batch_operator(
                 "arn:aws:batch:REGION:ACCOUNT_ID:job-queue/YOUR_JOB_QUEUE_NAME",
             ),  # Default ARN
             container_overrides=kwargs.get(
-                "overrides",
+                "container_overrides",
                 {
                     "vcpus": 1,  # Default vCPUs
                     "memory": 1024,  # Default memory (MB)
