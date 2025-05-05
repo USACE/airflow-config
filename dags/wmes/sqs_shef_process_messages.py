@@ -126,16 +126,21 @@ def sqs_shef_process_messages():
             loader_spec=f"cda[{office_code}][{CDA_URL}][{CDA_API_KEY}]",
         )
 
-    @task
+    @task(trigger_rule="all_done")
     def delete_processed_messages(processed_messages):
+        if not processed_messages:
+            raise AirflowSkipException("No messages to delete. Skipping...")
         for message in processed_messages:
-            print(f"Deleting SQS MessageId {message['MessageId']}")
-            receipt = message["ReceiptHandle"]
-            delete_response = delete_sqs_message(
-                queue_name=WMES_SHEF_QUEUE_NAME,
-                receipt_handle=receipt,
-            )
-            print(f"Delete response: {delete_response}")
+            if message:
+                print(f"Deleting SQS MessageId {message['MessageId']}")
+                receipt = message["ReceiptHandle"]
+                delete_response = delete_sqs_message(
+                    queue_name=WMES_SHEF_QUEUE_NAME,
+                    receipt_handle=receipt,
+                )
+                print(f"Delete response: {delete_response}")
+            else:
+                print("Empty message found.  Skipping...")
 
     messages = read_shef_queue()
     processed_messages = process_message.expand(message=messages)
