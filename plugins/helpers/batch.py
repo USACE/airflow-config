@@ -51,14 +51,7 @@ def batch_operator(
                 "job_queue",
                 "arn:aws:batch:REGION:ACCOUNT_ID:job-queue/YOUR_JOB_QUEUE_NAME",
             ),  # Default ARN
-            container_overrides=kwargs.get(
-                "container_overrides",
-                {
-                    "vcpus": 1,  # Default vCPUs
-                    "memory": 1024,  # Default memory (MB)
-                    "command": command,  # Default command
-                },
-            ),
+            container_overrides=kwargs.get("container_overrides", {}),
             aws_conn_id=kwargs.get(
                 "aws_conn_id", "aws_default"
             ),  # Default AWS connection ID

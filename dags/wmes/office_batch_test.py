@@ -41,7 +41,11 @@ submit_job = lrl_hourly_batch_task = batch.batch_operator(
     local_image="mock_job",  # Local Only - The local Docker image you want to run
     job_queue="wmes-lrd-jq",
     job_definition="wmes-lrl-jobs-jobdef",
-    # container_overrides={},
+    container_overrides={
+        # "cpu": 1,  # vCPUs
+        # "memory": 2048,  # memory (MB)
+        # "command": [],
+    },
 )
 
 wait_for_job = BatchSensor(
