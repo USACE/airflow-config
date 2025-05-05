@@ -34,6 +34,8 @@ dag = DAG(
 #     local_image="district-tasks",  # The local Docker image you want to run
 # )
 
+# The BatchOperator will wait and return SUCCESS or FAIL
+
 submit_job = lrl_hourly_batch_task = batch.batch_operator(
     dag=dag,
     task_id="lrl-hourly-job",
@@ -41,21 +43,13 @@ submit_job = lrl_hourly_batch_task = batch.batch_operator(
     local_image="mock_job",  # Local Only - The local Docker image you want to run
     job_queue="wmes-lrd-jq",
     job_definition="wmes-lrl-jobs-jobdef",
+    deferrable=True,
     container_overrides={
         # "cpu": 1,  # vCPUs
         # "memory": 2048,  # memory (MB)
         # "command": [],
     },
+    tags={"Office": "lrl"},
 )
 
-wait_for_job = BatchSensor(
-    task_id="wait_for_lrl_job",
-    job_id=submit_job.output,  # Pull the job ID from XCom
-    aws_conn_id="aws_default",  # Use your AWS connection id
-    deferrable=True,
-    # region_name="us-west-2",  # Set the appropriate AWS region
-    poke_interval=30,  # Check every 30 seconds
-    timeout=3600,  # Timeout after 1 hour
-)
-
-submit_job >> wait_for_job
+submit_job
