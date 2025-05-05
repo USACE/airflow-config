@@ -9,13 +9,14 @@ from typing import Any, Dict, List
 
 # Check if running in AWS (check environment variable for AWS_REGION or AWS_DEFAULT_REGION)
 def batch_operator(
-    dag: DAG, task_id: str, command: List[str], **kwargs: Dict[str, Any]
+    dag: DAG, task_id: str, local_command: List[str], **kwargs: Dict[str, Any]
 ):
     """
     Wrapper function for AWSBatchOperator that will default to using DockerOperator in local mode for mocking/testing.
 
     :param dag: DAG instance
     :param task_id: Task ID for the operator
+    :param local_command: Local use only with Docker
     :param kwargs: Additional arguments for the operator (like job name, queue, job definition, etc.)
     :return: Either a DockerOperator or AWSBatchOperator instance based on environment
     """
@@ -30,7 +31,7 @@ def batch_operator(
         return DockerOperator(
             task_id=task_id,
             image=kwargs.get("local_image", ""),
-            command=command,
+            command=local_command,
             docker_url="unix://var/run/docker.sock",  # Docker URL for local Docker engine
             network_mode="bridge",  # Local network mode
             mount_tmp_dir=False,

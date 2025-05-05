@@ -58,12 +58,14 @@ def wmes_hourly_jobs():
                     logical_date = get_current_context()["logical_date"]
                     job_name = f"wmes-{job_config['office']}-hourly-job-{logical_date.strftime('%Y%m%d-%H%M')}"
                     return batch.batch_operator(
+                        dag=dag,
                         task_id=job_name,
+                        deferrable=True,
+                        container_overrides={},
                         job_name=job_name,
                         job_queue=f"wmes-{job_config['office_group']}-jq",
                         job_definition=f"wmes-{job_config['office']}-jobs-jobdef",
-                        deferrable=True,
-                        container_overrides={},
+                        local_command=[],  # local docker mock only
                         tags={"Office": job_config["office"]},
                     ).execute({})
 
