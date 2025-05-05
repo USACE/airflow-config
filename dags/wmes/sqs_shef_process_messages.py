@@ -53,6 +53,7 @@ default_args = {
     tags=["wmes", "shef", "sqs"],
     max_active_runs=1,
     max_active_tasks=1,
+    catchup=False,
 )
 def sqs_shef_process_messages():
     """This pipeline will read available messages from the WMES SHEF queue and
