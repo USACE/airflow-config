@@ -4,6 +4,7 @@ from airflow.decorators import dag, task
 # from airflow.providers.amazon.aws.operators.batch import BatchOperator
 import helpers.batch as batch
 from airflow.operators.python import get_current_context
+from airflow.models.dag import DagContext
 from airflow.utils.task_group import TaskGroup
 from airflow.exceptions import AirflowSkipException
 
@@ -56,6 +57,7 @@ def wmes_hourly_jobs():
                         )
 
                     logical_date = get_current_context()["logical_date"]
+                    dag = DagContext.get_current_dag()
                     job_name = f"wmes-{job_config['office']}-hourly-job-{logical_date.strftime('%Y%m%d-%H%M')}"
                     return batch.batch_operator(
                         dag=dag,
