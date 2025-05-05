@@ -8,7 +8,7 @@ from helpers.sqs import receive_sqs_messages, delete_sqs_message
 from shef import shef_parser
 
 from airflow.decorators import dag, task
-from airflow.exceptions import AirflowSkipException
+from airflow.exceptions import AirflowFailException, AirflowSkipException
 from airflow.models import Variable
 from airflow.operators.python import get_current_context
 
@@ -104,6 +104,9 @@ def sqs_shef_process_messages():
                     f"Exception occured while processing {message_body['metadata']['filename']}"
                 )
                 print(traceback.format_exc())
+                raise AirflowFailException(
+                    "SHEF processing task failed. Leaving SQS message in queue..."
+                )
         except json.JSONDecodeError:
             print(
                 f"Unrecognized message format for MessageId {message['MessageId']} - Adding to delete queue"
