@@ -1,27 +1,37 @@
+from datetime import datetime, timedelta, timezone
 import io
 import json
-import os
-import traceback
 import requests
-import time
+import traceback
 
-
-from airflow import DAG
-
-# from airflow.operators.python_operator import PythonOperator
-from datetime import datetime, timedelta, timezone
-from airflow.decorators import dag, task
-from airflow.operators.python import get_current_context
 from helpers.sqs import receive_sqs_messages, delete_sqs_message
 from shef import shef_parser
 
-# from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
-# from airflow.operators.dummy import DummyOperator
+from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
-
 from airflow.models import Variable
+from airflow.operators.python import get_current_context
 
 WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
+CDA_API_KEY = Variable.get("API_KEY")
+CDA_URL = Variable.get("CDA_URL")
+
+# Associate offices with product slugs for use in CDA requests
+OFFICE_PRODUCTS = {
+    "LRL": [
+        "ohrfc-lrl-qpf-locals",
+        "ohrfc-lrl-qpf-res",
+        "ohrfc-lrl-qpf-stages",
+        "ohrfc-lrl-qpf-totals",
+    ]
+}
+
+
+def get_office_from_slug(slug: str):
+    for office, slugs in OFFICE_PRODUCTS.items():
+        if slug in slugs:
+            return office
+    return None
 
 
 default_args = {
@@ -30,8 +40,6 @@ default_args = {
     "start_date": (datetime.now(timezone.utc) - timedelta(minutes=15)).replace(
         minute=0, second=0
     ),
-    # "start_date": datetime(2022, 7, 1),
-    "catchup_by_default": True,
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 1,
@@ -46,8 +54,10 @@ default_args = {
     max_active_runs=1,
     max_active_tasks=1,
 )
-def sqs_shef_test_process_messages():
-    """This pipeline will read available messages from the WMES SQS queue and process them as specified based on the provided stub.  The SQS message is subsequently deleted if processing completes successfully."""
+def sqs_shef_process_messages():
+    """This pipeline will read available messages from the WMES SHEF queue and
+    process them as specified based on the provided slug.  The SQS message is
+    subsequently deleted if processing completes successfully."""
 
     @task()
     def read_shef_queue():
@@ -75,35 +85,34 @@ def sqs_shef_test_process_messages():
             print("WithinDAG - No messages received from SQS queue.")
             raise AirflowSkipException("No messages received from SQS queue.")
 
-    @task
-    def process_messages(messages):
-        processed_messages = []
-        for message in messages:
+    @task(map_index_template="{{ task_id }}")
+    def process_message(message):
+        context = get_current_context()
+        try:
+            message_body = json.loads(message["Body"])
+            context["task_id"] = message_body["metadata"]["filename"]
+            slug = message_body["product"]["slug"]
             try:
-                message_body = json.loads(message["Body"])
-                slug = message_body["product"]["slug"]
-                try:
-                    if slug == "ohrfc-lrl-qpf-res":
-                        process_ohrfc_lrl_res(message_body)
-                    else:
-                        print(f"Unhandled slug: {slug} -- Skipping processing")
-                    processed_messages.append(message)
-                except Exception:
-                    print(
-                        f"Exception occured while processing {message_body['metadata']['filename']}"
-                    )
-                    print(traceback.format_exc())
-            except json.JSONDecodeError:
+                office_code = get_office_from_slug(slug)
+                if office_code:
+                    process_shef_file(message_body, office_code)
+                else:
+                    print(f"Unhandled slug: {slug} -- Skipping processing")
+                return message
+            except Exception:
                 print(
-                    f"Unrecognized message format for MessageId {message['MessageId']} - Adding to delete queue"
+                    f"Exception occured while processing {message_body['metadata']['filename']}"
                 )
-                processed_messages.append(message)
-        return processed_messages
+                print(traceback.format_exc())
+        except json.JSONDecodeError:
+            print(
+                f"Unrecognized message format for MessageId {message['MessageId']} - Adding to delete queue"
+            )
+            return message
 
-    def process_ohrfc_lrl_res(message):
-        CDA_API_KEY = "foo"  # Provide dummy value for mock-post
+    def process_shef_file(message, office_code):
         print(f"Processing SHEF file: {message['metadata']['filename']}")
-        crit_file = "plugins/data/crit/OHRFC_ResIn_crit"
+        print(f"Associated office: {office_code}")
         callback_url = message["callback_url"]
         params = dict()
         params["disposition"] = "inline"
@@ -111,7 +120,7 @@ def sqs_shef_test_process_messages():
         input = io.StringIO(response.text)
         shef_parser.parse(
             input_stream=input,
-            loader_spec=f"cda[{crit_file}][{CDA_API_KEY}]",
+            loader_spec=f"cda[{office_code}][{CDA_URL}][{CDA_API_KEY}]",
         )
 
     @task
@@ -125,7 +134,9 @@ def sqs_shef_test_process_messages():
             )
             print(f"Delete response: {delete_response}")
 
-    delete_processed_messages(process_messages(read_shef_queue()))
+    messages = read_shef_queue()
+    processed_messages = process_message.expand(message=messages)
+    delete_processed_messages(processed_messages)
 
 
-sqs_shef_test_process_messages()
+sqs_shef_process_messages()
