@@ -8,7 +8,7 @@ from helpers.sqs import receive_sqs_messages, delete_sqs_message
 from shef import shef_parser
 
 from airflow.decorators import dag, task
-from airflow.exceptions import AirflowSkipException
+from airflow.exceptions import AirflowFailException, AirflowSkipException
 from airflow.models import Variable
 from airflow.operators.python import get_current_context
 
@@ -53,6 +53,7 @@ default_args = {
     tags=["wmes", "shef", "sqs"],
     max_active_runs=1,
     max_active_tasks=1,
+    catchup=False,
 )
 def sqs_shef_process_messages():
     """This pipeline will read available messages from the WMES SHEF queue and
@@ -104,6 +105,9 @@ def sqs_shef_process_messages():
                     f"Exception occured while processing {message_body['metadata']['filename']}"
                 )
                 print(traceback.format_exc())
+                raise AirflowFailException(
+                    "SHEF processing task failed. Leaving SQS message in queue..."
+                )
         except json.JSONDecodeError:
             print(
                 f"Unrecognized message format for MessageId {message['MessageId']} - Adding to delete queue"
@@ -123,16 +127,21 @@ def sqs_shef_process_messages():
             loader_spec=f"cda[{office_code}][{CDA_URL}][{CDA_API_KEY}]",
         )
 
-    @task
+    @task(trigger_rule="all_done")
     def delete_processed_messages(processed_messages):
+        if not processed_messages:
+            raise AirflowSkipException("No messages to delete. Skipping...")
         for message in processed_messages:
-            print(f"Deleting SQS MessageId {message['MessageId']}")
-            receipt = message["ReceiptHandle"]
-            delete_response = delete_sqs_message(
-                queue_name=WMES_SHEF_QUEUE_NAME,
-                receipt_handle=receipt,
-            )
-            print(f"Delete response: {delete_response}")
+            if message:
+                print(f"Deleting SQS MessageId {message['MessageId']}")
+                receipt = message["ReceiptHandle"]
+                delete_response = delete_sqs_message(
+                    queue_name=WMES_SHEF_QUEUE_NAME,
+                    receipt_handle=receipt,
+                )
+                print(f"Delete response: {delete_response}")
+            else:
+                print("Empty message found.  Skipping...")
 
     messages = read_shef_queue()
     processed_messages = process_message.expand(message=messages)
