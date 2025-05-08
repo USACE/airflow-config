@@ -15,8 +15,8 @@ DAYSBACK = 3
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc) - timedelta(hours=4)).replace(
-        minute=30, second=0
+    "start_date": (datetime.now(timezone.utc) - timedelta(hours=8)).replace(
+        minute=0, second=0
     ),
     "catchup_by_default": False,
     "email_on_failure": False,
