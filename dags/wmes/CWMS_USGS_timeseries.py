@@ -28,7 +28,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    tags=["CWMS", "USGS", "Timeseries"],
+    tags=["wmes", "CWMS", "USGS", "Timeseries"],
     schedule="@hourly",
     max_active_runs=1,
     max_active_tasks=4,

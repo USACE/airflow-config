@@ -29,7 +29,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    tags=["CWMS", "USGS", "Ratings"],
+    tags=["wmes", "CWMS", "USGS", "Ratings"],
     schedule="30 0,6,12,18 * * *",
     max_active_runs=1,
     max_active_tasks=4,
@@ -39,7 +39,7 @@ default_args = {
 def cwms_usgs_ratings():
     office_ids = ["LRL"]
     for office_id in office_ids:
-        with TaskGroup(group_id=f"{office_id}_usgs") as tg:
+        with TaskGroup(group_id=f"{office_id}_usgs_rating") as tg:
 
             @task(task_id=f"{office_id}_cwms_usgs_rating_byoffice")
             def cwms_usgs_ratings_byoffice(office_id):
