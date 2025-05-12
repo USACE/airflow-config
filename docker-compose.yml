@@ -13,11 +13,11 @@ x-airflow-common:
   &airflow-common
   #
   # image: apache/airflow:2.8.1-python3.8-usace
-  image: airflow-common:2.10.4-python3.11-usace
+  image: airflow-common:3.0.0-python3.11-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.10.4
+      - AIRFLOW_VERSION=3.0.0
       - PYTHON_BASE_IMAGE=python:3.11-slim-bookworm
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
       - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
@@ -37,8 +37,10 @@ x-airflow-common:
     # VARIABLES DEFINED BY AIRFLOW SOFTWARE
     #######################################
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
     AIRFLOW__CORE__FERNET_KEY: u1rsP4UVZf5_uREVUhAjqYYygN328ASxeNYdy0yd6_Q=
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     # Prevent the 30+ connections from being loaded
     AIRFLOW__DATABASE__LOAD_DEFAULT_CONNECTIONS: False
     #--> AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@pgbouncer:5432/airflow
@@ -60,7 +62,7 @@ x-airflow-common:
     DB_PORT: 5432
     # AIRFLOW__CELERY__BROKER_URL: sqs://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@elasticmq
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CELERY__CELERY_CONFIG_OPTIONS: celery_config.CELERY_CONFIG
+    # AIRFLOW__CELERY__CELERY_CONFIG_OPTIONS: celery_config.CELERY_CONFIG
     # default queue; specified in celery_config.py
     AIRFLOW__OPERATORS__DEFAULT_QUEUE: airflow
     # ----------
@@ -241,13 +243,99 @@ services:
     container_name: airflow-init
     depends_on:
       - airflowdb
-    entrypoint: |-
-      /bin/sh -c "
-      /entrypoint db reset -y;
-      /entrypoint db migrate;
-      /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
-      exit 0;
-      "
+    # entrypoint: |-
+    #   /bin/sh -c "
+    #   /entrypoint db reset -y;
+    #   /entrypoint db migrate;
+    #   /entrypoint users create --role Admin --username airflow --email airflow@airflow.com --firstname airflow --lastname airflow --password airflow;
+    #   exit 0;
+    #   "
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        if [[ -z "${AIRFLOW_UID}" ]]; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
+          echo "If you are on Linux, you SHOULD follow the instructions below to set "
+          echo "AIRFLOW_UID environment variable, otherwise files will be owned by root."
+          echo "For other operating systems you can get rid of the warning with manually created .env file:"
+          echo "    See: https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#setting-the-right-airflow-user"
+          echo
+          export AIRFLOW_UID=$(id -u)
+        fi
+        one_meg=1048576
+        mem_available=$$(($$(getconf _PHYS_PAGES) * $$(getconf PAGE_SIZE) / one_meg))
+        cpus_available=$$(grep -cE 'cpu[0-9]+' /proc/stat)
+        disk_available=$$(df / | tail -1 | awk '{print $$4}')
+        warning_resources="false"
+        if (( mem_available < 4000 )) ; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough memory available for Docker.\e[0m"
+          echo "At least 4GB of memory required. You have $$(numfmt --to iec $$((mem_available * one_meg)))"
+          echo
+          warning_resources="true"
+        fi
+        if (( cpus_available < 2 )); then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough CPUS available for Docker.\e[0m"
+          echo "At least 2 CPUs recommended. You have $${cpus_available}"
+          echo
+          warning_resources="true"
+        fi
+        if (( disk_available < one_meg * 10 )); then
+          echo
+          echo -e "\033[1;33mWARNING!!!: Not enough Disk space available for Docker.\e[0m"
+          echo "At least 10 GBs recommended. You have $$(numfmt --to iec $$((disk_available * 1024 )))"
+          echo
+          warning_resources="true"
+        fi
+        if [[ $${warning_resources} == "true" ]]; then
+          echo
+          echo -e "\033[1;33mWARNING!!!: You have not enough resources to run Airflow (see above)!\e[0m"
+          echo "Please follow the instructions to increase amount of resources available:"
+          echo "   https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#before-you-begin"
+          echo
+        fi
+        echo
+        echo "Creating missing opt dirs if missing:"
+        echo
+        mkdir -v -p /opt/airflow/{logs,dags,plugins,config}
+        echo
+        echo "Airflow version:"
+        /entrypoint airflow version
+        echo
+        echo "Files in shared volumes:"
+        echo
+        ls -la /opt/airflow/{logs,dags,plugins,config}
+        echo
+        echo "Running airflow config list to create default config file if missing."
+        echo
+        /entrypoint airflow config list >/dev/null
+        echo
+        echo "Files in shared volumes:"
+        echo
+        ls -la /opt/airflow/{logs,dags,plugins,config}
+        echo
+        echo "Change ownership of files in /opt/airflow to ${AIRFLOW_UID}:0"
+        echo
+        chown -R "${AIRFLOW_UID}:0" /opt/airflow/
+        echo
+        echo "Change ownership of files in shared volumes to ${AIRFLOW_UID}:0"
+        echo
+        chown -v -R "${AIRFLOW_UID}:0" /opt/airflow/{logs,dags,plugins,config}
+        echo
+        echo "Files in shared volumes:"
+        echo
+        ls -la /opt/airflow/{logs,dags,plugins,config}
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+      _PIP_ADDITIONAL_REQUIREMENTS: ''
+    user: '0:0'
   #############################################################################
   # Airflow Scheduler
   #############################################################################
@@ -256,12 +344,34 @@ services:
     container_name: airflow-scheduler
     command: scheduler
     healthcheck:
-      # test:
-      #   [
-      #     'CMD-SHELL',
-      #     'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"',
-      #   ]
       test: ['CMD', 'curl', '--fail', 'http://localhost:8974/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow_init:
+        condition: service_completed_successfully
+      airflow-elasticmq:
+        condition: service_started
+    networks:
+      - default
+      - cumulus
+  #############################################################################
+  # Airflow Scheduler
+  #############################################################################
+  airflow_dag_processor:
+    <<: *airflow-common
+    container_name: airflow-dag-processor
+    command: dag-processor
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"',
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -334,19 +444,18 @@ services:
   #############################################################################
   # Airflow User Interface
   #############################################################################
-  airflow_ui:
+  airflow_apiserver:
     <<: *airflow-common
-    container_name: airflow-ui
-    # image: apache/airflow:2.4.3-python3.8-usace
-    command: webserver
+    container_name: airflow-apiserver
+    command: api-server
     ports:
       - '8000:8080'
     environment:
       <<: *airflow-common-env
       AIRFLOW__WEBSERVER__ACCESS_LOGFILE: '/dev/null' # <-- stop spewing http logs to console
     healthcheck:
-      test: ['CMD', 'curl', '--fail', 'http://localhost:8080/health']
-      interval: 10s
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8080/api/v2/version']
+      interval: 30s
       timeout: 10s
       retries: 5
     restart: always
