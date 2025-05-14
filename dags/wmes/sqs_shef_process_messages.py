@@ -16,23 +16,6 @@ WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
 CDA_API_KEY = Variable.get("API_KEY")
 CDA_URL = Variable.get("CDA_URL")
 
-# Associate offices with product slugs for use in CDA requests
-OFFICE_PRODUCTS = {
-    "LRL": [
-        "ohrfc-lrl-qpf-locals",
-        "ohrfc-lrl-qpf-res",
-        "ohrfc-lrl-qpf-stages",
-        "ohrfc-lrl-qpf-totals",
-    ]
-}
-
-
-def get_office_from_slug(slug: str):
-    for office, slugs in OFFICE_PRODUCTS.items():
-        if slug in slugs:
-            return office
-    return None
-
 
 default_args = {
     "owner": "airflow",
@@ -92,13 +75,8 @@ def sqs_shef_process_messages():
         try:
             message_body = json.loads(message["Body"])
             context["task_id"] = message_body["metadata"]["filename"]
-            slug = message_body["product"]["slug"]
             try:
-                office_code = get_office_from_slug(slug)
-                if office_code:
-                    process_shef_file(message_body, office_code)
-                else:
-                    print(f"Unhandled slug: {slug} -- Skipping processing")
+                process_shef_file(message_body)
                 return message
             except Exception:
                 print(
@@ -114,9 +92,8 @@ def sqs_shef_process_messages():
             )
             return message
 
-    def process_shef_file(message, office_code):
+    def process_shef_file(message):
         print(f"Processing SHEF file: {message['metadata']['filename']}")
-        print(f"Associated office: {office_code}")
         callback_url = message["callback_url"]
         params = dict()
         params["disposition"] = "inline"
@@ -124,7 +101,7 @@ def sqs_shef_process_messages():
         input = io.StringIO(response.text)
         shef_parser.parse(
             input_stream=input,
-            loader_spec=f"cda[{office_code}][{CDA_URL}][{CDA_API_KEY}]",
+            loader_spec=f"cda[{CDA_URL}][{CDA_API_KEY}]",
         )
 
     @task(trigger_rule="all_done")
