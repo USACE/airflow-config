@@ -217,7 +217,7 @@ class CdaLoader(base_loader.BaseLoader):
                     self._payloads.append(post_data)
                 else:
                     match_payload = self._payloads[match_index]
-                    match_payload["values"].append(*time_series)
+                    match_payload["values"].extend(time_series)
             self._time_series = []
 
     def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
@@ -409,6 +409,6 @@ loader_options = (
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
 loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.0 or greater."
-loader_version = "0.3"
+loader_version = "0.3.1"
 loader_class = CdaLoader
 can_unload = False
