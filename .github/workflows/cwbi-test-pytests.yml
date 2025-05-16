@@ -2,14 +2,14 @@ name: pytest
 
 on:
   push:
-    branches: [cwbi-dev]
+    branches: [cwbi-test]
     paths:
-      - .github/workflows/cwbi-dev-pytests.yml
+      - .github/workflows/cwbi-test-pytests.yml
       - '**.py'
   pull_request:
-    branches: ['cwbi-dev']
+    branches: ['cwbi-test']
     paths:
-      - .github/workflows/cwbi-dev-pytests.yml
+      - .github/workflows/cwbi-test-pytests.yml
       - '**.py'
 
 jobs:
