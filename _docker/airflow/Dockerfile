@@ -36,7 +36,7 @@
 #                        much smaller.
 #
 # Use the same builder frontend version for everyone
-ARG AIRFLOW_EXTRAS="aiobotocore,amazon,async,celery,cncf-kubernetes,common-io,docker,elasticsearch,ftp,google,google-auth,graphviz,grpc,hashicorp,http,ldap,microsoft-azure,mysql,odbc,openlineage,pandas,postgres,redis,sendgrid,sftp,slack,snowflake,ssh,statsd,uv,virtualenv"
+ARG AIRFLOW_EXTRAS="aiobotocore,amazon,async,celery,cncf-kubernetes,common-io,docker,elasticsearch,ftp,graphviz,grpc,hashicorp,http,ldap,odbc,openlineage,pandas,postgres,redis,sendgrid,sftp,slack,snowflake,ssh,statsd,uv,virtualenv"
 ARG ADDITIONAL_AIRFLOW_EXTRAS=""
 ARG ADDITIONAL_PYTHON_DEPS=""
 
@@ -45,9 +45,9 @@ ARG AIRFLOW_UID="50000"
 ARG AIRFLOW_USER_HOME_DIR=/home/airflow
 
 # latest released version here
-ARG AIRFLOW_VERSION="2.10.4"
+ARG AIRFLOW_VERSION="2.10.5"
 
-ARG PYTHON_BASE_IMAGE="python:3.11-slim-bookworm"
+ARG PYTHON_BASE_IMAGE="python:3.12-slim-bookworm"
 
 
 # You can swap comments between those two args to test pip from the main version
