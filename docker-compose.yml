@@ -13,12 +13,12 @@ x-airflow-common:
   &airflow-common
   #
   # image: apache/airflow:2.8.1-python3.8-usace
-  image: airflow-common:2.10.4-python3.11-usace
+  image: airflow-common:2.10.5-python3.12-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.10.4
-      - PYTHON_BASE_IMAGE=python:3.11-slim-bookworm
+      - AIRFLOW_VERSION=2.10.5
+      - PYTHON_BASE_IMAGE=python:3.12-slim-bookworm
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
       - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis]
       - INSTALL_MYSQL_CLIENT=false

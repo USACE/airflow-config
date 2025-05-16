@@ -8,6 +8,7 @@ on:
     paths:
       - .github/workflows/cwbi-test-build-push-gitsync.yml
       - _docker/gitsync/**
+  workflow_dispatch:
 
 env:
   AWS_REGION: aws-us-gov #Change to reflect your Region

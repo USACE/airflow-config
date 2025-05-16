@@ -9,6 +9,7 @@ on:
       - .github/workflows/cwbi-test-build-push-migration.yml
       - _docker/flyway/common/**
       - _docker/flyway/Dockerfile
+  workflow_dispatch:
 
 env:
   AWS_REGION: aws-us-gov #Change to reflect your Region

@@ -8,6 +8,7 @@ on:
     paths:
       - .github/workflows/cwbi-test-push-airflow.yml
       - _docker/airflow/Dockerfile
+  workflow_dispatch:
 
 env:
   AWS_REGION: aws-us-gov #Change to reflect your Region
@@ -41,11 +42,11 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: wmes-airflow
-          IMAGE_TAG: 2.10.4-python3.11-usace
+          IMAGE_TAG: 2.10.5-python3.12-usace
         run: |
           docker build _docker/airflow \
-          --build-arg AIRFLOW_VERSION="2.10.4" \
-          --build-arg PYTHON_BASE_IMAGE="python:3.11-slim-bookworm" \
+          --build-arg AIRFLOW_VERSION="2.10.5" \
+          --build-arg PYTHON_BASE_IMAGE="python:3.12-slim-bookworm" \
           --build-arg ADDITIONAL_DEV_APT_DEPS="libcurl4-openssl-dev libssl-dev" \
           --build-arg ADDITIONAL_PYTHON_DEPS="celery[sqs] celery[redis]" \
           --build-arg INSTALL_MYSQL_CLIENT="false" \
