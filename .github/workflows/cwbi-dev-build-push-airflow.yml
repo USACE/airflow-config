@@ -46,7 +46,7 @@ jobs:
         run: |
           docker build _docker/airflow \
           --build-arg AIRFLOW_VERSION="2.10.5" \
-          --build-arg PYTHON_BASE_IMAGE="python:3.11-slim-bookworm" \
+          --build-arg PYTHON_BASE_IMAGE="python:3.12-slim-bookworm" \
           --build-arg ADDITIONAL_DEV_APT_DEPS="libcurl4-openssl-dev libssl-dev" \
           --build-arg ADDITIONAL_PYTHON_DEPS="celery[sqs] celery[redis]" \
           --build-arg INSTALL_MYSQL_CLIENT="false" \
