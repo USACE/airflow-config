@@ -8,6 +8,7 @@ on:
     paths:
       - .github/workflows/cwbi-test-push-airflow.yml
       - _docker/airflow/Dockerfile
+  workflow_dispatch:
 
 env:
   AWS_REGION: aws-us-gov #Change to reflect your Region
