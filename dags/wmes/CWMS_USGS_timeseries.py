@@ -36,7 +36,7 @@ default_args = {
     doc_md=__doc__,
 )
 def cwms_usgs_timeseries():
-    office_ids = ["LRL"]
+    office_ids = ["LRL", "MVP"]
     for office_id in office_ids:
         with TaskGroup(group_id=f"{office_id}_usgs") as tg:
 
