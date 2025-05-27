@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import cwms
 import requests
 
@@ -220,84 +220,90 @@ def CWMS_writeData(USGS_ts, USGS_data, USGS_data_method):
             f"Attempting to write values for ts_id -->  {ts_id},{USGS_Id_param}"
         )
         values = pd.DataFrame()
-        if (USGS_Id_param in USGS_data.index) or (
-            USGS_Id_param in USGS_data_method.index
-        ):
-            if pd.isna(row.USGS_Method_TS):
-                USGS_data_row = USGS_data.loc[USGS_Id_param]
-            else:
-                USGS_data_row = USGS_data_method.loc[USGS_Id_param]
+        USGS_data_row = None
+        if (USGS_Id_param in USGS_data.index) and pd.isna(row.USGS_Method_TS):
+            USGS_data_row = USGS_data.loc[USGS_Id_param]
+        elif USGS_Id_param in USGS_data_method.index:
+            USGS_data_row = USGS_data_method.loc[USGS_Id_param]
+        if USGS_data_row is not None:
+            try:
 
-            # grab the time series values obtained from USGS API.
-            values_df = pd.DataFrame(USGS_data_row["values"])
-            if values_df.shape[0] > 1:
-                if pd.isna(row.USGS_Method_TS):
-                    logging.warning(
-                        f"FAIL there are multiple time series for {USGS_Id_param} need to specify the USGS method TSID for {ts_id}"
-                    )
-                    mult_ids.append([ts_id, USGS_Id_param])
-                else:
-                    temp = values_df.method.apply(pd.Series)
-                    temp = values_df.join(pd.json_normalize(temp.pop(0)))
-                    try:
-                        values = pd.DataFrame(
-                            temp.query(f"methodID == {row.USGS_Method_TS}")[
-                                "value"
-                            ].item()
+                # grab the time series values obtained from USGS API.
+                values_df = pd.DataFrame(USGS_data_row["values"])
+                if values_df.shape[0] > 1:
+                    if pd.isna(row.USGS_Method_TS):
+                        logging.warning(
+                            f"FAIL there are multiple time series for {USGS_Id_param} need to specify the USGS method TSID for {ts_id}"
                         )
-                    except Exception as error:
                         mult_ids.append([ts_id, USGS_Id_param])
-                        logging.error(
-                            f"The USGS method ID defined could not be found from the USGS API check that it is correct for -->  {ts_id},{USGS_Id_param},{row.USGS_Method_TS}"
-                        )
-            else:
-                values = pd.DataFrame(values_df.loc[0, "value"])
-            # if values array is empty then append infor to noData list
-            if values.empty:
-                noData.append([ts_id, USGS_Id_param])
-                logging.warning(
-                    f"FAIL No Data obtained from USGS for ts_id: Values array is empty in USGS API output-->  {ts_id},{USGS_Id_param}"
-                )
-            else:
-                # grab value  and for no data (ie -999999) remove from dataset
-                nodata_val = USGS_data_row["variable"]["noDataValue"]
-                values = values[values.value != str(int(nodata_val))]
-                # check again if values dataframe is empty after removing nodata_vals
+                    else:
+                        temp = values_df.method.apply(pd.Series)
+                        temp = values_df.join(pd.json_normalize(temp.pop(0)))
+                        try:
+                            values = pd.DataFrame(
+                                temp.query(f"methodID == {row.USGS_Method_TS}")[
+                                    "value"
+                                ].item()
+                            )
+                        except Exception as error:
+                            mult_ids.append([ts_id, USGS_Id_param])
+                            logging.error(
+                                f"The USGS method ID defined could not be found from the USGS API check that it is correct for -->  {ts_id},{USGS_Id_param},{row.USGS_Method_TS}"
+                            )
+                else:
+                    values = pd.DataFrame(values_df.loc[0, "value"])
+                # if values array is empty then append infor to noData list
                 if values.empty:
                     noData.append([ts_id, USGS_Id_param])
                     logging.warning(
-                        f"FAIL No Data obtained from USGS for ts_id: Values array is empty after removing -999999 values-->  {ts_id},{USGS_Id_param}"
+                        f"FAIL No Data obtained from USGS for ts_id: Values array is empty in USGS API output-->  {ts_id},{USGS_Id_param}"
                     )
-                # if values are present grab information needed to save to CWMS database using CDA
                 else:
-                    values = values.reindex(columns=["dateTime", "value", "qualifiers"])
+                    # grab value  and for no data (ie -999999) remove from dataset
+                    nodata_val = USGS_data_row["variable"]["noDataValue"]
+                    values = values[values.value != str(int(nodata_val))]
+                    # check again if values dataframe is empty after removing nodata_vals
+                    if values.empty:
+                        noData.append([ts_id, USGS_Id_param])
+                        logging.warning(
+                            f"FAIL No Data obtained from USGS for ts_id: Values array is empty after removing -999999 values-->  {ts_id},{USGS_Id_param}"
+                        )
+                    # if values are present grab information needed to save to CWMS database using CDA
+                    else:
+                        values = values.reindex(
+                            columns=["dateTime", "value", "qualifiers"]
+                        )
 
-                    # adjust column names to fit cwms-python format.
-                    values = values.rename(
-                        columns={
-                            "dateTime": "date-time",
-                            "qualifiers": "quality-code",
-                        }
-                    )
-                    units = USGS_data_row["variable"]["unit"]["unitCode"]
-                    office = row["office-id"]
-                    values["quality-code"] = 0
+                        # adjust column names to fit cwms-python format.
+                        values = values.rename(
+                            columns={
+                                "dateTime": "date-time",
+                                "qualifiers": "quality-code",
+                            }
+                        )
+                        units = USGS_data_row["variable"]["unit"]["unitCode"]
+                        office = row["office-id"]
+                        values["quality-code"] = 0
 
-                    # write values to CWMS database
-                    try:
-                        data = cwms.timeseries_df_to_json(
-                            data=values, ts_id=ts_id, units=units, office_id=office
-                        )
-                        cwms.store_timeseries(data)
-                        logging.info(
-                            f"SUCCESS Data stored in CWMS database for -->  {ts_id},{USGS_Id_param}"
-                        )
-                        saved = saved + 1
-                    except Exception as error:
-                        storErr.append([ts_id, USGS_Id_param, error])
-                        logging.error(
-                            f"FAIL Data could not be stored to CWMS database for -->  {ts_id},{USGS_Id_param} CDA error = {error}"
-                        )
+                        # write values to CWMS database
+                        try:
+                            data = cwms.timeseries_df_to_json(
+                                data=values, ts_id=ts_id, units=units, office_id=office
+                            )
+                            cwms.store_timeseries(data)
+                            logging.info(
+                                f"SUCCESS Data stored in CWMS database for -->  {ts_id},{USGS_Id_param}"
+                            )
+                            saved = saved + 1
+                        except Exception as error:
+                            storErr.append([ts_id, USGS_Id_param, error])
+                            logging.error(
+                                f"FAIL Data could not be stored to CWMS database for -->  {ts_id},{USGS_Id_param} CDA error = {error}"
+                            )
+            except Exception as error:
+                logging.error(
+                    f"FAIL Unspecified Error when trying to save USGS data -->  {ts_id},{USGS_Id_param} error = {error}"
+                )
         else:
             NotinAPI.append([ts_id, USGS_Id_param])
             logging.warning(

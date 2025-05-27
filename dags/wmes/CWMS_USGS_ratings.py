@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from dataacquisition.getUSGS_rating_CDA import getusgs_rating_cda
+from dataacquisition.getUSGS_ratings_CDA import getusgs_rating_cda
 from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
@@ -37,9 +37,9 @@ default_args = {
     doc_md=__doc__,
 )
 def cwms_usgs_ratings():
-    office_ids = ["LRL"]
-    for office_id in office_ids:
-        with TaskGroup(group_id=f"{office_id}_usgs_rating") as tg:
+    with TaskGroup(group_id="USGS_ratings"):
+        office_ids = ["LRL", "MVP"]
+        for office_id in office_ids:
 
             @task(task_id=f"{office_id}_cwms_usgs_rating_byoffice")
             def cwms_usgs_ratings_byoffice(office_id):
