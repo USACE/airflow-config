@@ -1711,5 +1711,8 @@ LABEL org.apache.airflow.distro="debian" \
   org.opencontainers.image.title="Production Airflow Image" \
   org.opencontainers.image.description="Reference, production-ready Apache Airflow image"
 
+# Append the SESSION_COOKIE_NAME setting to webserver_config.py
+RUN echo 'SESSION_COOKIE_NAME = "wmes_airflow_session"' >> /opt/airflow/webserver_config.py
+
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/entrypoint"]
 CMD []
