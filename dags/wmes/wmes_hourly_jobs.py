@@ -32,7 +32,7 @@ def wmes_hourly_jobs():
     job_configs = [
         {"office": "lrc", "office_group": "lrd", "enabled": False},
         {"office": "lre", "office_group": "lrd", "enabled": False},
-        {"office": "lrh", "office_group": "lrd", "enabled": False},
+        {"office": "lrh", "office_group": "lrd", "enabled": True},
         {"office": "lrl", "office_group": "lrd", "enabled": True},
         {"office": "lrn", "office_group": "lrd", "enabled": False},
         {"office": "lrp", "office_group": "lrd", "enabled": False},
