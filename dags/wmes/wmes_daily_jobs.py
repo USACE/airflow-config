@@ -28,7 +28,7 @@ default_args = {
     max_active_runs=1,
     max_active_tasks=4,
 )
-def wmes_hourly_jobs():
+def wmes_daily_jobs():
     job_configs = [
         {"office": "lrc", "office_group": "lrd", "enabled": False},
         {"office": "lre", "office_group": "lrd", "enabled": False},
@@ -80,4 +80,4 @@ def wmes_hourly_jobs():
                 launch_batch.override(task_id=f"{jc['office']}-jobs")(jc)
 
 
-wmes_jobs_dag = wmes_hourly_jobs()
+wmes_jobs_dag = wmes_daily_jobs()
