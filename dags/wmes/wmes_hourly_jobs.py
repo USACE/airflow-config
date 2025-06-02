@@ -64,13 +64,11 @@ def wmes_hourly_jobs():
                         task_id=job_name,
                         deferrable=True,
                         container_overrides={
-                            {
-                                "environment": [
-                                    {"name": "OFFICE", "value": job_config["office"]},
-                                    {"name": "GITHUB_BRANCH", "value": "cwbi-dev"},
-                                ],
-                                "command": ["/jobs/bin/hourly.sh"],
-                            }
+                            "environment": [
+                                {"name": "OFFICE", "value": job_config["office"]},
+                                {"name": "GITHUB_BRANCH", "value": "cwbi-dev"},
+                            ],
+                            "command": ["/jobs/bin/hourly.sh"],
                         },
                         job_name=job_name,
                         job_queue=f"wmes-{job_config['office_group']}-jq",
