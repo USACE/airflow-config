@@ -69,7 +69,7 @@ def wmes_hourly_jobs():
                                     {"name": "OFFICE", "value": job_config["office"]},
                                     {"name": "GITHUB_BRANCH", "value": "cwbi-dev"},
                                 ],
-                                "command": ["/jobs/bin/daily.sh"],
+                                "command": ["/jobs/bin/hourly.sh"],
                             }
                         },
                         job_name=job_name,
