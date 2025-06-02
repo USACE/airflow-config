@@ -33,43 +33,36 @@ def wmes_hourly_jobs():
         {
             "office": "lrc",
             "office_group": "lrd",
-            "github_branch": "cwbi-dev",
             "enabled": False,
         },
         {
             "office": "lre",
             "office_group": "lrd",
-            "github_branch": "cwbi-dev",
             "enabled": False,
         },
         {
             "office": "lrh",
             "office_group": "lrd",
-            "github_branch": "cwbi-dev",
             "enabled": True,
         },
         {
             "office": "lrl",
             "office_group": "lrd",
-            "github_branch": "cwbi-dev",
             "enabled": False,
         },
         {
             "office": "lrn",
             "office_group": "lrd",
-            "github_branch": "cwbi-dev",
             "enabled": False,
         },
         {
             "office": "lrp",
             "office_group": "lrd",
-            "github_branch": "cwbi-dev",
             "enabled": False,
         },
         {
             "office": "swt",
             "office_group": "swd",
-            "github_branch": "cwbi-dev",
             "enabled": False,
         },
     ]
@@ -101,10 +94,6 @@ def wmes_hourly_jobs():
                         container_overrides={
                             "environment": [
                                 {"name": "OFFICE", "value": job_config["office"]},
-                                {
-                                    "name": "GITHUB_BRANCH",
-                                    "value": job_config["github_branch"],
-                                },
                             ],
                             "command": ["/jobs/bin/hourly.sh"],
                         },
