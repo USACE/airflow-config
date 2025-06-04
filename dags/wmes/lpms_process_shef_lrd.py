@@ -45,7 +45,7 @@ def lpms_process_shef_lrd():
         lookback_hours = 4
 
         # LPMS SHEF LRD endpoint: https://ndc-navapps.ops.usace.army.mil/ords/lpms2/shef/LRD/yyyymmddhhmm/lookbackhours
-        lpms_url = "https://ndc-navapps.ops.usace.army.mil/ords/lpms2/shef/LRD"
+        lpms_url = "http://nav-app1-prod1.cwbi.lan:8080/ords/lpms2/shef/LRD"
         request_url = f"{lpms_url}/{now_et}/{lookback_hours}"
 
         response = requests.get(request_url)

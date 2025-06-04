@@ -10,7 +10,7 @@ from airflow.exceptions import AirflowSkipException
 
 default_args = {
     "owner": "airflow",
-    "start_date": datetime(2025, 5, 3),
+    "start_date": datetime(2025, 6, 1),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -21,49 +21,26 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval="15 * * * *",
+    schedule_interval="0 17 * * *",
     start_date=datetime(2025, 5, 3),
     catchup=False,
     tags=["batch", "jobs", "district"],
     max_active_runs=1,
     max_active_tasks=4,
 )
-def wmes_hourly_jobs():
+def wmes_daily_jobs():
     job_configs = [
-        {
-            "office": "lrc",
-            "office_group": "lrd",
-            "enabled": False,
-        },
-        {
-            "office": "lre",
-            "office_group": "lrd",
-            "enabled": False,
-        },
-        {
-            "office": "lrh",
-            "office_group": "lrd",
-            "enabled": True,
-        },
-        {
-            "office": "lrl",
-            "office_group": "lrd",
-            "enabled": False,
-        },
-        {
-            "office": "lrn",
-            "office_group": "lrd",
-            "enabled": False,
-        },
-        {
-            "office": "lrp",
-            "office_group": "lrd",
-            "enabled": False,
-        },
+        {"office": "lrc", "office_group": "lrd", "enabled": False},
+        {"office": "lre", "office_group": "lrd", "enabled": False},
+        {"office": "lrh", "office_group": "lrd", "enabled": False},
+        {"office": "lrl", "office_group": "lrd", "enabled": False},
+        {"office": "lrn", "office_group": "lrd", "enabled": False},
+        {"office": "lrp", "office_group": "lrd", "enabled": False},
         {
             "office": "swt",
             "office_group": "swd",
-            "enabled": False,
+            "github_branch": "cwbi-restructure",
+            "enabled": True,
         },
     ]
 
@@ -86,17 +63,12 @@ def wmes_hourly_jobs():
 
                     logical_date = get_current_context()["logical_date"]
                     dag = DagContext.get_current_dag()
-                    job_name = f"wmes-{job_config['office']}-hourly-job-{logical_date.strftime('%Y%m%d-%H%M')}"
+                    job_name = f"wmes-{job_config['office']}-daily-job-{logical_date.strftime('%Y%m%d-%H%M')}"
                     return batch.batch_operator(
                         dag=dag,
                         task_id=job_name,
                         deferrable=True,
-                        container_overrides={
-                            "environment": [
-                                {"name": "OFFICE", "value": job_config["office"]},
-                            ],
-                            "command": ["/jobs/bin/hourly.sh"],
-                        },
+                        container_overrides={},
                         job_name=job_name,
                         job_queue=f"wmes-{job_config['office_group']}-jq",
                         job_definition=f"wmes-{job_config['office']}-jobs-jobdef",
@@ -108,4 +80,4 @@ def wmes_hourly_jobs():
                 launch_batch.override(task_id=f"{jc['office']}-jobs")(jc)
 
 
-wmes_jobs_dag = wmes_hourly_jobs()
+wmes_jobs_dag = wmes_daily_jobs()
