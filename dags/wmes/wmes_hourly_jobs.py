@@ -63,7 +63,7 @@ def wmes_hourly_jobs():
         {
             "office": "swt",
             "office_group": "swd",
-            "enabled": False,
+            "enabled": True,
         },
     ]
 
