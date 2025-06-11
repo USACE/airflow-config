@@ -1,5 +1,4 @@
-FROM flyway/flyway
-# FROM ghcr.io/usace/flyway:latest
+FROM ghcr.io/cwbi-apps/flyway:latest
 
 COPY . /flyway/sql/
 
