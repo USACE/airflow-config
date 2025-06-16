@@ -17,7 +17,11 @@ RUN go get -d -v
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
     go build -ldflags="-w -s" -o /go/bin/gitsync
 
-RUN mkdir /data && chown data:data /data && chmod 755 /data
+RUN mkdir /data && \
+  chown data:data /data && \
+  chmod 755 /data && \
+  # Remove the src code
+  rm -rf /go/src/app
 
 #
 # FROM scratch
