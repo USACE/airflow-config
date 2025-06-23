@@ -2,6 +2,9 @@ module gitsync
 
 go 1.24.1
 
+// force patching of go-crypto
+replace golang.org/x/crypto => golang.org/x/crypto v0.39.0
+
 require (
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/kelseyhightower/envconfig v1.4.0
