@@ -1,5 +1,5 @@
 # BUILD GO BINARIES
-FROM golang:1.24.4-alpine AS builder
+FROM alpine:3.22.0
 
 # Create User; https://github.com/mhart/alpine-node/issues/48
 # NOTE: Using same UID/GID as airflow user in container for shared volume convenience
@@ -8,32 +8,23 @@ RUN addgroup -g 50000 -S data \
 
 # Install Git
 RUN apk update && apk add --no-cache git ca-certificates
-# Copy In Source Code
-WORKDIR /go/src/app
-COPY gitsync .
-# Install Dependencies
-RUN go get -d -v
-# Build
-RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-    go build -ldflags="-w -s" -o /go/bin/gitsync
+
+WORKDIR /app
+
+COPY entrypoint.sh /entrypoint.sh
 
 RUN mkdir /data && \
   chown data:data /data && \
-  chmod 755 /data && \
-  # Remove the src code
-  rm -rf /go/src/app
+  chmod 755 /data
+  
+# Infrastructure is still pointing to "/go/bin/gitsync"
+  RUN chmod +x /entrypoint.sh && \
+  mkdir -p /go/bin && \
+  ln -s /entrypoint.sh /go/bin/gitsync
 
-#
-# FROM scratch
-# COPY --from=builder /go/bin/gitsync /go/bin/gitsync
-# COPY --from=builder /etc/passwd /etc/passwd
-# COPY --from=builder /data /data
-# COPY --from=builder /etc/ssl/certs/ca-certificates.crt \
-#                     /etc/ssl/certs/ca-certificates.crt
+
+USER data
 
 VOLUME "/data"
 
-# https://medium.com/@lizrice/non-privileged-containers-based-on-the-scratch-image-a80105d6d341
-USER data
-
-ENTRYPOINT ["/go/bin/gitsync"]
+ENTRYPOINT ["/entrypoint.sh"]
