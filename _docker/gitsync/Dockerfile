@@ -13,8 +13,12 @@ WORKDIR /app
 
 COPY entrypoint.sh /entrypoint.sh
 
+RUN mkdir /data && \
+  chown data:data /data && \
+  chmod 755 /data
+  
 # Infrastructure is still pointing to "/go/bin/gitsync"
-RUN chmod +x /entrypoint.sh && \
+  RUN chmod +x /entrypoint.sh && \
   mkdir -p /go/bin && \
   ln -s /entrypoint.sh /go/bin/gitsync
 
