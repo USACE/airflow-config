@@ -1,0 +1,55 @@
+#This is a basic workflow to help you get started with Actions
+name: Build DB Migration Image, Push to Prod
+
+# Controls when the action will run. Invokes the workflow on push events but only for the main branch
+on:
+  push:
+    branches: [cwbi-prod]
+    paths:
+      - .github/workflows/cwbi-prod-build-push-migration.yml
+      - _docker/flyway/common/**
+      - _docker/flyway/Dockerfile
+  workflow_dispatch:
+
+env:
+  AWS_REGION: aws-us-gov #Change to reflect your Region
+
+# Permission can be added at job level or workflow level
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+jobs:
+  Build-Push-Migration-to-Prod:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git clone the repository
+        uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-gov-west-1
+          role-to-assume: arn:aws-us-gov:iam::648157167324:role/github-actions-ecr-wmes-airflow
+          output-credentials: true
+      # Hello from AWS: WhoAmI
+      - name: Sts GetCallerIdentity
+        run: |
+          aws sts get-caller-identity
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+      - name: Build Image; Push to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: wmes-airflow-migration
+          IMAGE_TAG: latest
+        run: |
+          docker build _docker/flyway \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:prod 
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod
+      - name: ECR Logout
+        if: always()
+        run: docker logout ${{ steps.login-ecr.outputs.registry }}
