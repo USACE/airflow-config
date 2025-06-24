@@ -48,7 +48,7 @@ jobs:
           --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
           --tag $ECR_REGISTRY/$ECR_REPOSITORY:prod 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:pod
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod
       - name: ECR Logout
         if: always()
         run: docker logout ${{ steps.login-ecr.outputs.registry }}
