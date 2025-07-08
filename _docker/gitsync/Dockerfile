@@ -7,7 +7,9 @@ RUN addgroup -g 50000 -S data \
   && adduser -u 50000 -S data -G data
 
 # Install Git
-RUN apk update && apk add --no-cache git ca-certificates
+RUN apk update && \
+  apk add --no-cache git ca-certificates && \
+  apk upgrade --no-cache
 
 WORKDIR /app
 
