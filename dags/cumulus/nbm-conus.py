@@ -6,6 +6,7 @@ Returns
 Airflow DAG
     Directed Acyclic Graph
 """
+
 import re
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
@@ -22,7 +23,9 @@ from helpers.downloads import trigger_download
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.utcnow() - timedelta(hours=2)).replace(minute=0, second=0),
+    "start_date": (datetime.now(timezone.utc) - timedelta(hours=2)).replace(
+        minute=0, second=0
+    ),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -97,7 +100,7 @@ def get_forecast_interval(interval: str, forecast_hour: int):
     tags=["cumulus", "precip", "airtemp", "NBM"],
     schedule="3 * * * *",
     max_active_runs=1,
-    max_active_tasks=6,
+    max_active_tasks=4,
 )
 def cumulus_national_blend_models():
     """
