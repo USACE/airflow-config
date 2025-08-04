@@ -30,8 +30,8 @@ default_args = {
     "retry_delay": timedelta(minutes=10),
 }
 
-# url changed to 4.2 during May 2024
-URL_NOMADS = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/v4.2"
+# update URL
+URL_NOMADS = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/blend/prod"
 
 S3_ACQUIRABLE = "nbm-co-01h"
 
