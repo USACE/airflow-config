@@ -49,9 +49,9 @@ def lpms_process_shef_lrd():
         # LPMS SHEF LRD endpoint: https://ndc-navapps.ops.usace.army.mil/ords/lpms2/shef/LRD/yyyymmddhhmm/lookbackhours
         lpms_url = "http://nav-app1-prod1.cwbi.lan:8080/ords/lpms2/shef/LRD"
         if S3_BUCKET == "wmes-airflow-test":
-            lpms_url = "http://nav-app3-test.cwbi.us:8080/ords/lpms2/shef/LRD/"
+            lpms_url = "http://nav-app3-test.cwbi.lan:8080/ords/lpms2/shef/LRD"
         elif S3_BUCKET == "wmes-airflow-dev":
-            lpms_url = "https://ndc-navapps.ops.usace.army.mil/ords/lpms2/shef/LRD/"
+            lpms_url = "https://ndc-navapps.ops.usace.army.mil/ords/lpms2/shef/LRD"
         request_url = f"{lpms_url}/{now_et}/{lookback_hours}"
         logging.info(f"grabbing file from: {request_url}")
         response = requests.get(request_url)
