@@ -4,12 +4,14 @@ import pendulum
 
 from datetime import datetime, timedelta, timezone
 from shef import shef_parser
-
+from airflow.models import Variable
 from airflow.decorators import dag, task
 from airflow.models import Variable
+import logging
 
 CDA_API_KEY = Variable.get("API_KEY")
 CDA_URL = Variable.get("CDA_URL")
+S3_BUCKET = Variable.get("s3_bucket")
 
 default_args = {
     "owner": "airflow",
@@ -46,8 +48,12 @@ def lpms_process_shef_lrd():
 
         # LPMS SHEF LRD endpoint: https://ndc-navapps.ops.usace.army.mil/ords/lpms2/shef/LRD/yyyymmddhhmm/lookbackhours
         lpms_url = "http://nav-app1-prod1.cwbi.lan:8080/ords/lpms2/shef/LRD"
+        if S3_BUCKET == "wmes-airflow-test":
+            lpms_url = "http://nav-app3-test.cwbi.lan:8080/ords/lpms2/shef/LRD"
+        elif S3_BUCKET == "wmes-airflow-dev":
+            lpms_url = "https://ndc-navapps.ops.usace.army.mil/ords/lpms2/shef/LRD"
         request_url = f"{lpms_url}/{now_et}/{lookback_hours}"
-
+        logging.info(f"grabbing file from: {request_url}")
         response = requests.get(request_url)
         response.raise_for_status()
         input = io.StringIO(response.text)
