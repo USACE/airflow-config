@@ -1,12 +1,24 @@
 # Using https://github.com/brainsam/pgbouncer as a starting point
-FROM alpine:3.21.3 AS build_stage
+FROM alpine:3.22.1 AS build_stage
 
 ARG PGBOUNCER_VERSION=1.24.1
 ARG PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_24_1/pgbouncer-1.24.1.tar.gz
 
 WORKDIR /
 # python3, py3-pip, pip install docutils meets pandoc requirement for pgbouncer 
-RUN apk --update add python3 pipx py3-pip build-base automake autoconf libtool m4 libevent-dev openssl-dev c-ares-dev
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+        python3 \
+        py3-pip \
+        pipx \
+        build-base \
+        automake \
+        autoconf \
+        libtool \
+        m4 \
+        libevent-dev \
+        openssl-dev \
+        c-ares-dev
 
 # Prevent nag message from pip
 RUN rm -rf /usr/lib/python3.11/EXTERNALLY-MANAGED
@@ -23,9 +35,10 @@ RUN pipx install docutils \
 WORKDIR /bin
 RUN ln -s ../usr/bin/rst2man.py rst2man
 
-FROM alpine:3.21.3
+FROM alpine:3.22.1
 
-RUN apk --update add libevent openssl c-ares
+RUN apk update && apk upgrade && \
+    apk add --no-cache libevent openssl c-ares
 
 RUN adduser --disabled-password pgbouncer \
     && mkdir -p /etc/pgbouncer /var/log/pgbouncer\
