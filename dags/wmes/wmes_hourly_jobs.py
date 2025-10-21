@@ -48,7 +48,7 @@ def wmes_hourly_jobs():
         {
             "office": "lrl",
             "office_group": "lrd",
-            "enabled": False,
+            "enabled": True,
         },
         {
             "office": "lrn",
@@ -63,6 +63,11 @@ def wmes_hourly_jobs():
         {
             "office": "swt",
             "office_group": "swd",
+            "enabled": True,
+        },
+                {
+            "office": "spk",
+            "office_group": "spd",
             "enabled": True,
         },
     ]

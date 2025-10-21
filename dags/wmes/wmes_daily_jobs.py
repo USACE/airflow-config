@@ -36,12 +36,11 @@ def wmes_daily_jobs():
         {"office": "lrl", "office_group": "lrd", "enabled": False},
         {"office": "lrn", "office_group": "lrd", "enabled": False},
         {"office": "lrp", "office_group": "lrd", "enabled": False},
-        {
-            "office": "swt",
-            "office_group": "swd",
+        {"office": "swt", "office_group": "swd",
             "github_branch": "cwbi-restructure",
             "enabled": True,
         },
+        {"office": "spk", "office_group": "spd", "enabled": True},
     ]
 
     # Organize configs by office_group
