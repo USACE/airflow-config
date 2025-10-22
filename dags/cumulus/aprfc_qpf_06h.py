@@ -2,25 +2,26 @@
 Acquire and Process APRFC QPF 06h
 """
 
-import json
-from datetime import datetime, timedelta, timezone
 import calendar
-from bs4 import BeautifulSoup
+import json
 import re
-import requests
+from datetime import datetime, timedelta, timezone
 
+import helpers.cumulus as cumulus
+import requests
 from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
+from bs4 import BeautifulSoup
 from helpers.downloads import s3_file_exists, trigger_download
-
-import helpers.cumulus as cumulus
 
 # Default arguments
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc) - timedelta(hours=36)).replace(minute=0, second=0),
+    "start_date": (datetime.now(timezone.utc) - timedelta(hours=36)).replace(
+        minute=0, second=0
+    ),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -63,8 +64,9 @@ def get_filenames(edate, url):
     links = [node.get("href") for node in soup.find_all("a")]
 
     regex = r"^qpf06f_has_.*_awips_\d{12}_\d{10}f\d{3}\.\d+\.(grb|grb\.gz)$"
-    issue_re = re.compile(r"_awips_(\d{12})")  # Capture the issuance timestamp after 'awips_'
-    
+    issue_re = re.compile(
+        r"_awips_(\d{12})"
+    )  # Capture the issuance timestamp after 'awips_'
 
     # Collect candidates with their issuance timestamp
     candidates = []
