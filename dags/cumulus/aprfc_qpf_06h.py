@@ -126,10 +126,13 @@ def cumulus_aprfc_qpf_06h():
         for filename in filenames:
             url = f"{URL_ROOT}/{filename}"
             s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
-            # Check if the file already exists in S3
-            if s3_file_exists(cumulus.S3_BUCKET, s3_key):
-                print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
-                continue  # Skip to the next file
+            try:
+                # Check if the file already exists in S3
+                if s3_file_exists(cumulus.S3_BUCKET, s3_key):
+                    print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
+                    continue  # Skip to the next file
+            except:
+                print(f'Error checking S3 for {s3_key}')
             print(f"Downloading file: {filename}")
             try:
                 trigger_download(url=url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
