@@ -1,5 +1,5 @@
 # BUILD GO BINARIES
-FROM alpine:3.22.1
+FROM alpine:3.22.2
 
 # Create User; https://github.com/mhart/alpine-node/issues/48
 # NOTE: Using same UID/GID as airflow user in container for shared volume convenience
