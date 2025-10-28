@@ -105,10 +105,11 @@ def get_filenames(edate, url):
 
 @dag(
     default_args=default_args,
-    schedule="21 9,15,19 * * *",
+    schedule="25 * * * *",
     tags=["cumulus", "temp", "QTF", "APRFC"],
     max_active_runs=1,
     max_active_tasks=1,
+    catchup=False,  # Disable backfills
 )
 def cumulus_aprfc_qtf_01h():
     """This pipeline handles download, processing, and derivative product creation for \n
@@ -129,13 +130,6 @@ def cumulus_aprfc_qtf_01h():
         for filename in filenames:
             url = f"{URL_ROOT}/{filename}"
             s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
-            try:
-                # Check if the file already exists in S3
-                if s3_file_exists(cumulus.S3_BUCKET, s3_key):
-                    print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
-                    continue  # Skip to the next file
-            except:
-                print(f'Error checking S3 for {s3_key}')
             print(f"Downloading file: {filename}")
             try:
                 trigger_download(url=url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
