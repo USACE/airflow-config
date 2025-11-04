@@ -19,3 +19,6 @@
 # Airflow Logs Directory
 logs/**
 !logs/readme.md
+
+# env file
+.env
