@@ -1,5 +1,5 @@
 """
-Acquire and Process PRISM Early
+Acquire and Process PRISM Real-time
 """
 
 import json
@@ -15,7 +15,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc)).replace(
+    "start_date": (datetime.now(timezone.utc)-timedelta(days=14)).replace(
         minute=0, second=0
     ),    
     # "start_date": datetime(2021, 11, 9),
@@ -40,7 +40,7 @@ def generate_filename_for_product(product, date):
 @dag(
     default_args=default_args,
     schedule="30 12 * * *",
-    tags=["cumulus"],
+    tags=["cumulus", 'prism'],
     max_active_runs=2,
     max_active_tasks=4,
 )
@@ -55,7 +55,6 @@ def cumulus_prism_early():
     URL_ROOT = f"ftp://prism.nacse.org/daily"
     URL_ROOT = f"https://data.prism.oregonstate.edu/time_series/us/an/4km"
 
-    DAYS_BACK = 190
 
     # Download Tasks
     #################################################
@@ -64,29 +63,27 @@ def cumulus_prism_early():
         product_slug = f"prism-{short_name}-early"
         logical_date = get_current_context()["logical_date"]
         execution_date = logical_date.date()
-        start_date = execution_date - timedelta(days=DAYS_BACK)
         results = []
 
-        for offset in range(DAYS_BACK+1):  # includes today
-            dt = start_date + timedelta(days=offset)
-            file_dir = f'{URL_ROOT}/{short_name}/daily/{dt.strftime("%Y")}'
-            filename = generate_filename_for_product(short_name, dt)
-            s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
-            print(f"Downloading {filename}")
-            try:
-                output = trigger_download(
-                    url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key,
-                )
-                results.append(
-                    {
-                        "datetime": logical_date.isoformat(),
-                        "s3_key": s3_key,
-                        "product_slug": product_slug,
-                        "filename": filename,
-                    }
-                )
-            except:
-                print(f'Error downloading {filename}')
+        dt = execution_date
+        file_dir = f'{URL_ROOT}/{short_name}/daily/{dt.strftime("%Y")}'
+        filename = generate_filename_for_product(short_name, dt)
+        s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
+        print(f"Downloading {filename}")
+        try:
+            output = trigger_download(
+                url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key,
+            )
+            results.append(
+                {
+                    "datetime": logical_date.isoformat(),
+                    "s3_key": s3_key,
+                    "product_slug": product_slug,
+                    "filename": filename,
+                }
+            )
+        except:
+            print(f'Error downloading {filename}')
         return json.dumps(results)
 
     # Notify Tasks
