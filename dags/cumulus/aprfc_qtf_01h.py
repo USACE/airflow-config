@@ -107,8 +107,8 @@ def get_filenames(edate, url):
     default_args=default_args,
     schedule="25 * * * *",
     tags=["cumulus", "temp", "QTF", "APRFC"],
-    max_active_runs=1,
-    max_active_tasks=1,
+    max_active_runs=2,
+    max_active_tasks=4,
     catchup=False,  # Disable backfills
 )
 def cumulus_aprfc_qtf_01h():
