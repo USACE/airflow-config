@@ -29,7 +29,7 @@ default_args_backfill = {
     schedule="30 01 1 * *",  # monthly schedule
     tags=["cumulus", "backfill", 'prism'],
     max_active_runs=1,  # Limit concurrent runs
-    max_active_tasks=6,  # Limit concurrent tasks
+    max_active_tasks=4,  # Limit concurrent tasks
 )
 def cumulus_prism_backfill_por():
     """Backfill historical PRISM data month-by-month."""
