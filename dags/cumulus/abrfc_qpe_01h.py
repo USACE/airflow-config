@@ -36,9 +36,9 @@ default_args = {
 )
 def cumulus_abrfc_qpe_01h():
     """This pipeline handles download, processing, and derivative product creation for \n
-    Arkansas-Red Basin River Forecast Center (ABRFC) 1HR QPE\n
+    ABRFC QPE\n
     URL Dir - https://tgftp.nws.noaa.gov/data/rfc/abrfc/xmrg_qpe/
-    Files matching abrfc_qpe_01hr_YYYYMMDDHHZ.nc - 1 hour\n
+    Files matching abrfc_qpe_01hr_YYYYMMDDHHZ.nc.gz - 1 hour\n
     Note: Delay observed when watching new product timestamp on file at source.
     Example: timestamp said 15:50, but was pushed to server at 16:07
     """
@@ -49,7 +49,7 @@ def cumulus_abrfc_qpe_01h():
     @task()
     def download_raw_qpe():
         logical_date = get_current_context()["logical_date"]
-        filename = f'abrfc_qpe_01hr_{logical_date.strftime("%Y%m%d%H")}Z.nc'
+        filename = f'abrfc_qpe_01hr_{logical_date.strftime("%Y%m%d%H")}Z.nc.gz'
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
         print(f"Downloading file: {filename}")
         trigger_download(
