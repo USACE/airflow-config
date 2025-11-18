@@ -23,7 +23,7 @@ default_args = {
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 6,
+    "retries": 1,
     "retry_delay": timedelta(minutes=30),
 }
 
@@ -43,8 +43,8 @@ def get_filenames(edate):
     default_args=default_args,
     schedule="40 14,5 * * *",
     tags=["cumulus", "precip", "QPE", "APRFC"],
-    max_active_runs=2,
-    max_active_tasks=4,
+    max_active_runs=1,
+    max_active_tasks=1,
 )
 def cumulus_aprfc_qpe_06h():
     """This pipeline handles download, processing, and derivative product creation for \n

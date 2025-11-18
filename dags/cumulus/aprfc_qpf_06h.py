@@ -25,7 +25,7 @@ default_args = {
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 6,
+    "retries": 1,
     "retry_delay": timedelta(minutes=30),
 }
 
@@ -104,8 +104,8 @@ def get_filenames(edate, url):
     default_args=default_args,
     schedule="25 * * * *",
     tags=["cumulus", "precip", "QPF", "APRFC"],
-    max_active_runs=2,
-    max_active_tasks=4,
+    max_active_runs=1,
+    max_active_tasks=1,
     catchup=False,  # Disable backfills
 )
 def cumulus_aprfc_qpf_06h():
@@ -128,9 +128,10 @@ def cumulus_aprfc_qpf_06h():
             url = f"{URL_ROOT}/{filename}"
             s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
             # Check if the file already exists in S3
-            if s3_file_exists(cumulus.S3_BUCKET, s3_key):
-                print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
-                continue  # Skip to the next file
+            # needs infrastructure change to reenable this check
+            #if s3_file_exists(cumulus.S3_BUCKET, s3_key):
+            #    print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
+            #    continue  # Skip to the next file
             print(f"Downloading file: {filename}")
             try:
                 trigger_download(url=url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
