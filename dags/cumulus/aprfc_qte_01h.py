@@ -26,7 +26,7 @@ default_args = {
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 6,
+    "retries": 1,
     "retry_delay": timedelta(minutes=30),
 }
 
@@ -35,8 +35,8 @@ default_args = {
     default_args=default_args,
     tags=["cumulus", "AIRTEMP", "QTE", "APRFC"],
     schedule="45 * * * *",
-    max_active_runs=2,
-    max_active_tasks=4,
+    max_active_runs=1,
+    max_active_tasks=1,
 )
 def cumulus_aprfc_qte_01h():
     """
