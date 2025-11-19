@@ -25,7 +25,7 @@ default_args = {
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 6,
+    "retries": 1,
     "retry_delay": timedelta(minutes=30),
 }
 
@@ -131,9 +131,10 @@ def cumulus_aprfc_qtf_01h():
             url = f"{URL_ROOT}/{filename}"
             s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
             # Check if the file already exists in S3
-            if s3_file_exists(cumulus.S3_BUCKET, s3_key):
-                print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
-                continue  # Skip to the next file
+            #need infrastructure changes to reenable this check
+            #if s3_file_exists(cumulus.S3_BUCKET, s3_key):
+            #    print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
+            #    continue  # Skip to the next file
             print(f"Downloading file: {filename}")
             try:
                 trigger_download(url=url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
