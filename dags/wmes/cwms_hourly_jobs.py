@@ -28,7 +28,7 @@ default_args = {
     max_active_runs=1,
     max_active_tasks=4,
 )
-def wmes_hourly_jobs():
+def cwms_hourly_jobs():
     job_configs = [
         {
             "office": "lrc",
@@ -65,7 +65,7 @@ def wmes_hourly_jobs():
             "office_group": "swd",
             "enabled": True,
         },
-                {
+        {
             "office": "spk",
             "office_group": "spd",
             "enabled": True,
@@ -91,7 +91,7 @@ def wmes_hourly_jobs():
 
                     logical_date = get_current_context()["logical_date"]
                     dag = DagContext.get_current_dag()
-                    job_name = f"wmes-{job_config['office']}-hourly-job-{logical_date.strftime('%Y%m%d-%H%M')}"
+                    job_name = f"cwms-{job_config['office']}-hourly-job-{logical_date.strftime('%Y%m%d-%H%M')}"
                     return batch.batch_operator(
                         dag=dag,
                         task_id=job_name,
@@ -103,8 +103,8 @@ def wmes_hourly_jobs():
                             "command": ["/jobs/bin/hourly.sh"],
                         },
                         job_name=job_name,
-                        job_queue=f"wmes-{job_config['office_group']}-jq",
-                        job_definition=f"wmes-{job_config['office']}-jobs-jobdef",
+                        job_queue=f"cwms-{job_config['office_group']}-jq",
+                        job_definition=f"cwms-{job_config['office']}-jobs-jobdef",
                         local_command=[],  # local docker mock only
                         tags={"Office": job_config["office"]},
                     ).execute({})
@@ -113,4 +113,4 @@ def wmes_hourly_jobs():
                 launch_batch.override(task_id=f"{jc['office']}-jobs")(jc)
 
 
-wmes_jobs_dag = wmes_hourly_jobs()
+cwms_jobs_dag = cwms_hourly_jobs()
