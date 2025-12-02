@@ -28,7 +28,7 @@ default_args = {
     max_active_runs=1,
     max_active_tasks=4,
 )
-def wmes_daily_jobs():
+def cwms_daily_jobs():
     job_configs = [
         {"office": "lrc", "office_group": "lrd", "enabled": False},
         {"office": "lre", "office_group": "lrd", "enabled": False},
@@ -36,7 +36,9 @@ def wmes_daily_jobs():
         {"office": "lrl", "office_group": "lrd", "enabled": False},
         {"office": "lrn", "office_group": "lrd", "enabled": False},
         {"office": "lrp", "office_group": "lrd", "enabled": False},
-        {"office": "swt", "office_group": "swd",
+        {
+            "office": "swt",
+            "office_group": "swd",
             "github_branch": "cwbi-restructure",
             "enabled": True,
         },
@@ -62,15 +64,15 @@ def wmes_daily_jobs():
 
                     logical_date = get_current_context()["logical_date"]
                     dag = DagContext.get_current_dag()
-                    job_name = f"wmes-{job_config['office']}-daily-job-{logical_date.strftime('%Y%m%d-%H%M')}"
+                    job_name = f"cwms-{job_config['office']}-daily-job-{logical_date.strftime('%Y%m%d-%H%M')}"
                     return batch.batch_operator(
                         dag=dag,
                         task_id=job_name,
                         deferrable=True,
                         container_overrides={},
                         job_name=job_name,
-                        job_queue=f"wmes-{job_config['office_group']}-jq",
-                        job_definition=f"wmes-{job_config['office']}-jobs-jobdef",
+                        job_queue=f"cwms-{job_config['office_group']}-jq",
+                        job_definition=f"cwms-{job_config['office']}-jobs-jobdef",
                         local_command=[],  # local docker mock only
                         tags={"Office": job_config["office"]},
                     ).execute({})
@@ -79,4 +81,4 @@ def wmes_daily_jobs():
                 launch_batch.override(task_id=f"{jc['office']}-jobs")(jc)
 
 
-wmes_jobs_dag = wmes_daily_jobs()
+cwms_jobs_dag = cwms_daily_jobs()
