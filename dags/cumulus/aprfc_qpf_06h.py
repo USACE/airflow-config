@@ -30,23 +30,34 @@ default_args = {
 }
 
 
+QPF_REGEX = re.compile(
+    r"^qpf06f_has_"        # literal prefix with underscore
+    r".*?"                 # anything up to _awips_
+    r"_awips_"             
+    r"(\d{12})"            # group 1: 12-digit forecast time (2025121112)
+    r"_"                   
+    r"(\d{10})"            # group 2:  10-digit issuance (202512030603)
+    r"f"
+    r"(\d{3})"             # group 3: forecast hour (192)
+    r"\.grb(?:\.gz)?$"     # .grb or .grb.gz, no extra .digits
+)
+
 def get_latest_files(filenames):
     # Dictionary to store the latest file for each unique timestamp
     latest_files = {}
 
-    # Corrected regular expression
-    pattern = r"^qpf06f_has_.*_awips_(\d{12})_(\d{10}f\d{3})\.\d+\.(grb|grb\.gz)$"
     for filename in filenames:
-        match = re.search(pattern, filename)
-        if match:
-            # Combine the issue timestamp and forecast timestamp as the key
-            issue_timestamp = match.group(1)
-            forecast_timestamp = match.group(2)
-            key = issue_timestamp + "_" + forecast_timestamp
-            # Update the latest file for the key if it's not present or if the current filename is greater
-            if key not in latest_files or filename > latest_files[key]:
-                latest_files[key] = filename
+        m = QPF_REGEX.match(filename)
+        if not m:
+            continue
+        issue_ts    = m.group(2)  # 10-digit issuance
+        base_ts     = m.group(1)  # 12-digit valid/base
+        forecast_hr = m.group(3)  # 3-digit forecast hour
+        key = f"{issue_ts}_{base_ts}_{forecast_hr}"
+        # Update the latest file for the key if it's not present or if the current filename is greater
 
+        if key not in latest_files or filename > latest_files[key]:
+            latest_files[key] = filename
     # Return the list of latest files
     return list(latest_files.values())
 
@@ -63,21 +74,20 @@ def get_filenames(edate, url):
     soup = BeautifulSoup(page.content, "html.parser")
     links = [node.get("href") for node in soup.find_all("a")]
 
-    regex = r"^qpf06f_has_.*_awips_\d{12}_\d{10}f\d{3}\.\d+\.(grb|grb\.gz)$"
-    issue_re = re.compile(
-        r"_awips_(\d{12})"
-    )  # Capture the issuance timestamp after 'awips_'
-
-    # Collect candidates with their issuance timestamp
     candidates = []
     for link in links:
-        if link and re.match(regex, link):
-            m = issue_re.search(link)
-            if m:
-                candidates.append((link, m.group(1)))
-
+        if not link:
+            continue
+        link = link.strip()
+        m = QPF_REGEX.match(link)
+        if m:
+            issue_ts = m.group(1)  # 12-digit issuance after _awips_
+            candidates.append((link, issue_ts))
+            # print(f"DEBUG link: {link}, issue_ts: {issue_ts}")
+    
     # No matching files
     if not candidates:
+        print("DEBUG: no candidates matched QPF_REGEX")
         return []
 
     # Find the latest issuance
@@ -92,6 +102,13 @@ def get_filenames(edate, url):
     if latest_issue_dt > edate or (edate - latest_issue_dt) > timedelta(hours=36):
         # Outside the 36-hour window or in the future: do not download anything
         return []
+    # print(f"DEBUG found {len(candidates)} matching files; latest_issue_str={latest_issue_str}")
+    
+    # print(f"DEBUG latest_issue_str: {latest_issue_str}")
+    # print(f"DEBUG latest_issue_dt: {latest_issue_dt.isoformat()}")
+    # print(f"DEBUG edate (logical_date): {edate.isoformat()}")
+    # print(f"DEBUG age_hours: {(edate - latest_issue_dt).total_seconds() / 3600.0}")
+
 
     # Filter to only files from the latest issuance
     latest_issue_files = [fn for fn, issue in candidates if issue == latest_issue_str]
@@ -128,10 +145,9 @@ def cumulus_aprfc_qpf_06h():
             url = f"{URL_ROOT}/{filename}"
             s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
             # Check if the file already exists in S3
-            # needs infrastructure change to reenable this check
-            #if s3_file_exists(cumulus.S3_BUCKET, s3_key):
-            #    print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
-            #    continue  # Skip to the next file
+            if s3_file_exists(cumulus.S3_BUCKET, s3_key):
+               print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
+               continue  # Skip to the next file
             print(f"Downloading file: {filename}")
             try:
                 trigger_download(url=url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
