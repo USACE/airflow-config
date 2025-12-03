@@ -13,7 +13,7 @@ from string import Template
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
 from airflow.utils.task_group import TaskGroup
-from helpers.downloads import trigger_download
+from helpers.downloads import s3_file_exists, trigger_download
 
 import helpers.cumulus as cumulus
 
@@ -58,6 +58,7 @@ def cumulus_aprfc_qte_01h():
 
     URL_ROOT = "https://nomads.ncep.noaa.gov/pub/data/nccf/com/urma/prod/"
     PRODUCT_SLUG = "aprfc-qte-01h"
+    LOOKBACK_HOURS = 12 # number of hours from runtime to look back for
 
     filename_template = Template("akurma.t${hr_}z.2dvaranl_ndfd_3p0.grb2 ")
 
@@ -66,43 +67,62 @@ def cumulus_aprfc_qte_01h():
     @task()
     def download_raw_qte():
         logical_date = get_current_context()["logical_date"]
-        date_only = logical_date.strftime("%Y%m%d")
+        
 
-        url_suffix = url_suffix_template.substitute(
-            date_=date_only,
-        )
+        results = []
 
-        filename = filename_template.substitute(
-            hr_=logical_date.strftime("%H"),
-        )
+        for offset in range(LOOKBACK_HOURS):
+            ts = logical_date - timedelta(hours=offset)
+            date_only = logical_date.strftime("%Y%m%d")
+            hour_str = ts.strftime("%H")
 
-        file_dir = f"{URL_ROOT}{url_suffix}"
 
-        s3_filename = f"{date_only}_{filename}"
-        s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{s3_filename}"
+            url_suffix = url_suffix_template.substitute(
+                date_=date_only,
+            )
 
-        print(f"Downloading file: {filename}")
+            filename = filename_template.substitute(
+                hr_=logical_date.strftime("%H"),
+            )
 
-        trigger_download(
-            url=f"{file_dir}/{filename}", s3_bucket=s3_bucket, s3_key=s3_key
-        )
-        return json.dumps(
-            {
-                "execution": logical_date.isoformat(),
-                "s3_key": s3_key,
-                "filename": s3_filename,
-            }
-        )
+            file_dir = f"{URL_ROOT}{url_suffix}"
+
+            s3_filename = f"{date_only}_{filename}"
+            s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{s3_filename}"
+
+            if s3_file_exists(cumulus.S3_BUCKET, s3_key):
+               print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
+               continue  # Skip to the next file
+
+            print(f"Downloading file: {filename}")
+
+            try:
+
+                trigger_download(
+                    url=f"{file_dir}/{filename}", s3_bucket=s3_bucket, s3_key=s3_key
+                )
+            except:
+                print(f'Failed downloading {filename}')
+
+            results.append(
+                {
+                    "execution": ts.isoformat(),
+                    "s3_key": s3_key,
+                    "filename": s3_filename,
+                }
+            )
+        return json.dumps(results)
 
     @task()
     def notify_cumulus(payload):
         payload = json.loads(payload)
-        print("Notifying Cumulus: " + payload["filename"])
-        cumulus.notify_acquirablefile(
-            acquirable_id=cumulus.acquirables[PRODUCT_SLUG],
-            datetime=payload["execution"],
-            s3_key=payload["s3_key"],
-        )
+        for item in payload:
+            print("Notifying Cumulus: " + item["filename"])
+            cumulus.notify_acquirablefile(
+                acquirable_id=cumulus.acquirables[PRODUCT_SLUG],
+                datetime=item["execution"],
+                s3_key=item["s3_key"],
+            )
 
     notify_cumulus(download_raw_qte())
 
