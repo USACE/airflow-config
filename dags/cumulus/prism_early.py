@@ -61,7 +61,7 @@ def cumulus_prism_early():
     @task()
     def download_raw_prism_early(short_name='ppt'):
         product_slug = f"prism-{short_name}-early"
-        logical_date = get_current_context()["logical_date"]
+        logical_date = get_current_context()["logical_date"]-timedelta(hours=24)
         execution_date = logical_date.date()
         results = []
 
