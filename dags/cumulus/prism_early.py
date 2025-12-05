@@ -61,7 +61,7 @@ def cumulus_prism_early():
     @task()
     def download_raw_prism_early(short_name='ppt'):
         product_slug = f"prism-{short_name}-early"
-        logical_date = get_current_context()["logical_date"]
+        logical_date = get_current_context()["logical_date"]-timedelta(hours=24)
         execution_date = logical_date.date()
         results = []
 
@@ -70,20 +70,19 @@ def cumulus_prism_early():
         filename = generate_filename_for_product(short_name, dt)
         s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
         print(f"Downloading {filename}")
-        try:
-            output = trigger_download(
-                url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key,
-            )
-            results.append(
-                {
-                    "datetime": logical_date.isoformat(),
-                    "s3_key": s3_key,
-                    "product_slug": product_slug,
-                    "filename": filename,
-                }
-            )
-        except:
-            print(f'Error downloading {filename}')
+
+        output = trigger_download(
+            url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key,
+        )
+        results.append(
+            {
+                "datetime": logical_date.isoformat(),
+                "s3_key": s3_key,
+                "product_slug": product_slug,
+                "filename": filename,
+            }
+        )
+
         return json.dumps(results)
 
     # Notify Tasks
