@@ -20,7 +20,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc) - timedelta(hours=48)).replace(
+    "start_date": (datetime.now(timezone.utc) - timedelta(hours=72)).replace(
         minute=0, second=0
     ),
     "catchup_by_default": False,
@@ -82,7 +82,7 @@ def cumulus_aprfc_qte_01h():
             )
 
             filename = filename_template.substitute(
-                hr_=logical_date.strftime("%H"),
+                hr_=hour_str,
             )
 
             file_dir = f"{URL_ROOT}{url_suffix}"
@@ -94,7 +94,7 @@ def cumulus_aprfc_qte_01h():
                print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
                continue  # Skip to the next file
 
-            print(f"Downloading file: {filename}")
+            print(f"Downloading file: {url_suffix}/{filename}")
 
             try:
 
