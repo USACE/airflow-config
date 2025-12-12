@@ -15,7 +15,7 @@ import helpers.cumulus as cumulus
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": (datetime.now(timezone.utc)-timedelta(days=2)).replace(
+    "start_date": (datetime.now(timezone.utc)-timedelta(days=14)).replace(
         minute=0, second=0
     ),    
     # "start_date": datetime(2021, 11, 9),
