@@ -23,7 +23,7 @@ default_args = {
     "start_date": (datetime.now(timezone.utc) - timedelta(hours=72)).replace(
         minute=0, second=0
     ),
-    "catchup_by_default": False,
+    "catchup": True,
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 1,
@@ -35,8 +35,8 @@ default_args = {
     default_args=default_args,
     tags=["cumulus", "AIRTEMP", "QTE", "APRFC"],
     schedule="45 * * * *",
-    max_active_runs=1,
-    max_active_tasks=1,
+    max_active_runs=5,
+    max_active_tasks=5,
 )
 def cumulus_aprfc_qte_01h():
     """
@@ -60,19 +60,19 @@ def cumulus_aprfc_qte_01h():
     PRODUCT_SLUG = "aprfc-qte-01h"
     LOOKBACK_HOURS = 12 # number of hours from runtime to look back for
 
-    filename_template = Template("akurma.t${hr_}z.2dvaranl_ndfd_3p0.grb2 ")
+    filename_template = Template("akurma.t${hr_}z.2dvaranl_ndfd_3p0.grb2")
 
     url_suffix_template = Template("akurma.${date_}")
 
     @task()
     def download_raw_qte():
         logical_date = get_current_context()["logical_date"]
-        
+        anchor = get_current_context()["data_interval_end"].replace(minute=0, second=0, microsecond=0)
 
         results = []
 
         for offset in range(LOOKBACK_HOURS):
-            ts = logical_date - timedelta(hours=offset)
+            ts = anchor - timedelta(hours=1 + offset)  # last complete hour, then look back
             date_only = logical_date.strftime("%Y%m%d")
             hour_str = ts.strftime("%H")
 
