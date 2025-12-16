@@ -73,7 +73,7 @@ def cumulus_aprfc_qte_01h():
 
         for offset in range(LOOKBACK_HOURS):
             ts = anchor - timedelta(hours=1 + offset)  # last complete hour, then look back
-            date_only = logical_date.strftime("%Y%m%d")
+            date_only = ts.strftime("%Y%m%d")
             hour_str = ts.strftime("%H")
 
 
