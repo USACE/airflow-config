@@ -35,8 +35,8 @@ default_args = {
     default_args=default_args,
     tags=["cumulus", "AIRTEMP", "QTE", "APRFC"],
     schedule="45 * * * *",
-    max_active_runs=5,
-    max_active_tasks=5,
+    max_active_runs=2,
+    max_active_tasks=4,
 )
 def cumulus_aprfc_qte_01h():
     """
