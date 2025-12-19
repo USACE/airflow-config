@@ -9,7 +9,7 @@ import calendar
 from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
-from helpers.downloads import trigger_download
+from helpers.downloads import s3_file_exists, trigger_download
 
 import helpers.cumulus as cumulus
 
@@ -65,6 +65,9 @@ def cumulus_aprfc_qpe_06h():
             url = f"{URL_ROOT}/{filename}"
             filename = filename.split("/")[1]
             s3_key = f"{key_prefix}/{PRODUCT_SLUG}/{filename}"
+            if s3_file_exists(cumulus.S3_BUCKET, s3_key):
+               print(f"Skipping existing S3 object: s3://{cumulus.S3_BUCKET}/{s3_key}")
+               continue  # Skip to the next file
             print(f"Downloading file: {filename}")
             try:
                 trigger_download(url=url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
