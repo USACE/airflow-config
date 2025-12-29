@@ -55,8 +55,8 @@ ARG PYTHON_BASE_IMAGE="python:3.12-slim-bookworm"
 # Also use `force pip` label on your PR to swap all places we use `uv` to `pip`
 # ARG AIRFLOW_PIP_VERSION=24.3.1
 # ARG AIRFLOW_PIP_VERSION="git+https://github.com/pypa/pip.git@main"
-#ARG AIRFLOW_UV_VERSION=0.5.11
-ARG AIRFLOW_USE_UV="true"
+ARG AIRFLOW_UV_VERSION=0.5.11
+ARG AIRFLOW_USE_UV="false"
 ARG UV_HTTP_TIMEOUT="300"
 ARG AIRFLOW_IMAGE_REPOSITORY="https://github.com/apache/airflow"
 ARG AIRFLOW_IMAGE_README_URL="https://raw.githubusercontent.com/apache/airflow/main/docs/docker-stack/README.md"
