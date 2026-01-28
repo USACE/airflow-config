@@ -31,14 +31,19 @@ default_args = {
 def cwms_hourly_jobs():
     job_configs = [
         {
+            "office": "hec",
+            "office_group": "iwr",
+            "enabled": True,
+        },
+        {
             "office": "lrc",
             "office_group": "lrd",
-            "enabled": False,
+            "enabled": True,
         },
         {
             "office": "lre",
             "office_group": "lrd",
-            "enabled": False,
+            "enabled": True,
         },
         {
             "office": "lrh",
@@ -53,12 +58,12 @@ def cwms_hourly_jobs():
         {
             "office": "lrn",
             "office_group": "lrd",
-            "enabled": False,
+            "enabled": True,
         },
         {
             "office": "lrp",
             "office_group": "lrd",
-            "enabled": False,
+            "enabled": True,
         },
         {
             "office": "swt",
@@ -66,10 +71,120 @@ def cwms_hourly_jobs():
             "enabled": True,
         },
         {
+            "office": "swf",
+            "office_group": "swd",
+            "enabled": True,
+        },
+        {
+            "office": "swg",
+            "office_group": "swd",
+            "enabled": True,
+        },
+        {
+            "office": "swl",
+            "office_group": "swd",
+            "enabled": True,
+        },
+        {
+            "office": "nab",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nae",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nao",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nap",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nwdp",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "nwdm",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "mvk",
+            "office_group": "nvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvm",
+            "office_group": "nvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvm",
+            "office_group": "nvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvn",
+            "office_group": "nvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvp",
+            "office_group": "nvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvr",
+            "office_group": "nvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvs",
+            "office_group": "nvd",
+            "enabled": True,
+        },
+        {
             "office": "spk",
             "office_group": "spd",
             "enabled": True,
         },
+        {
+            "office": "spa",
+            "office_group": "spd",
+            "enabled": True,
+        },
+        {
+            "office": "spl",
+            "office_group": "spd",
+            "enabled": True,
+        },
+        {
+            "office": "saj",
+            "office_group": "sad",
+            "enabled": True,
+        },
+        {
+            "office": "sam",
+            "office_group": "sad",
+            "enabled": True,
+        },
+        {
+            "office": "sas",
+            "office_group": "sad",
+            "enabled": True,
+        },
+        {
+            "office": "saw",
+            "office_group": "sad",
+            "enabled": True,
+        }
     ]
 
     # Organize configs by office_group
