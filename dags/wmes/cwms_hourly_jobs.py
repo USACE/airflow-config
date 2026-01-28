@@ -106,7 +106,17 @@ def cwms_hourly_jobs():
             "enabled": True,
         },
         {
-            "office": "nwdp",
+            "office": "nws",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "nwp",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "nww",
             "office_group": "nwd",
             "enabled": True,
         },
@@ -117,37 +127,32 @@ def cwms_hourly_jobs():
         },
         {
             "office": "mvk",
-            "office_group": "nvd",
+            "office_group": "mvd",
             "enabled": True,
         },
         {
             "office": "mvm",
-            "office_group": "nvd",
-            "enabled": True,
-        },
-        {
-            "office": "mvm",
-            "office_group": "nvd",
+            "office_group": "mvd",
             "enabled": True,
         },
         {
             "office": "mvn",
-            "office_group": "nvd",
+            "office_group": "mvd",
             "enabled": True,
         },
         {
             "office": "mvp",
-            "office_group": "nvd",
+            "office_group": "mvd",
             "enabled": True,
         },
         {
             "office": "mvr",
-            "office_group": "nvd",
+            "office_group": "mvd",
             "enabled": True,
         },
         {
             "office": "mvs",
-            "office_group": "nvd",
+            "office_group": "mvd",
             "enabled": True,
         },
         {
