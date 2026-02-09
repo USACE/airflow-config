@@ -95,6 +95,7 @@ def ExpandLocations(df: DataFrame) -> DataFrame:
 def delete_location(
     location_id: str,
     office_id: Optional[str] = None,
+    cascade_delete: Optional[bool] = False,
 ) -> None:
     """
     Deletes location data with the given ID and office ID.
@@ -105,6 +106,8 @@ def delete_location(
             The ID of the office that the data belongs to.
         loc_ids : str
             The ID of the location that the data belongs to.
+        cascade_delete: bool
+            Whether to delete all data associated with location.
 
     Returns
     -------
@@ -119,12 +122,13 @@ def delete_location(
     endpoint = f"locations/{location_id}"
     params = {
         "office": office_id,
+        "cascade-delete": cascade_delete,
     }
 
     return api.delete(endpoint, params=params)
 
 
-def store_location(data: JSON) -> None:
+def store_location(data: JSON, fail_if_exists: bool = True) -> None:
     """
     This method is used to store and update location's data through CWMS Data API.
 
@@ -133,6 +137,10 @@ def store_location(data: JSON) -> None:
         data : dict
             A dictionary representing the JSON data to be stored.
             If the `data` value is None, a `ValueError` will be raised.
+        fail_if_exists : bool, optional
+            A boolean value indicating whether to fail if the outlet already exists.
+            Default is True.
+
 
     Returns
     -------
@@ -144,8 +152,8 @@ def store_location(data: JSON) -> None:
         raise ValueError("Storing location requires a JSON data dictionary")
 
     endpoint = "locations"
-
-    return api.post(endpoint, data)
+    params = {"fail-if-exists": fail_if_exists}
+    return api.post(endpoint, data, params=params)
 
 
 def update_location(location_id: str, data: JSON) -> None:

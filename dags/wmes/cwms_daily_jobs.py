@@ -30,19 +30,166 @@ default_args = {
 )
 def cwms_daily_jobs():
     job_configs = [
-        {"office": "lrc", "office_group": "lrd", "enabled": False},
-        {"office": "lre", "office_group": "lrd", "enabled": False},
-        {"office": "lrh", "office_group": "lrd", "enabled": False},
-        {"office": "lrl", "office_group": "lrd", "enabled": False},
-        {"office": "lrn", "office_group": "lrd", "enabled": False},
-        {"office": "lrp", "office_group": "lrd", "enabled": False},
+        {
+            "office": "hec",
+            "office_group": "iwr",
+            "enabled": True,
+        },
+        {
+            "office": "lrc",
+            "office_group": "lrd",
+            "enabled": True,
+        },
+        {
+            "office": "lre",
+            "office_group": "lrd",
+            "enabled": True,
+        },
+        {
+            "office": "lrh",
+            "office_group": "lrd",
+            "enabled": True,
+        },
+        {
+            "office": "lrl",
+            "office_group": "lrd",
+            "enabled": True,
+        },
+        {
+            "office": "lrn",
+            "office_group": "lrd",
+            "enabled": True,
+        },
+        {
+            "office": "lrp",
+            "office_group": "lrd",
+            "enabled": True,
+        },
         {
             "office": "swt",
             "office_group": "swd",
-            "github_branch": "cwbi-restructure",
             "enabled": True,
         },
-        {"office": "spk", "office_group": "spd", "enabled": True},
+        {
+            "office": "swf",
+            "office_group": "swd",
+            "enabled": True,
+        },
+        {
+            "office": "swg",
+            "office_group": "swd",
+            "enabled": True,
+        },
+        {
+            "office": "swl",
+            "office_group": "swd",
+            "enabled": True,
+        },
+        {
+            "office": "nab",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nae",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nao",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nap",
+            "office_group": "nad",
+            "enabled": True,
+        },
+        {
+            "office": "nws",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "nwp",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "nww",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "nwdm",
+            "office_group": "nwd",
+            "enabled": True,
+        },
+        {
+            "office": "mvk",
+            "office_group": "mvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvm",
+            "office_group": "mvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvn",
+            "office_group": "mvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvp",
+            "office_group": "mvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvr",
+            "office_group": "mvd",
+            "enabled": True,
+        },
+        {
+            "office": "mvs",
+            "office_group": "mvd",
+            "enabled": True,
+        },
+        {
+            "office": "spk",
+            "office_group": "spd",
+            "enabled": True,
+        },
+        {
+            "office": "spa",
+            "office_group": "spd",
+            "enabled": True,
+        },
+        {
+            "office": "spl",
+            "office_group": "spd",
+            "enabled": True,
+        },
+        {
+            "office": "saj",
+            "office_group": "sad",
+            "enabled": True,
+        },
+        {
+            "office": "sam",
+            "office_group": "sad",
+            "enabled": True,
+        },
+        {
+            "office": "sas",
+            "office_group": "sad",
+            "enabled": True,
+        },
+        {
+            "office": "saw",
+            "office_group": "sad",
+            "enabled": True,
+        }
     ]
 
     # Organize configs by office_group

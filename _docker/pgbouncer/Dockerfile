@@ -1,54 +1,62 @@
-# Using https://github.com/brainsam/pgbouncer as a starting point
-FROM alpine:3.22.1 AS build_stage
+### BUILD STAGE
+FROM chainguard/wolfi-base:latest AS build
 
 ARG PGBOUNCER_VERSION=1.24.1
 ARG PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_24_1/pgbouncer-1.24.1.tar.gz
 
-WORKDIR /
-# python3, py3-pip, pip install docutils meets pandoc requirement for pgbouncer 
-RUN apk update && apk upgrade && \
-    apk add --no-cache \
-        python3 \
-        py3-pip \
-        pipx \
-        build-base \
-        automake \
-        autoconf \
-        libtool \
-        m4 \
-        libevent-dev \
-        openssl-dev \
-        c-ares-dev
+WORKDIR /build
 
-# Prevent nag message from pip
-RUN rm -rf /usr/lib/python3.11/EXTERNALLY-MANAGED
+# Install build dependencies
+RUN apk update && apk add --no-cache \
+    build-base \
+    automake \
+    autoconf \
+    libtool \
+    m4 \
+    wget \
+    python3 \
+    py3-docutils \
+    libevent-dev \
+    openssl-dev \
+    c-ares-dev \
+    ca-certificates
 
-RUN pipx install docutils \
-    && wget ${PGBOUNCER_DOWNLOAD_URL} \
+# Fetch and build pgbouncer
+RUN wget ${PGBOUNCER_DOWNLOAD_URL} \
     && tar zxf pgbouncer-${PGBOUNCER_VERSION}.tar.gz \
-    && rm pgbouncer-${PGBOUNCER_VERSION}.tar.gz \
-    && cd /pgbouncer-${PGBOUNCER_VERSION}/ \
-    && ./configure --with-cares --prefix=/pgbouncer \
+    && cd pgbouncer-${PGBOUNCER_VERSION} \
+    && ./configure \
+        --with-cares \
+        --prefix=/pgbouncer \
     && make \
     && make install
 
-WORKDIR /bin
-RUN ln -s ../usr/bin/rst2man.py rst2man
+### RUNTIME STAGE
+FROM chainguard/wolfi-base:latest
 
-FROM alpine:3.22.1
+# Runtime deps only
+RUN apk update && apk add --no-cache \
+    libevent \
+    openssl \
+    c-ares \
+    ca-certificates
 
-RUN apk update && apk upgrade && \
-    apk add --no-cache libevent openssl c-ares
-
-RUN adduser --disabled-password pgbouncer \
-    && mkdir -p /etc/pgbouncer /var/log/pgbouncer\
+# Create pgbouncer user
+RUN addgroup -S pgbouncer \
+    && adduser -S -G pgbouncer pgbouncer \
+    && mkdir -p /etc/pgbouncer /var/log/pgbouncer \
     && chown pgbouncer:pgbouncer /etc/pgbouncer /var/log/pgbouncer \
     && chmod 700 /etc/pgbouncer /var/log/pgbouncer
-WORKDIR /
-COPY --from=build_stage /pgbouncer /pgbouncer
+
+# Copy compiled artifacts
+COPY --from=build /pgbouncer /pgbouncer
 COPY entrypoint.sh /entrypoint.sh
+
 RUN chmod 750 /entrypoint.sh \
     && chown root:pgbouncer /entrypoint.sh
+
 USER pgbouncer
+WORKDIR /
+
 ENTRYPOINT ["/entrypoint.sh"]
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
