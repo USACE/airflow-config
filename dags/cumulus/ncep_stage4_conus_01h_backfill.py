@@ -33,17 +33,33 @@ def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
         existing_size = os.path.getsize(dest_path) if os.path.exists(dest_path) else 0
         headers = {"Range": f"bytes={existing_size}-"} if existing_size > 0 else {}
 
-        logging.info(f"Download attempt {attempt}/{max_attempts}, offset={existing_size} bytes: {url}")
-        resp = requests.get(url, headers=headers, stream=True, timeout=120)
+        logging.info(
+            f"Download attempt {attempt}/{max_attempts}, offset={existing_size} bytes: {url}"
+        )
+        try:
+            resp = requests.get(
+                url,
+                headers=headers,
+                stream=True,
+                timeout=(30, 300),  # (connect timeout, read timeout) in seconds
+            )
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            wait = 30 * attempt
+            logging.warning(
+                f"Connection error on attempt {attempt}: {e}, retrying in {wait}s..."
+            )
+            time.sleep(wait)
+            continue
 
         if resp.status_code == 416:
             logging.info("416 Range Not Satisfiable – file already complete")
             return
 
-        # Retry on 5xx server errors with backoff
         if resp.status_code >= 500:
             wait = 30 * attempt
-            logging.warning(f"Server error {resp.status_code} on attempt {attempt}, waiting {wait}s before retry...")
+            logging.warning(
+                f"Server error {resp.status_code} on attempt {attempt}, waiting {wait}s..."
+            )
             time.sleep(wait)
             continue
 
@@ -63,7 +79,9 @@ def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
         if final_size >= expected:
             logging.info(f"Download complete: {final_size} bytes")
             return
-        logging.warning(f"Incomplete on attempt {attempt}: {final_size} < {expected}, retrying...")
+        logging.warning(
+            f"Incomplete on attempt {attempt}: {final_size} < {expected}, retrying..."
+        )
 
     raise RuntimeError(f"Failed to download {url} after {max_attempts} attempts")
 
@@ -102,29 +120,41 @@ def process_one_month(yyyymm: str) -> list:
                     logging.info(f"  Skipping non-file: {daily_name}")
                     continue
 
-                with tarfile.open(fileobj=io.BytesIO(daily_fileobj.read())) as daily_tar:
+                with tarfile.open(
+                    fileobj=io.BytesIO(daily_fileobj.read())
+                ) as daily_tar:
                     for hourly_member in daily_tar.getmembers():
                         inner_name = hourly_member.name
                         filename = os.path.basename(inner_name)
 
                         # GRIB2 post-cutoff
-                        if filename.startswith("st4_conus.") and filename.endswith(".01h.grb2"):
+                        if filename.startswith("st4_conus.") and filename.endswith(
+                            ".01h.grb2"
+                        ):
                             dt_str = filename.split(".")[1]
-                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
+                                tzinfo=timezone.utc
+                            )
                             if file_dt < CUTOFF:
                                 continue
                             hourly_fileobj = daily_tar.extractfile(hourly_member)
                             if hourly_fileobj is None:
                                 raise ValueError(f"Could not extract {inner_name}")
-                            s3_key = upload_bytes_via_cumulus(filename, hourly_fileobj.read())
+                            s3_key = upload_bytes_via_cumulus(
+                                filename, hourly_fileobj.read()
+                            )
                             logging.info(f"    Uploaded GRIB2: {filename}")
-                            s3_keys.append({"datetime": file_dt.isoformat(), "s3_key": s3_key})
+                            s3_keys.append(
+                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
+                            )
                             continue
 
                         # GRIB1 pre-cutoff (gzipped)
                         if filename.startswith("ST4.") and filename.endswith(".01h.gz"):
                             dt_str = filename.split(".")[1]
-                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
+                                tzinfo=timezone.utc
+                            )
                             if file_dt >= CUTOFF:
                                 continue
                             gz_fileobj = daily_tar.extractfile(hourly_member)
@@ -134,7 +164,9 @@ def process_one_month(yyyymm: str) -> list:
                             out_name = f"st4_conus.{dt_str}.01h"
                             s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
                             logging.info(f"    Uploaded GRIB1: {out_name}")
-                            s3_keys.append({"datetime": file_dt.isoformat(), "s3_key": s3_key})
+                            s3_keys.append(
+                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
+                            )
                             continue
 
     if not s3_keys:
@@ -160,10 +192,14 @@ default_args = {
     default_args=default_args,
     schedule=None,
     params={
-        "start_year":  Param(2002, type="integer", description="First year to backfill"),
-        "start_month": Param(1,    type="integer", description="First month (1-12)"),
-        "end_year":    Param(2002, type="integer", description="Last year to backfill (inclusive)"),
-        "end_month":   Param(12,   type="integer", description="Last month (1-12, inclusive)"),
+        "start_year": Param(2002, type="integer", description="First year to backfill"),
+        "start_month": Param(1, type="integer", description="First month (1-12)"),
+        "end_year": Param(
+            2002, type="integer", description="Last year to backfill (inclusive)"
+        ),
+        "end_month": Param(
+            12, type="integer", description="Last month (1-12, inclusive)"
+        ),
     },
     tags=["cumulus", "precip", "QPE", "CONUS", "stage4", "NCEP", "backfill"],
     max_active_runs=1,
@@ -178,7 +214,7 @@ def cumulus_ncep_stage4_conus_01h_backfill():
         ti = context["ti"]
 
         start = datetime(p["start_year"], p["start_month"], 1)
-        end   = datetime(p["end_year"],   p["end_month"],   1)
+        end = datetime(p["end_year"], p["end_month"], 1)
 
         if start > end:
             raise ValueError(f"start ({start:%Y-%m}) is after end ({end:%Y-%m})")
@@ -234,7 +270,6 @@ def cumulus_ncep_stage4_conus_01h_backfill():
             raise RuntimeError(
                 f"{len(failed_months)} month(s) failed and need re-running: {failed_months}"
             )
-
 
     backfill_all_months()
 
