@@ -15,7 +15,7 @@ __all__: list[str] = [
     "exporters",
 ]
 
-from . import import_validator
+from shef import import_validator
 
 import_validator.install()
 from shef import shef_parser
