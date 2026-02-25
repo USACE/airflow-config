@@ -14,7 +14,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlunparse
-import subprocess  
+import subprocess
 
 import requests
 from airflow.decorators import dag, task
@@ -25,7 +25,9 @@ import helpers.cumulus as cumulus
 from helpers.downloads import trigger_download
 
 
-CUTOFF = datetime(2013, 7, 25, tzinfo=timezone.utc)
+CUTOFF_LEGACY = datetime(2013, 7, 25, tzinfo=timezone.utc)  # .Z  → .gz  transition
+CUTOFF_GRB2 = datetime(2020, 7, 20, tzinfo=timezone.utc)  # .gz → .grb2 transition
+
 URL_ROOT = "https://osdf-director.osg-htc.org/ncar/gdex/d507005/stage4"
 PRODUCT_SLUG = "ncep-stage4-mosaic-01h"
 
@@ -122,7 +124,7 @@ def process_one_month(yyyymm: str) -> list:
                         inner_name = hourly_member.name
                         filename = os.path.basename(inner_name)
 
-                        # ── GRIB2 post-cutoff (.grb2) ────────────────────────────────────────
+                        # ── Era 3: GRIB2, post-2020-07-20 (.grb2) ────────────────────────────
                         if filename.startswith("st4_conus.") and filename.endswith(
                             ".01h.grb2"
                         ):
@@ -130,7 +132,7 @@ def process_one_month(yyyymm: str) -> list:
                             file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
                                 tzinfo=timezone.utc
                             )
-                            if file_dt < CUTOFF:
+                            if file_dt < CUTOFF_GRB2:
                                 continue
                             hourly_fileobj = daily_tar.extractfile(hourly_member)
                             if hourly_fileobj is None:
@@ -144,13 +146,13 @@ def process_one_month(yyyymm: str) -> list:
                             )
                             continue
 
-                        # ── GRIB1 pre-cutoff: gzip (.01h.gz) ─────────────────────────────────
+                        # ── Era 2: GRIB1 gzip, 2013-07-25 to 2020-07-20 (.gz) ───────────────
                         if filename.startswith("ST4.") and filename.endswith(".01h.gz"):
                             dt_str = filename.split(".")[1]
                             file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
                                 tzinfo=timezone.utc
                             )
-                            if file_dt >= CUTOFF:
+                            if file_dt < CUTOFF_LEGACY or file_dt >= CUTOFF_GRB2:
                                 continue
                             gz_fileobj = daily_tar.extractfile(hourly_member)
                             if gz_fileobj is None:
@@ -164,13 +166,13 @@ def process_one_month(yyyymm: str) -> list:
                             )
                             continue
 
-                        # ── GRIB1 pre-cutoff: Unix compress (.01h.Z) ─────────────────────────
+                        # ── Era 1: GRIB1 Unix-compress, pre-2013-07-25 (.Z) ─────────────────
                         if filename.startswith("ST4.") and filename.endswith(".01h.Z"):
                             dt_str = filename.split(".")[1]
                             file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
                                 tzinfo=timezone.utc
                             )
-                            if file_dt >= CUTOFF:
+                            if file_dt >= CUTOFF_LEGACY:
                                 continue
                             z_fileobj = daily_tar.extractfile(hourly_member)
                             if z_fileobj is None:
@@ -181,31 +183,31 @@ def process_one_month(yyyymm: str) -> list:
                                 capture_output=True,
                                 check=True,
                             )
-                            grib_bytes = result.stdout
                             out_name = f"st4_conus.{dt_str}.01h"
-                            s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
+                            s3_key = upload_bytes_via_cumulus(out_name, result.stdout)
                             logging.info(f"    Uploaded GRIB1 (.Z): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
                             continue
 
-                        # ── GRIB1 pre-cutoff: uncompressed (.01h, no suffix) ─────────────────
+                        # ── Era 1: GRIB1 uncompressed, pre-2013-07-25 (no suffix) ────────────
                         if filename.startswith("ST4.") and filename.endswith(".01h"):
                             dt_str = filename.split(".")[1]
                             file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
                                 tzinfo=timezone.utc
                             )
-                            if file_dt >= CUTOFF:
+                            if file_dt >= CUTOFF_LEGACY:
                                 continue
                             raw_fileobj = daily_tar.extractfile(hourly_member)
                             if raw_fileobj is None:
                                 raise ValueError(
                                     f"Could not extract uncompressed {inner_name}"
                                 )
-                            grib_bytes = raw_fileobj.read()
                             out_name = f"st4_conus.{dt_str}.01h"
-                            s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
+                            s3_key = upload_bytes_via_cumulus(
+                                out_name, raw_fileobj.read()
+                            )
                             logging.info(f"    Uploaded GRIB1 (raw): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
