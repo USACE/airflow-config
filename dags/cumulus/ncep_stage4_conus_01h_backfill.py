@@ -14,6 +14,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlunparse
+import subprocess
 
 import requests
 from airflow.decorators import dag, task
@@ -23,26 +24,26 @@ from airflow.operators.python import get_current_context
 import helpers.cumulus as cumulus
 from helpers.downloads import trigger_download
 
-CUTOFF = datetime(2020, 7, 20, tzinfo=timezone.utc)
+
+CUTOFF_LEGACY = datetime(2013, 7, 25, tzinfo=timezone.utc)  # .Z  → .gz  transition
+CUTOFF_GRB2 = datetime(2020, 7, 20, tzinfo=timezone.utc)  # .gz → .grb2 transition
+
 URL_ROOT = "https://osdf-director.osg-htc.org/ncar/gdex/d507005/stage4"
 PRODUCT_SLUG = "ncep-stage4-mosaic-01h"
+
+
+# ── helpers ───────────────────────────────────────────────────────
 
 
 def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
     for attempt in range(1, max_attempts + 1):
         existing_size = os.path.getsize(dest_path) if os.path.exists(dest_path) else 0
         headers = {"Range": f"bytes={existing_size}-"} if existing_size > 0 else {}
-
         logging.info(
             f"Download attempt {attempt}/{max_attempts}, offset={existing_size} bytes: {url}"
         )
         try:
-            resp = requests.get(
-                url,
-                headers=headers,
-                stream=True,
-                timeout=(30, 300),  # (connect timeout, read timeout) in seconds
-            )
+            resp = requests.get(url, headers=headers, stream=True, timeout=(30, 300))
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             wait = 30 * attempt
             logging.warning(
@@ -54,7 +55,6 @@ def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
         if resp.status_code == 416:
             logging.info("416 Range Not Satisfiable – file already complete")
             return
-
         if resp.status_code >= 500:
             wait = 30 * attempt
             logging.warning(
@@ -64,7 +64,6 @@ def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
             continue
 
         resp.raise_for_status()
-
         mode = "ab" if existing_size > 0 else "wb"
         with open(dest_path, mode) as f:
             for chunk in resp.iter_content(chunk_size=chunk_size):
@@ -90,7 +89,6 @@ def upload_bytes_via_cumulus(filename: str, content: bytes) -> str:
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp.write(content)
         tmp_path = tmp.name
-
     file_url = urlunparse(("file", "", tmp_path, "", "", ""))
     s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
     trigger_download(url=file_url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
@@ -98,13 +96,12 @@ def upload_bytes_via_cumulus(filename: str, content: bytes) -> str:
 
 
 def process_one_month(yyyymm: str) -> list:
-    """Download, extract, and upload all hourly files for one YYYYMM. Returns list of s3_key dicts."""
+    """Download, extract, and upload all hourly files for one YYYYMM."""
     monthly_name = f"stage4.{yyyymm}.tar"
     monthly_url = f"{URL_ROOT}/{monthly_name}"
     logging.info(f"--- Starting month {yyyymm}: {monthly_url}")
 
     s3_keys = []
-
     with tempfile.TemporaryDirectory() as tmpdir:
         monthly_path = os.path.join(tmpdir, monthly_name)
         download_with_resume(monthly_url, monthly_path)
@@ -127,7 +124,7 @@ def process_one_month(yyyymm: str) -> list:
                         inner_name = hourly_member.name
                         filename = os.path.basename(inner_name)
 
-                        # GRIB2 post-cutoff
+                        # ── Era 3: GRIB2, post-2020-07-20 (.grb2) ────────────────────────────
                         if filename.startswith("st4_conus.") and filename.endswith(
                             ".01h.grb2"
                         ):
@@ -135,7 +132,7 @@ def process_one_month(yyyymm: str) -> list:
                             file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
                                 tzinfo=timezone.utc
                             )
-                            if file_dt < CUTOFF:
+                            if file_dt < CUTOFF_GRB2:
                                 continue
                             hourly_fileobj = daily_tar.extractfile(hourly_member)
                             if hourly_fileobj is None:
@@ -149,13 +146,13 @@ def process_one_month(yyyymm: str) -> list:
                             )
                             continue
 
-                        # GRIB1 pre-cutoff (gzipped)
+                        # ── Era 2: GRIB1 gzip, 2013-07-25 to 2020-07-20 (.gz) ───────────────
                         if filename.startswith("ST4.") and filename.endswith(".01h.gz"):
                             dt_str = filename.split(".")[1]
                             file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
                                 tzinfo=timezone.utc
                             )
-                            if file_dt >= CUTOFF:
+                            if file_dt < CUTOFF_LEGACY or file_dt >= CUTOFF_GRB2:
                                 continue
                             gz_fileobj = daily_tar.extractfile(hourly_member)
                             if gz_fileobj is None:
@@ -163,7 +160,55 @@ def process_one_month(yyyymm: str) -> list:
                             grib_bytes = gzip.decompress(gz_fileobj.read())
                             out_name = f"st4_conus.{dt_str}.01h"
                             s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
-                            logging.info(f"    Uploaded GRIB1: {out_name}")
+                            logging.info(f"    Uploaded GRIB1 (gz): {out_name}")
+                            s3_keys.append(
+                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
+                            )
+                            continue
+
+                        # ── Era 1: GRIB1 Unix-compress, pre-2013-07-25 (.Z) ─────────────────
+                        if filename.startswith("ST4.") and filename.endswith(".01h.Z"):
+                            dt_str = filename.split(".")[1]
+                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
+                                tzinfo=timezone.utc
+                            )
+                            if file_dt >= CUTOFF_LEGACY:
+                                continue
+                            z_fileobj = daily_tar.extractfile(hourly_member)
+                            if z_fileobj is None:
+                                raise ValueError(f"Could not extract .Z {inner_name}")
+                            result = subprocess.run(
+                                ["zcat"],
+                                input=z_fileobj.read(),
+                                capture_output=True,
+                                check=True,
+                            )
+                            out_name = f"st4_conus.{dt_str}.01h"
+                            s3_key = upload_bytes_via_cumulus(out_name, result.stdout)
+                            logging.info(f"    Uploaded GRIB1 (.Z): {out_name}")
+                            s3_keys.append(
+                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
+                            )
+                            continue
+
+                        # ── Era 1: GRIB1 uncompressed, pre-2013-07-25 (no suffix) ────────────
+                        if filename.startswith("ST4.") and filename.endswith(".01h"):
+                            dt_str = filename.split(".")[1]
+                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
+                                tzinfo=timezone.utc
+                            )
+                            if file_dt >= CUTOFF_LEGACY:
+                                continue
+                            raw_fileobj = daily_tar.extractfile(hourly_member)
+                            if raw_fileobj is None:
+                                raise ValueError(
+                                    f"Could not extract uncompressed {inner_name}"
+                                )
+                            out_name = f"st4_conus.{dt_str}.01h"
+                            s3_key = upload_bytes_via_cumulus(
+                                out_name, raw_fileobj.read()
+                            )
+                            logging.info(f"    Uploaded GRIB1 (raw): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -176,11 +221,12 @@ def process_one_month(yyyymm: str) -> list:
     return s3_keys
 
 
+# ── DAG ───────────────────────────────────────────────────────────────────────
+
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2002, 1, 1, tzinfo=timezone.utc),
-    "catchup": False,
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 3,
@@ -191,6 +237,7 @@ default_args = {
 @dag(
     default_args=default_args,
     schedule=None,
+    catchup=False,
     params={
         "start_year": Param(2002, type="integer", description="First year to backfill"),
         "start_month": Param(1, type="integer", description="First month (1-12)"),
@@ -208,70 +255,39 @@ default_args = {
 def cumulus_ncep_stage4_conus_01h_backfill():
 
     @task()
-    def backfill_all_months():
-        context = get_current_context()
-        p = context["params"]
-        ti = context["ti"]
-
+    def generate_months() -> list[str]:
+        """Build the ordered list of YYYYMM strings from DAG params."""
+        p = get_current_context()["params"]
         start = datetime(p["start_year"], p["start_month"], 1)
         end = datetime(p["end_year"], p["end_month"], 1)
-
         if start > end:
             raise ValueError(f"start ({start:%Y-%m}) is after end ({end:%Y-%m})")
-
-        # Pull already-completed months from a previous attempt (empty set on first run)
-        prev_try_number = ti.try_number - 1
-        completed_months: set[str] = set()
-        if prev_try_number > 0:
-            for attempt in range(1, prev_try_number + 1):
-                prior = ti.xcom_pull(
-                    key="completed_months",
-                    task_ids=ti.task_id,
-                    map_indexes=ti.map_index,
-                )
-                if prior:
-                    completed_months.update(prior)
-                break  # xcom_pull returns the latest pushed value
-
-        failed_months = []
-        cur = start
+        months, cur = [], start
         while cur <= end:
-            yyyymm = cur.strftime("%Y%m")
-
-            if yyyymm in completed_months:
-                logging.info(f"Skipping already-completed month: {yyyymm}")
-                if cur.month == 12:
-                    cur = cur.replace(year=cur.year + 1, month=1)
-                else:
-                    cur = cur.replace(month=cur.month + 1)
-                continue
-
-            try:
-                s3_keys = process_one_month(yyyymm)
-                for item in s3_keys:
-                    cumulus.notify_acquirablefile(
-                        acquirable_id=cumulus.acquirables[PRODUCT_SLUG],
-                        datetime=item["datetime"],
-                        s3_key=item["s3_key"],
-                    )
-                completed_months.add(yyyymm)
-                # Persist progress after every successful month
-                ti.xcom_push(key="completed_months", value=list(completed_months))
-            except Exception as e:
-                logging.error(f"FAILED month {yyyymm}: {e}")
-                failed_months.append(yyyymm)
-
-            if cur.month == 12:
-                cur = cur.replace(year=cur.year + 1, month=1)
-            else:
-                cur = cur.replace(month=cur.month + 1)
-
-        if failed_months:
-            raise RuntimeError(
-                f"{len(failed_months)} month(s) failed and need re-running: {failed_months}"
+            months.append(cur.strftime("%Y%m"))
+            cur = (
+                cur.replace(year=cur.year + 1, month=1)
+                if cur.month == 12
+                else cur.replace(month=cur.month + 1)
             )
+        return months
 
-    backfill_all_months()
+    @task(map_index_template="{{ yyyymm }}")
+    def process_month(yyyymm: str) -> int:
+        # Must be set before any return/exception so the template can render
+        get_current_context()["yyyymm"] = yyyymm
+
+        s3_keys = process_one_month(yyyymm)
+        for item in s3_keys:
+            cumulus.notify_acquirablefile(
+                acquirable_id=cumulus.acquirables[PRODUCT_SLUG],
+                datetime=item["datetime"],
+                s3_key=item["s3_key"],
+            )
+        return len(s3_keys)
+
+    months = generate_months()
+    process_month.expand(yyyymm=months)
 
 
 backfill_dag = cumulus_ncep_stage4_conus_01h_backfill()
