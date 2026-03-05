@@ -96,6 +96,11 @@ def cwms_hourly_jobs():
             "enabled": True,
         },
         {
+            "office": "nan",
+            "office_group": "nad",
+            "enabled": True,
+        },      
+        {
             "office": "nao",
             "office_group": "nad",
             "enabled": True,
