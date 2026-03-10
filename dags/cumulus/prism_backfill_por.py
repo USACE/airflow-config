@@ -36,7 +36,7 @@ default_args = {
     },
     tags=["cumulus", "backfill", "prism"],
     max_active_runs=1,
-    max_active_tasks=2,  # 2 months processed in parallel
+    max_active_tasks=1,  
 )
 def cumulus_prism_backfill_por():
     """Backfill historical PRISM data month-by-month."""
