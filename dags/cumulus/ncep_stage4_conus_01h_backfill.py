@@ -21,7 +21,8 @@ import requests
 from airflow.decorators import dag, task
 from airflow.models.param import Param
 from airflow.operators.python import get_current_context
-from helpers.downloads import trigger_download
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from helpers.downloads import DOWNLOAD_OPERATOR_USE_CONNECTION, trigger_download
 
 CUTOFF_LEGACY = datetime(2013, 7, 25, tzinfo=timezone.utc)  # .Z  → .gz  transition
 CUTOFF_GRB2 = datetime(2020, 7, 20, tzinfo=timezone.utc)  # .gz → .grb2 transition
@@ -84,27 +85,14 @@ def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
 
 
 def upload_bytes_via_cumulus(filename: str, content: bytes) -> str:
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        tmp.write(content)
-        tmp.flush()
-        os.fsync(tmp.fileno())
-        tmp_path = tmp.name
-
-    try:
-        file_url = urlunparse(("file", "", tmp_path, "", "", ""))
-        s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
-        resp = trigger_download(
-            url=file_url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key
-        )
-        if isinstance(resp, str):
-            data = json.loads(resp)
-            if not data.get("success"):
-                raise RuntimeError(f"S3 upload failed for {filename}: {data}")
-
-        return s3_key
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+    s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
+    S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION).load_bytes(
+        bytes_data=content,
+        key=s3_key,
+        bucket_name=cumulus.S3_BUCKET,
+        replace=True,
+    )
+    return s3_key
 
 
 def process_one_month(yyyymm: str) -> list:
@@ -296,7 +284,7 @@ def cumulus_ncep_stage4_conus_01h_backfill():
                 datetime=item["datetime"],
                 s3_key=item["s3_key"],
             )
-            time.sleep(0.25)
+            time.sleep(1)
         return len(s3_keys)
 
     months = generate_months()
