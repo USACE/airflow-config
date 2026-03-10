@@ -140,7 +140,7 @@ def process_one_month(yyyymm: str) -> list:
                             s3_key = upload_bytes_via_cumulus(
                                 filename, hourly_fileobj.read()
                             )
-                            logging.info(f"    Uploaded GRIB2: {filename}")
+                            logging.debug(f"    Uploaded GRIB2: {filename}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -160,7 +160,7 @@ def process_one_month(yyyymm: str) -> list:
                             grib_bytes = gzip.decompress(gz_fileobj.read())
                             out_name = f"st4_conus.{dt_str}.01h"
                             s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
-                            logging.info(f"    Uploaded GRIB1 (gz): {out_name}")
+                            logging.debug(f"    Uploaded GRIB1 (gz): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -185,7 +185,7 @@ def process_one_month(yyyymm: str) -> list:
                             )
                             out_name = f"st4_conus.{dt_str}.01h"
                             s3_key = upload_bytes_via_cumulus(out_name, result.stdout)
-                            logging.info(f"    Uploaded GRIB1 (.Z): {out_name}")
+                            logging.debug(f"    Uploaded GRIB1 (.Z): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -208,7 +208,7 @@ def process_one_month(yyyymm: str) -> list:
                             s3_key = upload_bytes_via_cumulus(
                                 out_name, raw_fileobj.read()
                             )
-                            logging.info(f"    Uploaded GRIB1 (raw): {out_name}")
+                            logging.debug(f"    Uploaded GRIB1 (raw): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -250,7 +250,7 @@ default_args = {
     },
     tags=["cumulus", "precip", "QPE", "CONUS", "stage4", "NCEP", "backfill"],
     max_active_runs=1,
-    max_active_tasks=2,
+    max_active_tasks=1,
 )
 def cumulus_ncep_stage4_conus_01h_backfill():
 
@@ -284,6 +284,7 @@ def cumulus_ncep_stage4_conus_01h_backfill():
                 datetime=item["datetime"],
                 s3_key=item["s3_key"],
             )
+            time.sleep(0.25)
         return len(s3_keys)
 
     months = generate_months()
