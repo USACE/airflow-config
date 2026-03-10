@@ -9,21 +9,19 @@ import io
 import json
 import logging
 import os
+import subprocess
 import tarfile
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlunparse
-import subprocess
 
+import helpers.cumulus as cumulus
 import requests
 from airflow.decorators import dag, task
 from airflow.models.param import Param
 from airflow.operators.python import get_current_context
-
-import helpers.cumulus as cumulus
 from helpers.downloads import trigger_download
-
 
 CUTOFF_LEGACY = datetime(2013, 7, 25, tzinfo=timezone.utc)  # .Z  → .gz  transition
 CUTOFF_GRB2 = datetime(2020, 7, 20, tzinfo=timezone.utc)  # .gz → .grb2 transition
@@ -88,11 +86,25 @@ def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
 def upload_bytes_via_cumulus(filename: str, content: bytes) -> str:
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp.write(content)
+        tmp.flush()
+        os.fsync(tmp.fileno())
         tmp_path = tmp.name
-    file_url = urlunparse(("file", "", tmp_path, "", "", ""))
-    s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
-    trigger_download(url=file_url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
-    return s3_key
+
+    try:
+        file_url = urlunparse(("file", "", tmp_path, "", "", ""))
+        s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
+        resp = trigger_download(
+            url=file_url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key
+        )
+        if isinstance(resp, str):
+            data = json.loads(resp)
+            if not data.get("success"):
+                raise RuntimeError(f"S3 upload failed for {filename}: {data}")
+
+        return s3_key
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 def process_one_month(yyyymm: str) -> list:
