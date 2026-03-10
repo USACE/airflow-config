@@ -284,7 +284,7 @@ def cumulus_ncep_stage4_conus_01h_backfill():
                 datetime=item["datetime"],
                 s3_key=item["s3_key"],
             )
-            time.sleep(.2)
+            time.sleep(.6)
         return len(s3_keys)
 
     months = generate_months()
