@@ -9,21 +9,20 @@ import io
 import json
 import logging
 import os
+import subprocess
 import tarfile
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlunparse
-import subprocess
 
+import helpers.cumulus as cumulus
 import requests
 from airflow.decorators import dag, task
 from airflow.models.param import Param
 from airflow.operators.python import get_current_context
-
-import helpers.cumulus as cumulus
-from helpers.downloads import trigger_download
-
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from helpers.downloads import DOWNLOAD_OPERATOR_USE_CONNECTION, trigger_download
 
 CUTOFF_LEGACY = datetime(2013, 7, 25, tzinfo=timezone.utc)  # .Z  → .gz  transition
 CUTOFF_GRB2 = datetime(2020, 7, 20, tzinfo=timezone.utc)  # .gz → .grb2 transition
@@ -86,12 +85,13 @@ def download_with_resume(url, dest_path, chunk_size=65536, max_attempts=10):
 
 
 def upload_bytes_via_cumulus(filename: str, content: bytes) -> str:
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        tmp.write(content)
-        tmp_path = tmp.name
-    file_url = urlunparse(("file", "", tmp_path, "", "", ""))
     s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{PRODUCT_SLUG}/{filename}"
-    trigger_download(url=file_url, s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key)
+    S3Hook(aws_conn_id=DOWNLOAD_OPERATOR_USE_CONNECTION).load_bytes(
+        bytes_data=content,
+        key=s3_key,
+        bucket_name=cumulus.S3_BUCKET,
+        replace=True,
+    )
     return s3_key
 
 
@@ -140,7 +140,7 @@ def process_one_month(yyyymm: str) -> list:
                             s3_key = upload_bytes_via_cumulus(
                                 filename, hourly_fileobj.read()
                             )
-                            logging.info(f"    Uploaded GRIB2: {filename}")
+                            logging.debug(f"    Uploaded GRIB2: {filename}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -160,7 +160,7 @@ def process_one_month(yyyymm: str) -> list:
                             grib_bytes = gzip.decompress(gz_fileobj.read())
                             out_name = f"st4_conus.{dt_str}.01h"
                             s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
-                            logging.info(f"    Uploaded GRIB1 (gz): {out_name}")
+                            logging.debug(f"    Uploaded GRIB1 (gz): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -185,7 +185,7 @@ def process_one_month(yyyymm: str) -> list:
                             )
                             out_name = f"st4_conus.{dt_str}.01h"
                             s3_key = upload_bytes_via_cumulus(out_name, result.stdout)
-                            logging.info(f"    Uploaded GRIB1 (.Z): {out_name}")
+                            logging.debug(f"    Uploaded GRIB1 (.Z): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -208,7 +208,7 @@ def process_one_month(yyyymm: str) -> list:
                             s3_key = upload_bytes_via_cumulus(
                                 out_name, raw_fileobj.read()
                             )
-                            logging.info(f"    Uploaded GRIB1 (raw): {out_name}")
+                            logging.debug(f"    Uploaded GRIB1 (raw): {out_name}")
                             s3_keys.append(
                                 {"datetime": file_dt.isoformat(), "s3_key": s3_key}
                             )
@@ -250,7 +250,7 @@ default_args = {
     },
     tags=["cumulus", "precip", "QPE", "CONUS", "stage4", "NCEP", "backfill"],
     max_active_runs=1,
-    max_active_tasks=2,
+    max_active_tasks=1,
 )
 def cumulus_ncep_stage4_conus_01h_backfill():
 
@@ -284,6 +284,7 @@ def cumulus_ncep_stage4_conus_01h_backfill():
                 datetime=item["datetime"],
                 s3_key=item["s3_key"],
             )
+            time.sleep(.6)
         return len(s3_keys)
 
     months = generate_months()
