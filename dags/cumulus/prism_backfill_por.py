@@ -3,87 +3,94 @@ from calendar import monthrange
 from datetime import datetime, timedelta, timezone
 
 import helpers.cumulus as cumulus
-from airflow import DAG
 from airflow.decorators import dag, task
+from airflow.models.param import Param
 from airflow.operators.python import get_current_context
 from helpers.downloads import trigger_download
 
-default_args_backfill = {
+URL_ROOT = "https://data.prism.oregonstate.edu/time_series/us/an/4km"
+SHORT_NAMES = ["ppt", "tmax", "tmin"]
+
+default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    ### to backfill POR
-    "start_date": datetime(1981, 1, 1),  # Start from 1981
-    "end_date": (datetime.now(timezone.utc) - timedelta(days=180)).replace(
-        minute=0, second=0
-    ),  # Stop 6 months ago
-    "catchup": True,  # Enable backfill
-    ### to force backfill past 6 months
+    "start_date": datetime(1981, 1, 1, tzinfo=timezone.utc),
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 2,
     "retry_delay": timedelta(minutes=30),
 }
 
+
 @dag(
-    default_args=default_args_backfill,
-    schedule="30 01 1 * *",  # monthly schedule
-    tags=["cumulus", "backfill", 'prism'],
-    max_active_runs=1,  # Limit concurrent runs
-    max_active_tasks=4,  # Limit concurrent tasks
+    default_args=default_args,
+    schedule=None,  # manually triggered only
+    catchup=False,
+    params={
+        "start_year": Param(1981, type="integer", description="First year to backfill"),
+        "start_month": Param(1, type="integer", description="First month (1-12)"),
+        "end_year": Param(2025, type="integer", description="Last year (inclusive)"),
+        "end_month": Param(
+            12, type="integer", description="Last month (1-12, inclusive)"
+        ),
+    },
+    tags=["cumulus", "backfill", "prism"],
+    max_active_runs=1,
+    max_active_tasks=1,  
 )
 def cumulus_prism_backfill_por():
     """Backfill historical PRISM data month-by-month."""
 
-    URL_ROOT = f"https://data.prism.oregonstate.edu/time_series/us/an/4km"
-
     @task()
-    def download_historical_prism_month(short_name='ppt'):
-        product_slug = f"prism-{short_name}-early"
-        logical_date = get_current_context()["logical_date"]
-        execution_date = logical_date.date()
-        year = execution_date.year
-        month = execution_date.month
-        results = []
-
-        # Get the number of days in the month
-        num_days = monthrange(year, month)[1]
-
-        for day in range(1, num_days + 1):
-            dt = datetime(year, month, day)
-            file_dir = f'{URL_ROOT}/{short_name}/daily/{dt.strftime("%Y")}'
-            filename = f'prism_{short_name}_us_25m_{dt.strftime("%Y%m%d")}.zip'
-            s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
-            print(f"Downloading {filename}")
-            try:
-                output = trigger_download(
-                    url=f"{file_dir}/{filename}", s3_bucket=cumulus.S3_BUCKET, s3_key=s3_key,
-                )
-                results.append(
-                    {
-                        "datetime": logical_date.isoformat(),
-                        "s3_key": s3_key,
-                        "product_slug": product_slug,
-                        "filename": filename,
-                    }
-                )
-            except:
-                print(f'Error downloading {filename}')
-        return json.dumps(results)
-
-    @task()
-    def notify_cumulus(payload):
-        payload = json.loads(payload)
-        for item in payload:
-            print("Notifying Cumulus: " + item["filename"])
-            cumulus.notify_acquirablefile(
-                acquirable_id=cumulus.acquirables[item["product_slug"]],
-                datetime=item["datetime"],
-                s3_key=item["s3_key"],
+    def generate_months() -> list[str]:
+        """Build ordered list of YYYYMM strings from DAG params."""
+        p = get_current_context()["params"]
+        start = datetime(p["start_year"], p["start_month"], 1)
+        end = datetime(p["end_year"], p["end_month"], 1)
+        if start > end:
+            raise ValueError(f"start ({start:%Y-%m}) is after end ({end:%Y-%m})")
+        months, cur = [], start
+        while cur <= end:
+            months.append(cur.strftime("%Y%m"))
+            cur = (
+                cur.replace(year=cur.year + 1, month=1)
+                if cur.month == 12
+                else cur.replace(month=cur.month + 1)
             )
+        return months
 
-    notify_cumulus(download_historical_prism_month(short_name='ppt'))
-    notify_cumulus(download_historical_prism_month(short_name='tmax'))
-    notify_cumulus(download_historical_prism_month(short_name='tmin'))
+    @task(map_index_template="{{ yyyymm }}")
+    def process_month(yyyymm: str) -> int:
+        get_current_context()["yyyymm"] = yyyymm  # powers map_index_template label
+
+        year = int(yyyymm[:4])
+        month = int(yyyymm[4:])
+        num_days = monthrange(year, month)[1]
+        total = 0
+
+        for short_name in SHORT_NAMES:
+            product_slug = f"prism-{short_name}-early"
+            for day in range(1, num_days + 1):
+                dt = datetime(year, month, day, tzinfo=timezone.utc)
+                file_dir = f"{URL_ROOT}/{short_name}/daily/{dt.strftime('%Y')}"
+                filename = f"prism_{short_name}_us_25m_{dt.strftime('%Y%m%d')}.zip"
+                s3_key = f"{cumulus.S3_ACQUIRABLE_PREFIX}/{product_slug}/{filename}"
+                trigger_download(
+                    url=f"{file_dir}/{filename}",
+                    s3_bucket=cumulus.S3_BUCKET,
+                    s3_key=s3_key,
+                )
+                cumulus.notify_acquirablefile(
+                    acquirable_id=cumulus.acquirables[product_slug],
+                    datetime=dt.isoformat(),
+                    s3_key=s3_key,
+                )
+                total += 1
+
+        return total  # files uploaded this month
+
+    months = generate_months()
+    process_month.expand(yyyymm=months)
 
 
 backfill_dag = cumulus_prism_backfill_por()
