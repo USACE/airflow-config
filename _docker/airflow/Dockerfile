@@ -36,9 +36,9 @@
 #                        much smaller.
 #
 # Use the same builder frontend version for everyone
-ARG AIRFLOW_EXTRAS="aiobotocore,amazon,async,celery,cncf-kubernetes,common-io,docker,elasticsearch,ftp,graphviz,grpc,hashicorp,http,ldap,odbc,openlineage,pandas,postgres,redis,sendgrid,sftp,slack,ssh,statsd,uv,virtualenv"
+ARG AIRFLOW_EXTRAS="aiobotocore,amazon,async,celery,cncf-kubernetes,common-io,docker,elasticsearch,ftp,graphviz,grpc,hashicorp,http,ldap,odbc,openlineage,pandas,postgres,redis,sendgrid,sftp,slack,ssh,statsd,uv,virtualenv,dataretrieval==1.0.12,cwms-python==1.0.3,cwms-cli==0.3.2,shef-parser==1.9.0"
 ARG ADDITIONAL_AIRFLOW_EXTRAS=""
-ARG ADDITIONAL_PYTHON_DEPS="dataretrieval==1.0.12 cwms-python==1.0.3 cwms-cli==0.3.2 shef-parser==1.9.0"
+ARG ADDITIONAL_PYTHON_DEPS=""
 
 ARG AIRFLOW_HOME=/opt/airflow
 ARG AIRFLOW_UID="50000"
