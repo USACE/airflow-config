@@ -37,10 +37,8 @@ def cwms_daily_jobs():
     for group_name, configs in groups.items():
         with TaskGroup(group_id=group_name) as tg:
             for jc in configs:
-
-                @task
+                @task(task_id=f"{jc['office']}-jobs")
                 def launch_batch(job_config):
-
                     logical_date = get_current_context()["logical_date"]
                     dag = DagContext.get_current_dag()
                     job_name = f"cwms-{job_config['office']}-daily-job-{logical_date.strftime('%Y%m%d-%H%M')}"
@@ -55,9 +53,7 @@ def cwms_daily_jobs():
                         local_command=[],  # local docker mock only
                         tags={"Office": job_config["office"]},
                     ).execute({})
-
-                # Use override to set task_id with office name
-                launch_batch.override(task_id=f"{jc['office']}-jobs")(jc)
+                launch_batch(jc)
 
 
 cwms_jobs_dag = cwms_daily_jobs()
