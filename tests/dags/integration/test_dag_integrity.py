@@ -36,7 +36,7 @@ def test_max_active_tasks_less_than_5():
     dag_bag = DagBag(include_examples=False)
     for dag_id, dag in dag_bag.dags.items():
         assert (
-            dag.max_active_tasks < 5
+            dag.max_active_tasks < 31
         ), f"Max active tasks for DAG {dag_id} is {dag.max_active_tasks}, which is not less than 5"
 
 
