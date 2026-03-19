@@ -1,9 +1,9 @@
 
 {
-    "USGS_TS_OFFICES": "MVP,LRL",
-    "USGS_RATINGS_OFFICES": "MVP,LRL",
-    "BATCH_HOURLY_OFFICES": "MVP,LRL",
-    "BATCH_DAILY_OFFICES": "MVP,LRL",
+    "USGS_TS_OFFICES": "mvp,lrl",
+    "USGS_RATINGS_OFFICES": "mvp,lrl",
+    "BATCH_HOURLY_OFFICES": "mvp,lrl",
+    "BATCH_DAILY_OFFICES": "mvp,lrl",
     "OFFICE_GROUPS": [
     {"office": "hec", "office_group": "iwr"},
     {"office": "lrb", "office_group": "lrd"},
