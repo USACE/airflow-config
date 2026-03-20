@@ -25,7 +25,7 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule_interval="0 17 * * *",
+    schedule="0 17 * * *",
     start_date=datetime(2025, 5, 3),
     catchup=False,
     tags=["batch", "jobs", "district"],
