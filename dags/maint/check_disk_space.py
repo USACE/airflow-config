@@ -1,16 +1,18 @@
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from airflow.operators.python import PythonOperator
 import logging
 import subprocess
 
-default_args = {"owner": "airflow", "retries": 1, "retry_delay": timedelta(minutes=10)}
+default_args = {"owner": "airflow", "retries": 1,
+                "retry_delay": timedelta(minutes=10)}
 
 with DAG(
     default_args=default_args,
     dag_id="maint_check_disk_space",
     schedule="@hourly",
-    start_date=(datetime.utcnow() - timedelta(hours=2)).replace(minute=0, second=0),
+    start_date=(datetime.now(timezone.utc) - timedelta(hours=2)
+                ).replace(minute=0, second=0),
     catchup=False,
     tags=["maintenance"],
     max_active_runs=1,

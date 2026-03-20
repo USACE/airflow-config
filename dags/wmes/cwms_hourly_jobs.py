@@ -24,7 +24,7 @@ OFFICES = Variable.get("BATCH_HOURLY_OFFICES").split(",")
 
 @dag(
     default_args=default_args,
-    schedule_interval="15 * * * *",
+    schedule="15 * * * *",
     start_date=datetime(2025, 5, 3),
     catchup=False,
     tags=["batch", "jobs", "district"],

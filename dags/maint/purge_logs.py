@@ -7,19 +7,20 @@ We already write to remote logs (via S3)
 """
 
 from airflow import DAG
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from airflow.operators.python import PythonOperator
 import logging
 import subprocess
 from textwrap import dedent
 
-default_args = {"owner": "airflow", "retries": 1, "retry_delay": timedelta(minutes=10)}
+default_args = {"owner": "airflow", "retries": 1,
+                "retry_delay": timedelta(minutes=10)}
 
 with DAG(
     default_args=default_args,
     dag_id="maint_purge_logs",
     schedule="@daily",
-    start_date=(datetime.utcnow() - timedelta(days=2)),
+    start_date=(datetime.now(timezone.utc) - timedelta(days=2)),
     catchup=False,
     tags=["maintenance"],
     doc_md=dedent(__doc__),
