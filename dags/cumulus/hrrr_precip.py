@@ -4,7 +4,7 @@ import json
 # The DAG object; we'll need this to instantiate a DAG
 from airflow import DAG
 
-from airflow import AirflowException
+from airflow.exceptions import AirflowException
 from datetime import datetime, timedelta, timezone
 from airflow.operators.python import get_current_context
 
@@ -16,7 +16,8 @@ import helpers.cumulus as cumulus
 
 # These args will get passed on to each operator
 # You can override them on a per-task basis during operator initialization
-default_args = {"owner": "airflow", "retries": 6, "retry_delay": timedelta(minutes=10)}
+default_args = {"owner": "airflow", "retries": 6,
+                "retry_delay": timedelta(minutes=10)}
 with DAG(
     "cumulus_hrrr_precip",
     default_args=default_args,

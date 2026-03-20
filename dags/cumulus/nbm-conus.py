@@ -129,14 +129,16 @@ def cumulus_national_blend_models():
 
         url_list = url + "/ls-l"
 
-        file_pattern = re.compile("blend.t\d+z.core.f\d+.co.grib2.idx")
+        file_pattern = re.compile(
+            r"blend\.t\d{2}z\.core\.f\d{3}\.co\.grib2\.idx")
 
         request_response = requests.request(
             "GET",
             url_list,
         )
         request_response_text = request_response.text
-        file_pattern_match = file_pattern.findall(request_response_text, re.MULTILINE)
+        file_pattern_match = file_pattern.findall(
+            request_response_text, re.MULTILINE)
 
         return url, file_pattern_match
 
@@ -181,7 +183,8 @@ def cumulus_national_blend_models():
                             )
 
                             for line in request_response.text.split("\n")[:-1]:
-                                index_attribute = IndexAttributes(*(line.split(":")))
+                                index_attribute = IndexAttributes(
+                                    *(line.split(":")))
                                 if (
                                     index_attribute.variable == "APCP"
                                     and index_attribute.description == "surface"
@@ -224,11 +227,13 @@ def cumulus_national_blend_models():
                             var["forecast_interval"], fhour
                         )
 
-                        slug = acquirable_slug(variable_code, forecast_interval)
+                        slug = acquirable_slug(
+                            variable_code, forecast_interval)
                         if slug:
                             filename_parts[1] = date_time.strftime("%Y%m%d")
                             s3_key = "{}/{}/{}".format(
-                                key_prefix, S3_ACQUIRABLE, ".".join(filename_parts)
+                                key_prefix, S3_ACQUIRABLE, ".".join(
+                                    filename_parts)
                             )
                             trigger_download(
                                 url=url,
