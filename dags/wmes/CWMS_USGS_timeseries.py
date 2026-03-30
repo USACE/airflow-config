@@ -11,7 +11,7 @@ from helpers.batch import get_office_groups
 APIKEY = Variable.get("API_KEY")
 APIROOT = Variable.get("CDA_URL")
 OFFICES = Variable.get("USGS_TS_OFFICES").split(",")
-DAYSBACK = Variable.get("USGS_TS_DAYS_BACK", default_var=0.5)
+DAYSBACK = float(Variable.get("USGS_TS_DAYS_BACK", default_var=0.5))
 
 default_args = {
     "owner": "airflow",
