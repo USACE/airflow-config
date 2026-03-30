@@ -37,7 +37,7 @@ default_args = {
     catchup=False,
     doc_md=__doc__,
 )
-def cwms_usgs_timeseries():
+def cwms_usgs_timeseries_backfill():
     groups = get_office_groups(OFFICES)
     for group_name, configs in groups.items():
         print(f"Processing group: {group_name} with configs: {configs}")
@@ -55,4 +55,4 @@ def cwms_usgs_timeseries():
                 cwms_usgs_ts(jc)
 
 
-DAG_ = cwms_usgs_timeseries()
+DAG_ = cwms_usgs_timeseries_backfill()
