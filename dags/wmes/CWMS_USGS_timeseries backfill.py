@@ -10,8 +10,8 @@ from helpers.batch import get_office_groups
 
 APIKEY = Variable.get("API_KEY")
 APIROOT = Variable.get("CDA_URL")
-OFFICES = Variable.get("USGS_TS_OFFICES").split(",")
-DAYSBACK = float(Variable.get("USGS_TS_DAYS_BACK", default_var=0.5))
+OFFICES = Variable.get("USGS_TS_BACKFILL_OFFICES").split(",")
+DAYSBACK = float(Variable.get("USGS_TS_BACKFILL_DAYS_BACK", default_var=14))
 
 default_args = {
     "owner": "airflow",
@@ -31,13 +31,13 @@ default_args = {
 @dag(
     default_args=default_args,
     tags=["wmes", "CWMS", "USGS", "Timeseries"],
-    schedule="@hourly",
+    schedule="0 6 * * 6",
     max_active_runs=1,
     max_active_tasks=3,
     catchup=False,
     doc_md=__doc__,
 )
-def cwms_usgs_timeseries():
+def cwms_usgs_timeseries_backfill():
     groups = get_office_groups(OFFICES)
     for group_name, configs in groups.items():
         print(f"Processing group: {group_name} with configs: {configs}")
@@ -55,4 +55,4 @@ def cwms_usgs_timeseries():
                 cwms_usgs_ts(jc)
 
 
-DAG_ = cwms_usgs_timeseries()
+DAG_ = cwms_usgs_timeseries_backfill()
