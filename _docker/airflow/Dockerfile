@@ -1715,5 +1715,9 @@ LABEL org.apache.airflow.distro="debian" \
 # Append the SESSION_COOKIE_NAME setting to webserver_config.py
 RUN echo 'SESSION_COOKIE_NAME = "wmes_airflow_session"' >> /opt/airflow/webserver_config.py
 
+# /opt/airflow/plugins isn't auto-added to sys.path early enough in 2.11
+# for the CLI/Celery executor loader to import celery_config — set it explicitly.
+ENV PYTHONPATH=/opt/airflow/plugins
+
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/entrypoint"]
 CMD []
