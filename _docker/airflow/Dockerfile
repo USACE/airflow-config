@@ -1715,5 +1715,11 @@ LABEL org.apache.airflow.distro="debian" \
 # Append the SESSION_COOKIE_NAME setting to webserver_config.py
 RUN echo 'SESSION_COOKIE_NAME = "wmes_airflow_session"' >> /opt/airflow/webserver_config.py
 
+# /opt/airflow/plugins isn't on sys.path early enough in 2.11 for the
+# executor loader to import celery_config, and the AWS deployment doesn't
+# mount plugins/ at all. Bake celery_config.py into site-packages so it's
+# importable regardless of plugin folder state.
+COPY --chown=airflow:0 celery_config.py /home/airflow/.local/lib/python3.12/site-packages/celery_config.py
+
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/entrypoint"]
 CMD []

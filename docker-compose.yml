@@ -61,9 +61,6 @@ x-airflow-common:
     # AIRFLOW__CELERY__BROKER_URL: sqs://AKIAIOSFODNN7EXAMPLE:wJalrXUtnFEMI%2FK7MDENG%2FbPxRfiCYEXAMPLEKEY@elasticmq
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CELERY__CELERY_CONFIG_OPTIONS: celery_config.CELERY_CONFIG
-    # /opt/airflow/plugins isn't auto-added to sys.path early enough in 2.11
-    # for the CLI/Celery executor loader to import celery_config — set it explicitly.
-    PYTHONPATH: /opt/airflow/plugins
     # default queue; specified in celery_config.py
     AIRFLOW__OPERATORS__DEFAULT_QUEUE: airflow
     # ----------
@@ -245,8 +242,7 @@ services:
       - airflowdb
     volumes:
       # `<<: *airflow-common` doesn't merge sequences, so re-list the common
-      # mounts here. /opt/airflow/plugins is required because `users create`
-      # in 2.11 loads the Celery executor, which imports celery_config.
+      # mounts here alongside the variables.json mount.
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
