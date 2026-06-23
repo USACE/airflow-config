@@ -36,7 +36,7 @@
 #                        much smaller.
 #
 # Use the same builder frontend version for everyone
-ARG AIRFLOW_EXTRAS="aiobotocore,amazon,async,celery,cncf-kubernetes,common-io,docker,elasticsearch,ftp,graphviz,grpc,hashicorp,http,ldap,odbc,openlineage,pandas,postgres,redis,sendgrid,sftp,slack,ssh,statsd,uv,virtualenv"
+ARG AIRFLOW_EXTRAS="aiobotocore,amazon,async,celery,cncf-kubernetes,common-io,docker,elasticsearch,fab,ftp,graphviz,grpc,hashicorp,http,ldap,odbc,openlineage,pandas,postgres,redis,sendgrid,sftp,slack,ssh,statsd,uv,virtualenv"
 ARG ADDITIONAL_AIRFLOW_EXTRAS=""
 #the global gets overwritten by a local in the build stage.  add additional dependencies later in the code
 ARG ADDITIONAL_PYTHON_DEPS=""
@@ -46,7 +46,7 @@ ARG AIRFLOW_UID="50000"
 ARG AIRFLOW_USER_HOME_DIR=/home/airflow
 
 # latest released version here
-ARG AIRFLOW_VERSION="2.10.5"
+ARG AIRFLOW_VERSION="2.11.2"
 
 ARG PYTHON_BASE_IMAGE="python:3.12-slim-bookworm"
 
@@ -1486,7 +1486,7 @@ RUN bash /scripts/docker/install_packaging_tools.sh; bash /scripts/docker/create
 COPY --chown=airflow:0 ${AIRFLOW_SOURCES_FROM} ${AIRFLOW_SOURCES_TO}
 
 # Add extra python dependencies
-ARG ADDITIONAL_PYTHON_DEPS="celery[sqs] celery[redis] dataretrieval==1.0.12 cwms-python==1.0.3 cwms-cli==0.3.2 shef-parser==1.9.0"
+ARG ADDITIONAL_PYTHON_DEPS="celery[sqs] celery[redis] pydantic dataretrieval==1.0.12 cwms-python==1.0.3 cwms-cli==0.3.2 shef-parser==1.9.0"
 
 
 ARG VERSION_SUFFIX_FOR_PYPI=""
@@ -1714,6 +1714,12 @@ LABEL org.apache.airflow.distro="debian" \
 
 # Append the SESSION_COOKIE_NAME setting to webserver_config.py
 RUN echo 'SESSION_COOKIE_NAME = "wmes_airflow_session"' >> /opt/airflow/webserver_config.py
+
+# /opt/airflow/plugins isn't on sys.path early enough in 2.11 for the
+# executor loader to import celery_config, and the AWS deployment doesn't
+# mount plugins/ at all. Bake celery_config.py into site-packages so it's
+# importable regardless of plugin folder state.
+COPY --chown=airflow:0 celery_config.py /home/airflow/.local/lib/python3.12/site-packages/celery_config.py
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/entrypoint"]
 CMD []

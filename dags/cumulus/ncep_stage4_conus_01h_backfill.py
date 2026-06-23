@@ -94,6 +94,75 @@ def upload_bytes_via_cumulus(filename: str, content: bytes) -> str:
     )
     return s3_key
 
+def _process_hourly_member(tar_handle, member) -> list:
+    """
+    Given an open TarFile and a member, extract and upload it if it is a
+    recognised hourly product file.  Returns a list with 0 or 1 dict entries.
+    """
+    inner_name = member.name
+    filename = os.path.basename(inner_name)
+
+    # ── Era 3: GRIB2, post-2020-07-20 (.grb2) ────────────────────────────────
+    if filename.startswith("st4_conus.") and filename.endswith(".01h.grb2"):
+        dt_str = filename.split(".")[1]
+        file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+        if file_dt < CUTOFF_GRB2:
+            return []
+        fileobj = tar_handle.extractfile(member)
+        if fileobj is None:
+            raise ValueError(f"Could not extract {inner_name}")
+        s3_key = upload_bytes_via_cumulus(filename, fileobj.read())
+        logging.debug(f"    Uploaded GRIB2: {filename}")
+        return [{"datetime": file_dt.isoformat(), "s3_key": s3_key}]
+
+    # ── Era 2: GRIB1 gzip, 2013-07-25 to 2020-07-20 (.gz) ───────────────────
+    if filename.startswith("ST4.") and filename.endswith(".01h.gz"):
+        dt_str = filename.split(".")[1]
+        file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+        if file_dt < CUTOFF_LEGACY or file_dt >= CUTOFF_GRB2:
+            return []
+        gz_fileobj = tar_handle.extractfile(member)
+        if gz_fileobj is None:
+            raise ValueError(f"Could not extract gz {inner_name}")
+        grib_bytes = gzip.decompress(gz_fileobj.read())
+        out_name = f"st4_conus.{dt_str}.01h"
+        s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
+        logging.debug(f"    Uploaded GRIB1 (gz): {out_name}")
+        return [{"datetime": file_dt.isoformat(), "s3_key": s3_key}]
+
+    # ── Era 1: GRIB1 Unix-compress, pre-2013-07-25 (.Z) ─────────────────────
+    if filename.startswith("ST4.") and filename.endswith(".01h.Z"):
+        dt_str = filename.split(".")[1]
+        file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+        if file_dt >= CUTOFF_LEGACY:
+            return []
+        z_fileobj = tar_handle.extractfile(member)
+        if z_fileobj is None:
+            raise ValueError(f"Could not extract .Z {inner_name}")
+        result = subprocess.run(
+            ["zcat"], input=z_fileobj.read(), capture_output=True, check=True
+        )
+        out_name = f"st4_conus.{dt_str}.01h"
+        s3_key = upload_bytes_via_cumulus(out_name, result.stdout)
+        logging.debug(f"    Uploaded GRIB1 (.Z): {out_name}")
+        return [{"datetime": file_dt.isoformat(), "s3_key": s3_key}]
+
+    # ── Era 1: GRIB1 uncompressed, pre-2013-07-25 (no suffix) ────────────────
+    if filename.startswith("ST4.") and filename.endswith(".01h"):
+        dt_str = filename.split(".")[1]
+        file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+        if file_dt >= CUTOFF_LEGACY:
+            return []
+        raw_fileobj = tar_handle.extractfile(member)
+        if raw_fileobj is None:
+            raise ValueError(f"Could not extract uncompressed {inner_name}")
+        out_name = f"st4_conus.{dt_str}.01h"
+        s3_key = upload_bytes_via_cumulus(out_name, raw_fileobj.read())
+        logging.debug(f"    Uploaded GRIB1 (raw): {out_name}")
+        return [{"datetime": file_dt.isoformat(), "s3_key": s3_key}]
+
+    return []  # not a recognised hourly file (e.g. bare date-marker, .06h, .24h)
+
 
 def process_one_month(yyyymm: str) -> list:
     """Download, extract, and upload all hourly files for one YYYYMM."""
@@ -107,112 +176,53 @@ def process_one_month(yyyymm: str) -> list:
         download_with_resume(monthly_url, monthly_path)
 
         with tarfile.open(monthly_path) as monthly_tar:
-            daily_members = monthly_tar.getmembers()
-            logging.info(f"  Found {len(daily_members)} daily tars")
+            all_members = monthly_tar.getmembers()
 
-            for daily_member in daily_members:
-                daily_name = os.path.basename(daily_member.name)
-                daily_fileobj = monthly_tar.extractfile(daily_member)
-                if daily_fileobj is None:
-                    logging.info(f"  Skipping non-file: {daily_name}")
-                    continue
+            # ── Detect archive layout ─────────────────────────────────────────
+            # Flat layout  (2019-01 – 2019-03):  hourly files sit directly in
+            #   the monthly tar alongside bare date-marker files (ST4.YYYYMMDD).
+            # Nested layout (all other months):  each daily member is itself a
+            #   tar that contains the hourly files.
+            HOURLY_SUFFIXES = (".01h.gz", ".01h.Z", ".01h.grb2", ".01h")
+            is_flat = any(
+                os.path.basename(m.name).endswith(sfx)
+                for m in all_members
+                for sfx in HOURLY_SUFFIXES
+            )
 
-                with tarfile.open(
-                    fileobj=io.BytesIO(daily_fileobj.read())
-                ) as daily_tar:
-                    for hourly_member in daily_tar.getmembers():
-                        inner_name = hourly_member.name
-                        filename = os.path.basename(inner_name)
+            if is_flat:
+                # ── Flat layout: process hourly files directly ────────────────
+                file_members = [m for m in all_members if m.isfile()]
+                logging.info(
+                    f"  Flat layout detected: {len(file_members)} files in monthly tar"
+                )
+                for member in file_members:
+                    s3_keys.extend(_process_hourly_member(monthly_tar, member))
 
-                        # ── Era 3: GRIB2, post-2020-07-20 (.grb2) ────────────────────────────
-                        if filename.startswith("st4_conus.") and filename.endswith(
-                            ".01h.grb2"
-                        ):
-                            dt_str = filename.split(".")[1]
-                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
-                                tzinfo=timezone.utc
-                            )
-                            if file_dt < CUTOFF_GRB2:
-                                continue
-                            hourly_fileobj = daily_tar.extractfile(hourly_member)
-                            if hourly_fileobj is None:
-                                raise ValueError(f"Could not extract {inner_name}")
-                            s3_key = upload_bytes_via_cumulus(
-                                filename, hourly_fileobj.read()
-                            )
-                            logging.debug(f"    Uploaded GRIB2: {filename}")
-                            s3_keys.append(
-                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
-                            )
-                            continue
-
-                        # ── Era 2: GRIB1 gzip, 2013-07-25 to 2020-07-20 (.gz) ───────────────
-                        if filename.startswith("ST4.") and filename.endswith(".01h.gz"):
-                            dt_str = filename.split(".")[1]
-                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
-                                tzinfo=timezone.utc
-                            )
-                            if file_dt < CUTOFF_LEGACY or file_dt >= CUTOFF_GRB2:
-                                continue
-                            gz_fileobj = daily_tar.extractfile(hourly_member)
-                            if gz_fileobj is None:
-                                raise ValueError(f"Could not extract gz {inner_name}")
-                            grib_bytes = gzip.decompress(gz_fileobj.read())
-                            out_name = f"st4_conus.{dt_str}.01h"
-                            s3_key = upload_bytes_via_cumulus(out_name, grib_bytes)
-                            logging.debug(f"    Uploaded GRIB1 (gz): {out_name}")
-                            s3_keys.append(
-                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
-                            )
-                            continue
-
-                        # ── Era 1: GRIB1 Unix-compress, pre-2013-07-25 (.Z) ─────────────────
-                        if filename.startswith("ST4.") and filename.endswith(".01h.Z"):
-                            dt_str = filename.split(".")[1]
-                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
-                                tzinfo=timezone.utc
-                            )
-                            if file_dt >= CUTOFF_LEGACY:
-                                continue
-                            z_fileobj = daily_tar.extractfile(hourly_member)
-                            if z_fileobj is None:
-                                raise ValueError(f"Could not extract .Z {inner_name}")
-                            result = subprocess.run(
-                                ["zcat"],
-                                input=z_fileobj.read(),
-                                capture_output=True,
-                                check=True,
-                            )
-                            out_name = f"st4_conus.{dt_str}.01h"
-                            s3_key = upload_bytes_via_cumulus(out_name, result.stdout)
-                            logging.debug(f"    Uploaded GRIB1 (.Z): {out_name}")
-                            s3_keys.append(
-                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
-                            )
-                            continue
-
-                        # ── Era 1: GRIB1 uncompressed, pre-2013-07-25 (no suffix) ────────────
-                        if filename.startswith("ST4.") and filename.endswith(".01h"):
-                            dt_str = filename.split(".")[1]
-                            file_dt = datetime.strptime(dt_str, "%Y%m%d%H").replace(
-                                tzinfo=timezone.utc
-                            )
-                            if file_dt >= CUTOFF_LEGACY:
-                                continue
-                            raw_fileobj = daily_tar.extractfile(hourly_member)
-                            if raw_fileobj is None:
-                                raise ValueError(
-                                    f"Could not extract uncompressed {inner_name}"
+            else:
+                # ── Nested layout: each member is a daily tar ─────────────────
+                daily_members = [m for m in all_members if m.isfile()]
+                logging.info(
+                    f"  Nested layout detected: {len(daily_members)} daily tars"
+                )
+                for daily_member in daily_members:
+                    daily_name = os.path.basename(daily_member.name)
+                    daily_fileobj = monthly_tar.extractfile(daily_member)
+                    if daily_fileobj is None:
+                        logging.info(f"  Skipping non-file: {daily_name}")
+                        continue
+                    try:
+                        with tarfile.open(
+                            fileobj=io.BytesIO(daily_fileobj.read())
+                        ) as daily_tar:
+                            for hourly_member in daily_tar.getmembers():
+                                s3_keys.extend(
+                                    _process_hourly_member(daily_tar, hourly_member)
                                 )
-                            out_name = f"st4_conus.{dt_str}.01h"
-                            s3_key = upload_bytes_via_cumulus(
-                                out_name, raw_fileobj.read()
-                            )
-                            logging.debug(f"    Uploaded GRIB1 (raw): {out_name}")
-                            s3_keys.append(
-                                {"datetime": file_dt.isoformat(), "s3_key": s3_key}
-                            )
-                            continue
+                    except tarfile.ReadError as e:
+                        logging.warning(
+                            f"  Skipping unreadable daily member {daily_name}: {e}"
+                        )
 
     if not s3_keys:
         raise ValueError(f"No matching hourly files found in {monthly_url}")
@@ -284,7 +294,7 @@ def cumulus_ncep_stage4_conus_01h_backfill():
                 datetime=item["datetime"],
                 s3_key=item["s3_key"],
             )
-            time.sleep(.6)
+            time.sleep(.3)
         return len(s3_keys)
 
     months = generate_months()

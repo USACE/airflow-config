@@ -13,14 +13,14 @@ x-airflow-common:
   &airflow-common
   #
   # image: apache/airflow:2.8.1-python3.8-usace
-  image: airflow-common:2.10.5-python3.12-usace
+  image: airflow-common:2.11.2-python3.12-usace
   build:
     context: _docker/airflow
     args:
-      - AIRFLOW_VERSION=2.10.5
+      - AIRFLOW_VERSION=2.11.2
       - PYTHON_BASE_IMAGE=python:3.12-slim-bookworm
       - ADDITIONAL_DEV_APT_DEPS=libcurl4-openssl-dev libssl-dev
-      - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis] dataretrieval==1.0.12 cwms-python==1.0.3 cwms-cli==0.3.2 shef-parser==1.9.0
+      - ADDITIONAL_PYTHON_DEPS=celery[sqs] celery[redis] pydantic dataretrieval==1.0.12 cwms-python==1.0.3 cwms-cli==0.3.2 shef-parser==1.9.0
       - INSTALL_MYSQL_CLIENT=false
       - INSTALL_MSSQL_CLIENT=false
   environment:
@@ -241,6 +241,12 @@ services:
     depends_on:
       - airflowdb
     volumes:
+      # `<<: *airflow-common` doesn't merge sequences, so re-list the common
+      # mounts here alongside the variables.json mount.
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./_utils/variables.json:/opt/airflow/variables.json
     entrypoint: |-
       /bin/sh -c "
