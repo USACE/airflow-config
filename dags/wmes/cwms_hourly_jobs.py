@@ -19,15 +19,19 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=10),
 }
-OFFICES = Variable.get("BATCH_HOURLY_OFFICES").split(",")
+OFFICES = [
+    office.strip()
+    for office in Variable.get("BATCH_HOURLY_OFFICES", default_var="").split(",")
+    if office.strip()
+]
 
 
 @dag(
     default_args=default_args,
-    schedule="15 * * * *",
+    schedule=None,
     start_date=datetime(2025, 5, 3),
     catchup=False,
-    tags=["batch", "jobs", "district"],
+    tags=["batch", "jobs", "district", "legacy"],
     max_active_runs=1,
     max_active_tasks=30,
 )

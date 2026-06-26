@@ -64,3 +64,29 @@ def trigger_job(script_id: str) -> dict:
     )
     with urlopen(request, timeout=30) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def get_scheduled_scripts() -> list[dict]:
+    api_root = get_config("BATCH_EVENTS_API_ROOT").rstrip("/")
+    token = get_service_account_token()
+    request = Request(
+        f"{api_root}/scripts/scheduled",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json",
+        },
+        method="GET",
+    )
+    with urlopen(request, timeout=30) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def scripts_due_at_minute(minute: int) -> list[dict]:
+    scripts = get_scheduled_scripts()
+    return [
+        script
+        for script in scripts
+        if script.get("scheduleEnabled")
+        and script.get("scheduleType") == "hourly"
+        and script.get("scheduleMinute") == minute
+    ]
