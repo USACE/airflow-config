@@ -6,7 +6,6 @@ from airflow.operators.python import get_current_context
 
 import helpers.batch_events as batch_events
 
-
 default_args = {
     "owner": "airflow",
     "start_date": datetime(2026, 1, 1),
@@ -29,8 +28,8 @@ default_args = {
 def cwms_batch_events_scheduled_jobs():
     @task(task_id="get-due-scripts")
     def get_due_scripts():
-        minute = get_current_context()["logical_date"].minute
-        scripts = batch_events.scripts_due_at_minute(minute)
+        logical_date = get_current_context()["logical_date"]
+        scripts = batch_events.scripts_due_at(logical_date)
         print(json.dumps(scripts, indent=2))
         return scripts
 

@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -82,11 +83,82 @@ def get_scheduled_scripts() -> list[dict]:
 
 
 def scripts_due_at_minute(minute: int) -> list[dict]:
-    scripts = get_scheduled_scripts()
     return [
         script
-        for script in scripts
+        for script in get_scheduled_scripts()
         if script.get("scheduleEnabled")
         and script.get("scheduleType") == "hourly"
         and script.get("scheduleMinute") == minute
     ]
+
+
+def _cron_field_matches(field: str, value: int, minimum: int, maximum: int) -> bool:
+    for part in field.split(","):
+        part = part.strip()
+        if not part:
+            continue
+
+        step = 1
+        if "/" in part:
+            part, step_value = part.split("/", 1)
+            step = int(step_value)
+            if step < 1:
+                raise ValueError("Cron step must be at least 1")
+
+        if part == "*":
+            start, end = minimum, maximum
+        elif "-" in part:
+            start_value, end_value = part.split("-", 1)
+            start, end = int(start_value), int(end_value)
+        else:
+            start = end = int(part)
+
+        if start < minimum or end > maximum or start > end:
+            raise ValueError(f"Cron field value out of range: {field}")
+
+        if start <= value <= end and (value - start) % step == 0:
+            return True
+
+    return False
+
+
+def cron_matches(expression: str, logical_date: datetime) -> bool:
+    minute, hour, day, month, weekday = expression.split()
+    # Python weekday is Monday=0; cron weekday commonly treats Sunday as 0 or 7.
+    cron_weekday = (logical_date.weekday() + 1) % 7
+
+    return (
+        _cron_field_matches(minute, logical_date.minute, 0, 59)
+        and _cron_field_matches(hour, logical_date.hour, 0, 23)
+        and _cron_field_matches(day, logical_date.day, 1, 31)
+        and _cron_field_matches(month, logical_date.month, 1, 12)
+        and (
+            _cron_field_matches(weekday, cron_weekday, 0, 7)
+            or (cron_weekday == 0 and _cron_field_matches(weekday, 7, 0, 7))
+        )
+    )
+
+
+def scripts_due_at(logical_date: datetime) -> list[dict]:
+    due_scripts = []
+    for script in get_scheduled_scripts():
+        if not script.get("scheduleEnabled"):
+            continue
+
+        schedule_type = script.get("scheduleType")
+        if (
+            schedule_type == "hourly"
+            and script.get("scheduleMinute") == logical_date.minute
+        ):
+            due_scripts.append(script)
+            continue
+
+        schedule_cron = script.get("scheduleCron")
+        if (
+            schedule_type == "cron"
+            and schedule_cron
+            and cron_matches(schedule_cron, logical_date)
+        ):
+            due_scripts.append(script)
+
+    return due_scripts

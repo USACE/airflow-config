@@ -25,10 +25,10 @@ default_args = {
 
 @dag(
     default_args=default_args,
-    schedule="0 17 * * *",
+    schedule=None,
     start_date=datetime(2025, 5, 3),
     catchup=False,
-    tags=["batch", "jobs", "district"],
+    tags=["batch", "jobs", "district", "legacy"],
     max_active_runs=1,
     max_active_tasks=30,
 )
@@ -37,6 +37,7 @@ def cwms_daily_jobs():
     for group_name, configs in groups.items():
         with TaskGroup(group_id=group_name) as tg:
             for jc in configs:
+
                 @task(task_id=f"{jc['office']}-jobs")
                 def launch_batch(job_config):
                     logical_date = get_current_context()["logical_date"]
@@ -53,6 +54,7 @@ def cwms_daily_jobs():
                         local_command=[],  # local docker mock only
                         tags={"Office": job_config["office"]},
                     ).execute({})
+
                 launch_batch(jc)
 
 
