@@ -1,16 +1,11 @@
 from datetime import datetime, timedelta
+import json
+
 from airflow.decorators import dag, task
 from airflow.models import Variable
 
-# from airflow.providers.amazon.aws.operators.batch import BatchOperator
-import helpers.batch as batch
-from helpers.batch import get_office_groups
-from airflow.operators.python import get_current_context
-from airflow.models.dag import DagContext
-from airflow.utils.task_group import TaskGroup
-from airflow.exceptions import AirflowSkipException
+import helpers.batch_events as batch_events
 
-OFFICES = Variable.get("BATCH_DAILY_OFFICES").split(",")
 
 default_args = {
     "owner": "airflow",
@@ -23,39 +18,50 @@ default_args = {
 }
 
 
+def configured_offices(name: str) -> list[str]:
+    return [
+        office.strip()
+        for office in Variable.get(name, default_var="").split(",")
+        if office.strip()
+    ]
+
+
 @dag(
     default_args=default_args,
     schedule=None,
     start_date=datetime(2025, 5, 3),
     catchup=False,
-    tags=["batch", "jobs", "district", "legacy"],
+    tags=["batch-events", "jobs", "district", "manual"],
     max_active_runs=1,
     max_active_tasks=30,
 )
 def cwms_daily_jobs():
-    groups = get_office_groups(OFFICES)
-    for group_name, configs in groups.items():
-        with TaskGroup(group_id=group_name) as tg:
-            for jc in configs:
+    @task(task_id="get-cron-scripts")
+    def get_cron_scripts():
+        scripts = batch_events.scheduled_scripts_for_offices(
+            "cron",
+            configured_offices("BATCH_DAILY_OFFICES"),
+        )
+        print(json.dumps(scripts, indent=2))
+        return scripts
 
-                @task(task_id=f"{jc['office']}-jobs")
-                def launch_batch(job_config):
-                    logical_date = get_current_context()["logical_date"]
-                    dag = DagContext.get_current_dag()
-                    job_name = f"cwms-{job_config['office']}-daily-job-{logical_date.strftime('%Y%m%d-%H%M')}"
-                    return batch.batch_operator(
-                        dag=dag,
-                        task_id=job_name,
-                        deferrable=True,
-                        container_overrides={},
-                        job_name=job_name,
-                        job_queue=f"cwms-{job_config['office_group']}-jq",
-                        job_definition=f"cwms-{job_config['office']}-jobs-jobdef",
-                        local_command=[],  # local docker mock only
-                        tags={"Office": job_config["office"]},
-                    ).execute({})
+    @task(task_id="trigger-script")
+    def trigger_script(script: dict):
+        job = batch_events.trigger_job(script["id"])
+        result = {
+            "jobId": job["id"],
+            "scriptId": script["id"],
+            "office": script["office"],
+            "slug": script["slug"],
+            "scheduleType": script["scheduleType"],
+            "scheduleCron": script.get("scheduleCron"),
+            "resourceProfile": script["resourceProfile"],
+            "runtime": script["runtime"],
+        }
+        print(json.dumps(result, indent=2))
+        return result
 
-                launch_batch(jc)
+    trigger_script.expand(script=get_cron_scripts())
 
 
 cwms_jobs_dag = cwms_daily_jobs()

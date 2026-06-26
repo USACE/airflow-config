@@ -82,6 +82,27 @@ def get_scheduled_scripts() -> list[dict]:
         return json.loads(response.read().decode("utf-8"))
 
 
+def scheduled_scripts_for_offices(
+    schedule_type: str,
+    offices: list[str] | None = None,
+) -> list[dict]:
+    office_filter = {
+        office.strip().upper()
+        for office in (offices or [])
+        if office and office.strip()
+    }
+    return [
+        script
+        for script in get_scheduled_scripts()
+        if script.get("scheduleEnabled")
+        and script.get("scheduleType") == schedule_type
+        and (
+            not office_filter
+            or str(script.get("office", "")).upper() in office_filter
+        )
+    ]
+
+
 def scripts_due_at_minute(minute: int) -> list[dict]:
     return [
         script
