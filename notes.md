@@ -13,7 +13,7 @@ The `airflow_ui` container will likely need to be restarted after running `airfl
 
 ## Batch Events scheduled jobs
 
-`dags/wmes/cwms_batch_events_swt_hourly.py` now acts as the Batch Events scheduled-job driver. It runs every minute, reads `/scripts/scheduled` from Batch Events using the Airflow Keycloak service client, and triggers any hourly registry entries whose `scheduleMinute` matches the current Airflow logical date minute.
+`dags/wmes/cwms_batch_events_swt_hourly.py` now acts as the Batch Events scheduled-job driver. It runs every minute, reads `/scripts/scheduled` from Batch Events using the Airflow Keycloak service client, and triggers any hourly registry entries whose `scheduleMinute` matches the current Airflow logical date minute. Due scripts are triggered through dynamic task mapping so one office trigger does not block the others due in the same minute.
 
 The schedule, office, runtime, resource profile, script path, roles, environment variables, and allowed secret names live in the Batch Events script registry. Airflow should not create one DAG or AWS Batch job definition per office for this path.
 
