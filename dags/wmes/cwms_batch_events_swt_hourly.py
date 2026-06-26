@@ -27,27 +27,28 @@ default_args = {
     max_active_runs=5,
 )
 def cwms_batch_events_scheduled_jobs():
-    @task(task_id="trigger-due-jobs")
-    def trigger_due_jobs():
+    @task(task_id="get-due-scripts")
+    def get_due_scripts():
         minute = get_current_context()["logical_date"].minute
-        due_scripts = batch_events.scripts_due_at_minute(minute)
-        jobs = []
-        for script in due_scripts:
-            job = batch_events.trigger_job(script["id"])
-            jobs.append(
-                {
-                    "jobId": job["id"],
-                    "scriptId": script["id"],
-                    "office": script["office"],
-                    "slug": script["slug"],
-                    "resourceProfile": script["resourceProfile"],
-                    "runtime": script["runtime"],
-                }
-            )
-        print(json.dumps(jobs, indent=2))
-        return jobs
+        scripts = batch_events.scripts_due_at_minute(minute)
+        print(json.dumps(scripts, indent=2))
+        return scripts
 
-    trigger_due_jobs()
+    @task(task_id="trigger-script")
+    def trigger_script(script: dict):
+        job = batch_events.trigger_job(script["id"])
+        result = {
+            "jobId": job["id"],
+            "scriptId": script["id"],
+            "office": script["office"],
+            "slug": script["slug"],
+            "resourceProfile": script["resourceProfile"],
+            "runtime": script["runtime"],
+        }
+        print(json.dumps(result, indent=2))
+        return result
+
+    trigger_script.expand(script=get_due_scripts())
 
 
 DAG_ = cwms_batch_events_scheduled_jobs()
