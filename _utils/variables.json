@@ -7,6 +7,11 @@
     "USGS_RATINGS_OFFICES": "mvp,lrl",
     "BATCH_HOURLY_OFFICES": "mvp,lrl",
     "BATCH_DAILY_OFFICES": "mvp,lrl",
+    "BATCH_EVENTS_API_ROOT": "https://batch-events-test.cwbi.us/api",
+    "BATCH_EVENTS_KEYCLOAK_TOKEN_URL": "https://identity-test.cwbi.us/auth/realms/cwms/protocol/openid-connect/token",
+    "BATCH_EVENTS_KEYCLOAK_CLIENT_ID": "cwms-batch-airflow-swt",
+    "BATCH_EVENTS_KEYCLOAK_SCOPE": "openid profile",
+    "BATCH_EVENTS_SWT_HOURLY_SCRIPT_ID": "bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
     "OFFICE_GROUPS": [
     {"office": "hec", "office_group": "iwr"},
     {"office": "lrb", "office_group": "lrd"},
