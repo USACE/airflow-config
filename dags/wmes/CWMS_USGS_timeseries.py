@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from cwmscli.usgs.getusgs_cda import getusgs_cda
+#from cwmscli.usgs.getusgs_cda import getusgs_cda
 from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
@@ -7,6 +7,8 @@ from airflow.utils.task_group import TaskGroup
 from airflow.operators.python import get_current_context
 from airflow.models import Variable
 from helpers.batch import get_office_groups
+from helpers.usgs_cda import getusgs_cda
+from airflow import DAG
 
 APIKEY = Variable.get("API_KEY")
 APIROOT = Variable.get("CDA_URL")
