@@ -1,10 +1,13 @@
 import json
+import logging
 import os
 from datetime import datetime
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from airflow.models import Variable
+
+logger = logging.getLogger(__name__)
 
 
 def get_config(name: str, default: str | None = None) -> str:
@@ -178,8 +181,16 @@ def scripts_due_at(logical_date: datetime) -> list[dict]:
         if (
             schedule_type == "cron"
             and schedule_cron
-            and cron_matches(schedule_cron, logical_date)
         ):
-            due_scripts.append(script)
+            try:
+                if cron_matches(schedule_cron, logical_date):
+                    due_scripts.append(script)
+            except ValueError as exc:
+                logger.warning(
+                    "Skipping scheduled script %s because scheduleCron %r is invalid: %s",
+                    script.get("id", "<unknown>"),
+                    schedule_cron,
+                    exc,
+                )
 
     return due_scripts

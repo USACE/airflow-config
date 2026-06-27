@@ -130,3 +130,32 @@ def test_scripts_due_at_matches_hourly_minute_and_cron(monkeypatch):
     scripts = batch_events.scripts_due_at(logical_date)
 
     assert [script["id"] for script in scripts] == ["hourly-due", "cron-due"]
+
+
+def test_scripts_due_at_skips_invalid_cron_without_blocking_other_scripts(
+    monkeypatch, caplog
+):
+    logical_date = datetime(2026, 6, 26, 17, 15, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts",
+        lambda: [
+            {
+                "id": "bad-cron",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "99 17 * * *",
+            },
+            {
+                "id": "good-cron",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 17 * * 5",
+            },
+        ],
+    )
+
+    scripts = batch_events.scripts_due_at(logical_date)
+
+    assert [script["id"] for script in scripts] == ["good-cron"]
+    assert "Skipping scheduled script bad-cron" in caplog.text
