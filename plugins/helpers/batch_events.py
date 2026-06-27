@@ -75,6 +75,8 @@ def get_office_client_config(office: str | None) -> dict[str, str]:
     if not office_key:
         return {}
 
+    # Office-specific scheduler clients keep Airflow's trigger rights scoped to
+    # the office whose registry rows it is listing or starting.
     client_id = get_optional_config(f"BATCH_EVENTS_KEYCLOAK_CLIENT_ID_{office_key}")
     client_secret = get_optional_config(
         f"BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET_{office_key}"
@@ -306,6 +308,8 @@ def script_schedule_datetime(script: dict, logical_date: datetime) -> datetime:
     if logical_date.tzinfo is None:
         logical_date = logical_date.replace(tzinfo=timezone.utc)
 
+    # Airflow ticks in UTC; each registry schedule is evaluated in the script's
+    # selected timezone to preserve office-local schedule semantics.
     return logical_date.astimezone(schedule_timezone)
 
 
