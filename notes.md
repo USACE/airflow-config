@@ -27,6 +27,9 @@ service account values:
 - `BATCH_EVENTS_KEYCLOAK_CLIENT_ID`
 - `BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET`
 - `BATCH_EVENTS_KEYCLOAK_SCOPE`
+- `BATCH_EVENTS_KEYCLOAK_TOKEN_HOST_HEADER` when an environment must reach the
+  Keycloak token endpoint through one host while preserving the public issuer
+  host header
 
 In AWS these are expected to come from Airflow variables exposed by the Airflow
 CDK app as `AIRFLOW_VAR_BATCH_EVENTS_*` secrets. Airflow should not require
