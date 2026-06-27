@@ -132,6 +132,41 @@ def test_scripts_due_at_matches_hourly_minute_and_cron(monkeypatch):
     assert [script["id"] for script in scripts] == ["hourly-due", "cron-due"]
 
 
+def test_scripts_due_at_includes_multiple_offices_due_same_minute(monkeypatch):
+    logical_date = datetime(2026, 6, 26, 17, 15, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts",
+        lambda: [
+            {
+                "id": "swt-hourly",
+                "office": "SWT",
+                "scheduleEnabled": True,
+                "scheduleType": "hourly",
+                "scheduleMinute": 15,
+            },
+            {
+                "id": "lrl-hourly",
+                "office": "LRL",
+                "scheduleEnabled": True,
+                "scheduleType": "hourly",
+                "scheduleMinute": 15,
+            },
+            {
+                "id": "mvk-later",
+                "office": "MVK",
+                "scheduleEnabled": True,
+                "scheduleType": "hourly",
+                "scheduleMinute": 30,
+            },
+        ],
+    )
+
+    scripts = batch_events.scripts_due_at(logical_date)
+
+    assert [script["id"] for script in scripts] == ["swt-hourly", "lrl-hourly"]
+
+
 def test_scripts_due_at_skips_invalid_cron_without_blocking_other_scripts(
     monkeypatch, caplog
 ):
