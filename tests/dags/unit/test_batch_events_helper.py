@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 import sys
 import types
@@ -14,6 +15,51 @@ sys.modules.setdefault("airflow.models", airflow_models_module)
 
 from helpers import batch_events  # noqa: E402
 from helpers.batch_events import cron_matches  # noqa: E402
+
+
+class FakeResponse:
+    def __init__(self, payload: dict):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+
+def test_trigger_job_posts_once_to_batch_events_without_polling(monkeypatch):
+    requests = []
+    monkeypatch.setattr(batch_events, "get_service_account_token", lambda: "token")
+    monkeypatch.setattr(
+        batch_events,
+        "get_config",
+        lambda name, default=None: (
+            "https://batch-events.example/api"
+            if name == "BATCH_EVENTS_API_ROOT"
+            else default
+        ),
+    )
+
+    def fake_urlopen(request, timeout):
+        requests.append((request, timeout))
+        return FakeResponse({"id": "job-1", "jobStatus": "Pending"})
+
+    monkeypatch.setattr(batch_events, "urlopen", fake_urlopen)
+
+    job = batch_events.trigger_job("script-1")
+
+    assert job == {"id": "job-1", "jobStatus": "Pending"}
+    assert len(requests) == 1
+    request, timeout = requests[0]
+    assert timeout == 30
+    assert request.full_url == "https://batch-events.example/api/jobs"
+    assert request.get_method() == "POST"
+    assert request.headers["Authorization"] == "Bearer token"
+    assert json.loads(request.data.decode("utf-8")) == {"scriptId": "script-1"}
 
 
 def test_cron_matches_daily_schedule():
