@@ -17,6 +17,23 @@ def test_registry_scheduled_driver_uses_batch_events_dynamic_mapping():
     assert "trigger_script.expand(script=get_due_scripts())" in source
     assert 'schedule="* * * * *"' in source
     assert "max_active_tasks=30" in source
+    assert "BatchOperator" not in source
+    assert "SubmitJob" not in source
+    assert "submit_job" not in source
+
+
+def test_registry_scheduled_driver_does_not_wait_for_batch_completion():
+    source = read_dag("cwms_batch_events_scheduled_jobs.py")
+
+    for forbidden in [
+        "describe_jobs",
+        "get_log_events",
+        "get_logs",
+        "jobStatus",
+        "sleep(",
+        "wait_for",
+    ]:
+        assert forbidden not in source
 
 
 def test_legacy_wmes_batch_dags_are_manual_batch_events_compatibility_paths():
@@ -34,3 +51,6 @@ def test_legacy_wmes_batch_dags_are_manual_batch_events_compatibility_paths():
         assert "BatchOperator" not in source
         assert "SubmitJob" not in source
         assert "submit_job" not in source
+        assert "describe_jobs" not in source
+        assert "get_log_events" not in source
+        assert "wait_for" not in source

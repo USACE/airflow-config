@@ -63,6 +63,8 @@ def test_trigger_job_posts_once_to_batch_events_without_polling(monkeypatch):
     request, timeout = requests[0]
     assert timeout == 30
     assert request.full_url == "https://batch-events.example/api/jobs"
+    assert "/logs" not in request.full_url
+    assert "/status" not in request.full_url
     assert request.get_method() == "POST"
     assert request.headers["Authorization"] == "Bearer token"
     assert json.loads(request.data.decode("utf-8")) == {"scriptId": "script-1"}
