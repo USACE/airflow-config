@@ -4,6 +4,8 @@ from pathlib import Path
 import sys
 import types
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "plugins"))
 
@@ -216,6 +218,40 @@ def test_get_scheduled_scripts_uses_single_default_client_without_office_config(
     assert scripts == [{"id": "script-1", "scheduleEnabled": True}]
     assert len(requests) == 1
     assert requests[0].headers["Authorization"] == "Bearer token-default"
+
+
+def test_get_scheduled_scripts_skips_failed_office_when_multiple_configured(
+    monkeypatch,
+    caplog,
+):
+    def fake_get_scheduled_scripts_for_office(office=None):
+        if office == "SWT":
+            raise RuntimeError("SWT token failed")
+        return [{"id": f"{office.lower()}-script", "office": office}]
+
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts_for_office",
+        fake_get_scheduled_scripts_for_office,
+    )
+
+    scripts = batch_events.get_scheduled_scripts(["SWT", "LRL"])
+
+    assert scripts == [{"id": "lrl-script", "office": "LRL"}]
+    assert "Skipping scheduled scripts for office SWT" in caplog.text
+
+
+def test_get_scheduled_scripts_raises_failed_office_when_only_one_configured(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts_for_office",
+        lambda office=None: (_ for _ in ()).throw(RuntimeError("SWT token failed")),
+    )
+
+    with pytest.raises(RuntimeError, match="SWT token failed"):
+        batch_events.get_scheduled_scripts(["SWT"])
 
 
 def test_cron_matches_daily_schedule():

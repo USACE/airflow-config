@@ -182,7 +182,18 @@ def get_scheduled_scripts(offices: list[str] | None = None) -> list[dict]:
     if office_list:
         scripts_by_id = {}
         for office in office_list:
-            for script in get_scheduled_scripts_for_office(office):
+            try:
+                office_scripts = get_scheduled_scripts_for_office(office)
+            except Exception:
+                if len(office_list) == 1:
+                    raise
+                logger.exception(
+                    "Skipping scheduled scripts for office %s after Batch Events lookup failed",
+                    office,
+                )
+                continue
+
+            for script in office_scripts:
                 scripts_by_id.setdefault(script["id"], script)
         return list(scripts_by_id.values())
 
