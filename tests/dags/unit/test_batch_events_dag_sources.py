@@ -13,7 +13,7 @@ def test_registry_scheduled_driver_uses_batch_events_dynamic_mapping():
     source = read_dag("cwms_batch_events_scheduled_jobs.py")
 
     assert "batch_events.scripts_due_at(logical_date)" in source
-    assert "batch_events.trigger_job(script[\"id\"])" in source
+    assert "batch_events.trigger_job(script[\"id\"], office=script[\"office\"])" in source
     assert "trigger_script.expand(script=get_due_scripts())" in source
     assert 'schedule="* * * * *"' in source
     assert "max_active_tasks=30" in source
@@ -28,7 +28,7 @@ def test_legacy_wmes_batch_dags_are_manual_batch_events_compatibility_paths():
 
         assert "schedule=None" in source
         assert helper_call in source
-        assert "batch_events.trigger_job(script[\"id\"])" in source
+        assert "batch_events.trigger_job(script[\"id\"], office=script[\"office\"])" in source
         assert "trigger_script.expand(" in source
         assert "max_active_tasks=30" in source
         assert "BatchOperator" not in source

@@ -36,7 +36,7 @@ def cwms_batch_events_scheduled_jobs():
 
     @task(task_id="trigger-script")
     def trigger_script(script: dict):
-        job = batch_events.trigger_job(script["id"])
+        job = batch_events.trigger_job(script["id"], office=script["office"])
         result = {
             "jobId": job["id"],
             "scriptId": script["id"],

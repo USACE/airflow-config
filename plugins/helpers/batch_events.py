@@ -10,6 +10,13 @@ from airflow.models import Variable
 logger = logging.getLogger(__name__)
 
 
+def normalize_office(office: str | None) -> str | None:
+    if not office:
+        return None
+    value = office.strip().upper().replace("-", "_")
+    return value or None
+
+
 def get_config(name: str, default: str | None = None) -> str:
     value = Variable.get(name, default_var=None)
     if value:
@@ -30,13 +37,67 @@ def get_config(name: str, default: str | None = None) -> str:
     raise RuntimeError(f"Missing Airflow configuration value: {name}")
 
 
-def get_service_account_token() -> str:
+def get_optional_config(name: str) -> str | None:
+    try:
+        return get_config(name)
+    except RuntimeError:
+        return None
+
+
+def get_office_client_config(office: str | None) -> dict[str, str]:
+    office_key = normalize_office(office)
+    if not office_key:
+        return {}
+
+    client_id = get_optional_config(f"BATCH_EVENTS_KEYCLOAK_CLIENT_ID_{office_key}")
+    client_secret = get_optional_config(
+        f"BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET_{office_key}"
+    )
+    if client_id and client_secret:
+        return {"client_id": client_id, "client_secret": client_secret}
+
+    raw_clients = get_optional_config("BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS")
+    if not raw_clients:
+        return {}
+
+    try:
+        clients = json.loads(raw_clients)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS is not valid JSON") from exc
+
+    config = clients.get(office_key) or clients.get(office_key.lower())
+    if not config:
+        return {}
+    if not isinstance(config, dict):
+        raise RuntimeError(
+            f"BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS.{office_key} must be an object"
+        )
+
+    client_id = config.get("client_id") or config.get("clientId")
+    client_secret = config.get("client_secret") or config.get("clientSecret")
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            f"BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS.{office_key} must include client_id and client_secret"
+        )
+
+    return {"client_id": client_id, "client_secret": client_secret}
+
+
+def get_service_account_token(office: str | None = None) -> str:
+    office_config = get_office_client_config(office)
+    client_id = office_config.get("client_id")
+    if not client_id:
+        client_id = get_config("BATCH_EVENTS_KEYCLOAK_CLIENT_ID")
+    client_secret = office_config.get("client_secret")
+    if not client_secret:
+        client_secret = get_config("BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET")
+
     token_url = get_config("BATCH_EVENTS_KEYCLOAK_TOKEN_URL")
     form = urlencode(
         {
             "grant_type": "client_credentials",
-            "client_id": get_config("BATCH_EVENTS_KEYCLOAK_CLIENT_ID"),
-            "client_secret": get_config("BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET"),
+            "client_id": client_id,
+            "client_secret": client_secret,
             "scope": get_config("BATCH_EVENTS_KEYCLOAK_SCOPE", "openid profile"),
         }
     ).encode("utf-8")
@@ -53,9 +114,9 @@ def get_service_account_token() -> str:
         return json.loads(response.read().decode("utf-8"))["access_token"]
 
 
-def trigger_job(script_id: str) -> dict:
+def trigger_job(script_id: str, office: str | None = None) -> dict:
     api_root = get_config("BATCH_EVENTS_API_ROOT").rstrip("/")
-    token = get_service_account_token()
+    token = get_service_account_token(office)
     body = json.dumps({"scriptId": script_id}).encode("utf-8")
     request = Request(
         f"{api_root}/jobs",

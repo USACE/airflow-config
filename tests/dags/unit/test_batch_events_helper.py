@@ -33,7 +33,12 @@ class FakeResponse:
 
 def test_trigger_job_posts_once_to_batch_events_without_polling(monkeypatch):
     requests = []
-    monkeypatch.setattr(batch_events, "get_service_account_token", lambda: "token")
+    token_offices = []
+    monkeypatch.setattr(
+        batch_events,
+        "get_service_account_token",
+        lambda office=None: token_offices.append(office) or "token",
+    )
     monkeypatch.setattr(
         batch_events,
         "get_config",
@@ -50,9 +55,10 @@ def test_trigger_job_posts_once_to_batch_events_without_polling(monkeypatch):
 
     monkeypatch.setattr(batch_events, "urlopen", fake_urlopen)
 
-    job = batch_events.trigger_job("script-1")
+    job = batch_events.trigger_job("script-1", office="SWT")
 
     assert job == {"id": "job-1", "jobStatus": "Pending"}
+    assert token_offices == ["SWT"]
     assert len(requests) == 1
     request, timeout = requests[0]
     assert timeout == 30
@@ -60,6 +66,77 @@ def test_trigger_job_posts_once_to_batch_events_without_polling(monkeypatch):
     assert request.get_method() == "POST"
     assert request.headers["Authorization"] == "Bearer token"
     assert json.loads(request.data.decode("utf-8")) == {"scriptId": "script-1"}
+
+
+def test_get_service_account_token_uses_office_specific_config(monkeypatch):
+    requests = []
+    values = {
+        "BATCH_EVENTS_KEYCLOAK_TOKEN_URL": "https://keycloak/token",
+        "BATCH_EVENTS_KEYCLOAK_CLIENT_ID": "default-client",
+        "BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET": "default-secret",
+        "BATCH_EVENTS_KEYCLOAK_CLIENT_ID_SWT": "swt-client",
+        "BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET_SWT": "swt-secret",
+        "BATCH_EVENTS_KEYCLOAK_SCOPE": "openid profile",
+        "BATCH_EVENTS_KEYCLOAK_TOKEN_HOST_HEADER": "",
+    }
+    monkeypatch.setattr(
+        batch_events,
+        "get_config",
+        lambda name, default=None: values.get(name, default),
+    )
+
+    def fake_urlopen(request, timeout):
+        requests.append((request, timeout))
+        return FakeResponse({"access_token": "office-token"})
+
+    monkeypatch.setattr(batch_events, "urlopen", fake_urlopen)
+
+    token = batch_events.get_service_account_token("swt")
+
+    assert token == "office-token"
+    request, timeout = requests[0]
+    assert timeout == 30
+    body = request.data.decode("utf-8")
+    assert "client_id=swt-client" in body
+    assert "client_secret=swt-secret" in body
+    assert "default-client" not in body
+
+
+def test_get_service_account_token_uses_office_client_map(monkeypatch):
+    requests = []
+    values = {
+        "BATCH_EVENTS_KEYCLOAK_TOKEN_URL": "https://keycloak/token",
+        "BATCH_EVENTS_KEYCLOAK_CLIENT_ID": "default-client",
+        "BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET": "default-secret",
+        "BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS": json.dumps(
+            {
+                "SWT": {
+                    "clientId": "mapped-swt-client",
+                    "clientSecret": "mapped-swt-secret",
+                }
+            }
+        ),
+        "BATCH_EVENTS_KEYCLOAK_SCOPE": "openid profile",
+        "BATCH_EVENTS_KEYCLOAK_TOKEN_HOST_HEADER": "",
+    }
+    monkeypatch.setattr(
+        batch_events,
+        "get_config",
+        lambda name, default=None: values.get(name, default),
+    )
+
+    def fake_urlopen(request, timeout):
+        requests.append(request)
+        return FakeResponse({"access_token": "mapped-token"})
+
+    monkeypatch.setattr(batch_events, "urlopen", fake_urlopen)
+
+    token = batch_events.get_service_account_token("SWT")
+
+    assert token == "mapped-token"
+    body = requests[0].data.decode("utf-8")
+    assert "client_id=mapped-swt-client" in body
+    assert "client_secret=mapped-swt-secret" in body
 
 
 def test_cron_matches_daily_schedule():

@@ -47,7 +47,7 @@ def cwms_daily_jobs():
 
     @task(task_id="trigger-script")
     def trigger_script(script: dict):
-        job = batch_events.trigger_job(script["id"])
+        job = batch_events.trigger_job(script["id"], office=script["office"])
         result = {
             "jobId": job["id"],
             "scriptId": script["id"],
