@@ -46,3 +46,23 @@ def test_dag_owner_is_airflow():
         owner = dag_bag.dags[dag].default_args.get("owner", None)
         error_msg = f"'owner' not set to 'airflow' for DAG {dag}"
         assert owner == "airflow", error_msg
+
+
+def test_batch_events_scheduled_driver_runs_every_minute():
+    dag_bag = DagBag(include_examples=False)
+    dag = dag_bag.dags["cwms_batch_events_scheduled_jobs"]
+
+    assert str(dag.timetable.summary) == "* * * * *"
+    assert dag.max_active_runs == 2
+    assert dag.max_active_tasks == 30
+    assert {"get-due-scripts", "trigger-script"}.issubset(dag.task_ids)
+
+
+def test_legacy_wmes_batch_dags_are_manual_compatibility_dags():
+    dag_bag = DagBag(include_examples=False)
+
+    for dag_id in ["cwms_hourly_jobs", "cwms_daily_jobs"]:
+        dag = dag_bag.dags[dag_id]
+        assert dag.timetable.summary == "None"
+        assert dag.max_active_tasks == 30
+        assert "trigger-script" in dag.task_ids
