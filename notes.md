@@ -13,7 +13,7 @@ The `airflow_ui` container will likely need to be restarted after running `airfl
 
 ## Batch Events scheduled jobs
 
-`dags/wmes/cwms_batch_events_scheduled_jobs.py` is the Batch Events scheduled-job driver. It runs every minute, reads `/scripts/scheduled` from Batch Events using the Airflow Keycloak service client, and triggers any registry entries due at the current Airflow logical date. The registry supports hourly-at-minute entries and five-field cron expressions. Due scripts are triggered through dynamic task mapping so one office trigger does not block the others due in the same minute.
+`dags/wmes/cwms_batch_events_scheduled_jobs.py` is the Batch Events scheduled-job driver. It runs every minute, reads `/scripts/scheduled` from Batch Events using the Airflow Keycloak service client, and triggers any registry entries due at the current Airflow logical date. When triggering a due script, the helper passes the script office into the token lookup so Airflow can use office-specific scheduler client credentials when configured. The registry supports hourly-at-minute entries and five-field cron expressions. Due scripts are triggered through dynamic task mapping so one office trigger does not block the others due in the same minute.
 
 The schedule, office, runtime, resource profile, script path, roles, environment variables, and allowed secret names live in the Batch Events script registry. Airflow should not create one DAG or AWS Batch job definition per office for this path.
 
@@ -26,6 +26,11 @@ service account values:
 - `BATCH_EVENTS_KEYCLOAK_TOKEN_URL`
 - `BATCH_EVENTS_KEYCLOAK_CLIENT_ID`
 - `BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET`
+- optional office-suffixed overrides such as
+  `BATCH_EVENTS_KEYCLOAK_CLIENT_ID_SWT` and
+  `BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET_SWT`
+- optional `BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS` JSON map, such as
+  `{"SWT":{"clientId":"cwms-batch-airflow-swt","clientSecret":"..."}}`
 - `BATCH_EVENTS_KEYCLOAK_SCOPE`
 - `BATCH_EVENTS_KEYCLOAK_TOKEN_HOST_HEADER` when an environment must reach the
   Keycloak token endpoint through one host while preserving the public issuer
