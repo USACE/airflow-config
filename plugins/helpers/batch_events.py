@@ -1,13 +1,15 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from airflow.models import Variable
 
 logger = logging.getLogger(__name__)
+DEFAULT_SCHEDULE_TIMEZONE = "UTC"
 
 
 def normalize_office(office: str | None) -> str | None:
@@ -294,16 +296,43 @@ def cron_matches(expression: str, logical_date: datetime) -> bool:
     )
 
 
+def script_schedule_datetime(script: dict, logical_date: datetime) -> datetime:
+    timezone_name = (script.get("scheduleTimezone") or DEFAULT_SCHEDULE_TIMEZONE).strip()
+    try:
+        schedule_timezone = ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as exc:
+        raise ValueError(f"Invalid scheduleTimezone {timezone_name!r}") from exc
+
+    if logical_date.tzinfo is None:
+        logical_date = logical_date.replace(tzinfo=timezone.utc)
+
+    return logical_date.astimezone(schedule_timezone)
+
+
 def scripts_due_at(logical_date: datetime) -> list[dict]:
     due_scripts = []
     for script in get_scheduled_scripts():
         if not script.get("scheduleEnabled"):
             continue
 
+        try:
+            schedule_date = script_schedule_datetime(script, logical_date)
+        except ValueError as exc:
+            logger.warning(
+                "Skipping scheduled script %s because scheduleTimezone %r is invalid: %s",
+                script.get("id", "<unknown>"),
+                script.get("scheduleTimezone"),
+                exc,
+            )
+            continue
+
+        if getattr(schedule_date, "fold", 0) == 1:
+            continue
+
         schedule_type = script.get("scheduleType")
         if (
             schedule_type == "hourly"
-            and script.get("scheduleMinute") == logical_date.minute
+            and script.get("scheduleMinute") == schedule_date.minute
         ):
             due_scripts.append(script)
             continue
@@ -314,7 +343,7 @@ def scripts_due_at(logical_date: datetime) -> list[dict]:
             and schedule_cron
         ):
             try:
-                if cron_matches(schedule_cron, logical_date):
+                if cron_matches(schedule_cron, schedule_date):
                     due_scripts.append(script)
             except ValueError as exc:
                 logger.warning(

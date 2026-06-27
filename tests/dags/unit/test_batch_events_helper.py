@@ -385,6 +385,117 @@ def test_scripts_due_at_matches_hourly_minute_and_cron(monkeypatch):
     assert [script["id"] for script in scripts] == ["hourly-due", "cron-due"]
 
 
+def test_scripts_due_at_matches_cron_in_script_timezone(monkeypatch):
+    logical_date = datetime(2026, 6, 26, 17, 15, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts",
+        lambda: [
+            {
+                "id": "chicago-noon",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 12 * * 5",
+                "scheduleTimezone": "America/Chicago",
+            },
+            {
+                "id": "utc-noon",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 12 * * 5",
+                "scheduleTimezone": "UTC",
+            },
+        ],
+    )
+
+    scripts = batch_events.scripts_due_at(logical_date)
+
+    assert [script["id"] for script in scripts] == ["chicago-noon"]
+
+
+def test_scripts_due_at_skips_invalid_timezone_without_blocking_other_scripts(
+    monkeypatch, caplog
+):
+    logical_date = datetime(2026, 6, 26, 17, 15, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts",
+        lambda: [
+            {
+                "id": "bad-zone",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 17 * * 5",
+                "scheduleTimezone": "Mars/Base",
+            },
+            {
+                "id": "good-zone",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 17 * * 5",
+                "scheduleTimezone": "UTC",
+            },
+        ],
+    )
+
+    scripts = batch_events.scripts_due_at(logical_date)
+
+    assert [script["id"] for script in scripts] == ["good-zone"]
+    assert "Skipping scheduled script bad-zone" in caplog.text
+    assert "scheduleTimezone" in caplog.text
+
+
+def test_scripts_due_at_skips_nonexistent_spring_forward_local_occurrence(
+    monkeypatch,
+):
+    logical_date = datetime(2026, 3, 8, 8, 15, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts",
+        lambda: [
+            {
+                "id": "missing-215",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 2 * * *",
+                "scheduleTimezone": "America/Chicago",
+            },
+            {
+                "id": "existing-315",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 3 * * *",
+                "scheduleTimezone": "America/Chicago",
+            },
+        ],
+    )
+
+    scripts = batch_events.scripts_due_at(logical_date)
+
+    assert [script["id"] for script in scripts] == ["existing-315"]
+
+
+def test_scripts_due_at_runs_repeated_fall_back_local_occurrence_once(monkeypatch):
+    script = {
+        "id": "fall-back-115",
+        "scheduleEnabled": True,
+        "scheduleType": "cron",
+        "scheduleCron": "15 1 * * *",
+        "scheduleTimezone": "America/Chicago",
+    }
+    monkeypatch.setattr(batch_events, "get_scheduled_scripts", lambda: [script])
+
+    first_occurrence = batch_events.scripts_due_at(
+        datetime(2026, 11, 1, 6, 15, tzinfo=timezone.utc)
+    )
+    repeated_occurrence = batch_events.scripts_due_at(
+        datetime(2026, 11, 1, 7, 15, tzinfo=timezone.utc)
+    )
+
+    assert [script["id"] for script in first_occurrence] == ["fall-back-115"]
+    assert repeated_occurrence == []
+
+
 def test_scripts_due_at_includes_multiple_offices_due_same_minute(monkeypatch):
     logical_date = datetime(2026, 6, 26, 17, 15, tzinfo=timezone.utc)
     monkeypatch.setattr(
