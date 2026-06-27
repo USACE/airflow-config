@@ -44,6 +44,30 @@ def get_optional_config(name: str) -> str | None:
         return None
 
 
+def parse_office_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [
+        office
+        for office in (normalize_office(part) for part in value.split(","))
+        if office
+    ]
+
+
+def get_office_client_map() -> dict:
+    raw_clients = get_optional_config("BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS")
+    if not raw_clients:
+        return {}
+
+    try:
+        clients = json.loads(raw_clients)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS is not valid JSON") from exc
+    if not isinstance(clients, dict):
+        raise RuntimeError("BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS must be a JSON object")
+    return clients
+
+
 def get_office_client_config(office: str | None) -> dict[str, str]:
     office_key = normalize_office(office)
     if not office_key:
@@ -56,15 +80,7 @@ def get_office_client_config(office: str | None) -> dict[str, str]:
     if client_id and client_secret:
         return {"client_id": client_id, "client_secret": client_secret}
 
-    raw_clients = get_optional_config("BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS")
-    if not raw_clients:
-        return {}
-
-    try:
-        clients = json.loads(raw_clients)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS is not valid JSON") from exc
-
+    clients = get_office_client_map()
     config = clients.get(office_key) or clients.get(office_key.lower())
     if not config:
         return {}
@@ -81,6 +97,17 @@ def get_office_client_config(office: str | None) -> dict[str, str]:
         )
 
     return {"client_id": client_id, "client_secret": client_secret}
+
+
+def get_scheduled_script_offices() -> list[str]:
+    offices = parse_office_list(get_optional_config("BATCH_EVENTS_SCHEDULED_OFFICES"))
+    if offices:
+        return offices
+    return [
+        office
+        for office in (normalize_office(key) for key in get_office_client_map())
+        if office
+    ]
 
 
 def get_service_account_token(office: str | None = None) -> str:
@@ -131,9 +158,9 @@ def trigger_job(script_id: str, office: str | None = None) -> dict:
         return json.loads(response.read().decode("utf-8"))
 
 
-def get_scheduled_scripts() -> list[dict]:
+def get_scheduled_scripts_for_office(office: str | None = None) -> list[dict]:
     api_root = get_config("BATCH_EVENTS_API_ROOT").rstrip("/")
-    token = get_service_account_token()
+    token = get_service_account_token(office)
     request = Request(
         f"{api_root}/scripts/scheduled",
         headers={
@@ -144,6 +171,26 @@ def get_scheduled_scripts() -> list[dict]:
     )
     with urlopen(request, timeout=30) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def get_scheduled_scripts(offices: list[str] | None = None) -> list[dict]:
+    office_list = [
+        office
+        for office in (normalize_office(office) for office in (offices or []))
+        if office
+    ]
+    if office_list:
+        scripts_by_id = {}
+        for office in office_list:
+            for script in get_scheduled_scripts_for_office(office):
+                scripts_by_id.setdefault(script["id"], script)
+        return list(scripts_by_id.values())
+
+    configured_offices = get_scheduled_script_offices()
+    if configured_offices:
+        return get_scheduled_scripts(configured_offices)
+
+    return get_scheduled_scripts_for_office()
 
 
 def scheduled_scripts_for_offices(
@@ -157,7 +204,7 @@ def scheduled_scripts_for_offices(
     }
     return [
         script
-        for script in get_scheduled_scripts()
+        for script in get_scheduled_scripts(offices)
         if script.get("scheduleEnabled")
         and script.get("scheduleType") == schedule_type
         and (

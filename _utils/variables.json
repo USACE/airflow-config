@@ -10,6 +10,7 @@
     "BATCH_EVENTS_API_ROOT": "https://batch-events-test.cwbi.us/api",
     "BATCH_EVENTS_KEYCLOAK_TOKEN_URL": "https://identity-test.cwbi.us/auth/realms/cwms/protocol/openid-connect/token",
     "BATCH_EVENTS_KEYCLOAK_CLIENT_ID": "cwms-batch-airflow-swt",
+    "BATCH_EVENTS_SCHEDULED_OFFICES": "",
     "BATCH_EVENTS_KEYCLOAK_SCOPE": "openid profile",
     "OFFICE_GROUPS": [
     {"office": "hec", "office_group": "iwr"},

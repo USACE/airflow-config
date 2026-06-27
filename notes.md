@@ -31,6 +31,9 @@ service account values:
   `BATCH_EVENTS_KEYCLOAK_CLIENT_SECRET_SWT`
 - optional `BATCH_EVENTS_KEYCLOAK_OFFICE_CLIENTS` JSON map, such as
   `{"SWT":{"clientId":"cwms-batch-airflow-swt","clientSecret":"..."}}`
+- optional `BATCH_EVENTS_SCHEDULED_OFFICES` comma-separated list. When set,
+  Airflow lists scheduled registry rows once per office using that office's
+  scheduler client; when blank, it uses the default scheduler client once.
 - `BATCH_EVENTS_KEYCLOAK_SCOPE`
 - `BATCH_EVENTS_KEYCLOAK_TOKEN_HOST_HEADER` when an environment must reach the
   Keycloak token endpoint through one host while preserving the public issuer

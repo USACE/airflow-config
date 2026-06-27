@@ -139,6 +139,83 @@ def test_get_service_account_token_uses_office_client_map(monkeypatch):
     assert "client_secret=mapped-swt-secret" in body
 
 
+def test_get_scheduled_scripts_uses_configured_office_clients(monkeypatch):
+    requests = []
+    monkeypatch.setattr(
+        batch_events,
+        "get_config",
+        lambda name, default=None: (
+            "https://batch-events.example/api"
+            if name == "BATCH_EVENTS_API_ROOT"
+            else "SWT,LRL"
+            if name == "BATCH_EVENTS_SCHEDULED_OFFICES"
+            else default
+        ),
+    )
+    monkeypatch.setattr(
+        batch_events,
+        "get_service_account_token",
+        lambda office=None: f"token-{office}",
+    )
+
+    def fake_urlopen(request, timeout):
+        requests.append((request, timeout))
+        token = request.headers["Authorization"].removeprefix("Bearer ")
+        office = token.removeprefix("token-")
+        return FakeResponse(
+            [
+                {
+                    "id": f"{office.lower()}-script",
+                    "office": office,
+                    "scheduleEnabled": True,
+                    "scheduleType": "hourly",
+                }
+            ]
+        )
+
+    monkeypatch.setattr(batch_events, "urlopen", fake_urlopen)
+
+    scripts = batch_events.get_scheduled_scripts()
+
+    assert [script["id"] for script in scripts] == ["swt-script", "lrl-script"]
+    assert [request.headers["Authorization"] for request, _timeout in requests] == [
+        "Bearer token-SWT",
+        "Bearer token-LRL",
+    ]
+
+
+def test_get_scheduled_scripts_uses_single_default_client_without_office_config(
+    monkeypatch,
+):
+    requests = []
+    monkeypatch.setattr(
+        batch_events,
+        "get_config",
+        lambda name, default=None: (
+            "https://batch-events.example/api"
+            if name == "BATCH_EVENTS_API_ROOT"
+            else default
+        ),
+    )
+    monkeypatch.setattr(
+        batch_events,
+        "get_service_account_token",
+        lambda office=None: f"token-{office or 'default'}",
+    )
+
+    def fake_urlopen(request, timeout):
+        requests.append(request)
+        return FakeResponse([{"id": "script-1", "scheduleEnabled": True}])
+
+    monkeypatch.setattr(batch_events, "urlopen", fake_urlopen)
+
+    scripts = batch_events.get_scheduled_scripts()
+
+    assert scripts == [{"id": "script-1", "scheduleEnabled": True}]
+    assert len(requests) == 1
+    assert requests[0].headers["Authorization"] == "Bearer token-default"
+
+
 def test_cron_matches_daily_schedule():
     logical_date = datetime(2026, 6, 26, 17, 0, tzinfo=timezone.utc)
 
@@ -172,7 +249,7 @@ def test_scheduled_scripts_for_offices_filters_type_enabled_and_office(monkeypat
     monkeypatch.setattr(
         batch_events,
         "get_scheduled_scripts",
-        lambda: [
+        lambda offices=None: [
             {
                 "id": "1",
                 "office": "SWT",
@@ -211,7 +288,7 @@ def test_scheduled_scripts_for_offices_allows_all_offices_when_filter_empty(
     monkeypatch.setattr(
         batch_events,
         "get_scheduled_scripts",
-        lambda: [
+        lambda offices=None: [
             {
                 "id": "1",
                 "office": "SWT",
