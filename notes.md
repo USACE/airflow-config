@@ -17,7 +17,7 @@ The `airflow_ui` container will likely need to be restarted after running `airfl
 
 The schedule, office, runtime, resource profile, script path, roles, environment variables, and allowed secret names live in the Batch Events script registry. Airflow should not create one DAG or AWS Batch job definition per office for this path.
 
-`dags/wmes/cwms_hourly_jobs.py` and `dags/wmes/cwms_daily_jobs.py` are retained as manual compatibility DAGs and no longer have active schedules. They no longer submit AWS Batch jobs directly. Instead, they read scheduled Batch Events registry entries for the configured offices and trigger those scripts through Batch Events, so Airflow does not need office-specific AWS Batch job definitions.
+`dags/wmes/cwms_hourly_jobs.py` and `dags/wmes/cwms_daily_jobs.py` are retained as manual compatibility DAGs and no longer have active schedules. They no longer submit AWS Batch jobs directly. Instead, they read scheduled Batch Events registry entries for the configured offices and trigger those scripts through Batch Events using dynamic task mapping, so one office's job trigger does not block another and Airflow does not need office-specific AWS Batch job definitions. The every-minute scheduled driver is the production cron-like path for registry schedules.
 
 The scheduler authenticates with Batch Events using the configured Keycloak
 service account values:
