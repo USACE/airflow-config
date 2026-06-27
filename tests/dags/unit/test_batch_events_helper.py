@@ -35,10 +35,30 @@ def test_scheduled_scripts_for_offices_filters_type_enabled_and_office(monkeypat
         batch_events,
         "get_scheduled_scripts",
         lambda: [
-            {"id": "1", "office": "SWT", "scheduleEnabled": True, "scheduleType": "hourly"},
-            {"id": "2", "office": "LRL", "scheduleEnabled": True, "scheduleType": "hourly"},
-            {"id": "3", "office": "SWT", "scheduleEnabled": True, "scheduleType": "cron"},
-            {"id": "4", "office": "SWT", "scheduleEnabled": False, "scheduleType": "hourly"},
+            {
+                "id": "1",
+                "office": "SWT",
+                "scheduleEnabled": True,
+                "scheduleType": "hourly",
+            },
+            {
+                "id": "2",
+                "office": "LRL",
+                "scheduleEnabled": True,
+                "scheduleType": "hourly",
+            },
+            {
+                "id": "3",
+                "office": "SWT",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+            },
+            {
+                "id": "4",
+                "office": "SWT",
+                "scheduleEnabled": False,
+                "scheduleType": "hourly",
+            },
         ],
     )
 
@@ -47,16 +67,66 @@ def test_scheduled_scripts_for_offices_filters_type_enabled_and_office(monkeypat
     assert [script["id"] for script in scripts] == ["1"]
 
 
-def test_scheduled_scripts_for_offices_allows_all_offices_when_filter_empty(monkeypatch):
+def test_scheduled_scripts_for_offices_allows_all_offices_when_filter_empty(
+    monkeypatch,
+):
     monkeypatch.setattr(
         batch_events,
         "get_scheduled_scripts",
         lambda: [
-            {"id": "1", "office": "SWT", "scheduleEnabled": True, "scheduleType": "cron"},
-            {"id": "2", "office": "LRL", "scheduleEnabled": True, "scheduleType": "cron"},
+            {
+                "id": "1",
+                "office": "SWT",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+            },
+            {
+                "id": "2",
+                "office": "LRL",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+            },
         ],
     )
 
     scripts = batch_events.scheduled_scripts_for_offices("cron", [])
 
     assert [script["id"] for script in scripts] == ["1", "2"]
+
+
+def test_scripts_due_at_matches_hourly_minute_and_cron(monkeypatch):
+    logical_date = datetime(2026, 6, 26, 17, 15, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        batch_events,
+        "get_scheduled_scripts",
+        lambda: [
+            {
+                "id": "hourly-due",
+                "scheduleEnabled": True,
+                "scheduleType": "hourly",
+                "scheduleMinute": 15,
+            },
+            {
+                "id": "hourly-later",
+                "scheduleEnabled": True,
+                "scheduleType": "hourly",
+                "scheduleMinute": 45,
+            },
+            {
+                "id": "cron-due",
+                "scheduleEnabled": True,
+                "scheduleType": "cron",
+                "scheduleCron": "15 17 * * 5",
+            },
+            {
+                "id": "disabled",
+                "scheduleEnabled": False,
+                "scheduleType": "hourly",
+                "scheduleMinute": 15,
+            },
+        ],
+    )
+
+    scripts = batch_events.scripts_due_at(logical_date)
+
+    assert [script["id"] for script in scripts] == ["hourly-due", "cron-due"]

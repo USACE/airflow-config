@@ -23,7 +23,8 @@ default_args = {
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["batch-events", "jobs", "scheduled"],
-    max_active_runs=5,
+    max_active_runs=2,
+    max_active_tasks=30,
 )
 def cwms_batch_events_scheduled_jobs():
     @task(task_id="get-due-scripts")
