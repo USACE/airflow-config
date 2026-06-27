@@ -150,16 +150,28 @@ def cron_matches(expression: str, logical_date: datetime) -> bool:
     minute, hour, day, month, weekday = expression.split()
     # Python weekday is Monday=0; cron weekday commonly treats Sunday as 0 or 7.
     cron_weekday = (logical_date.weekday() + 1) % 7
+    day_is_wildcard = day == "*"
+    weekday_is_wildcard = weekday == "*"
+    day_matches = _cron_field_matches(day, logical_date.day, 1, 31)
+    weekday_matches = (
+        _cron_field_matches(weekday, cron_weekday, 0, 7)
+        or (cron_weekday == 0 and _cron_field_matches(weekday, 7, 0, 7))
+    )
+
+    if day_is_wildcard and weekday_is_wildcard:
+        date_matches = True
+    elif day_is_wildcard:
+        date_matches = weekday_matches
+    elif weekday_is_wildcard:
+        date_matches = day_matches
+    else:
+        date_matches = day_matches or weekday_matches
 
     return (
         _cron_field_matches(minute, logical_date.minute, 0, 59)
         and _cron_field_matches(hour, logical_date.hour, 0, 23)
-        and _cron_field_matches(day, logical_date.day, 1, 31)
         and _cron_field_matches(month, logical_date.month, 1, 12)
-        and (
-            _cron_field_matches(weekday, cron_weekday, 0, 7)
-            or (cron_weekday == 0 and _cron_field_matches(weekday, 7, 0, 7))
-        )
+        and date_matches
     )
 
 

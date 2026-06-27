@@ -76,6 +76,21 @@ def test_cron_matches_ranges_lists_and_steps():
     assert not cron_matches("*/20 0-8 * 6,7 5", logical_date)
 
 
+def test_cron_matches_day_of_month_or_day_of_week_when_both_are_restricted():
+    friday = datetime(2026, 6, 26, 17, 15, tzinfo=timezone.utc)
+
+    assert cron_matches("15 17 1 * 5", friday)
+    assert cron_matches("15 17 26 * 1", friday)
+    assert not cron_matches("15 17 1 * 1", friday)
+
+
+def test_cron_matches_sunday_as_zero_or_seven():
+    sunday = datetime(2026, 6, 28, 17, 15, tzinfo=timezone.utc)
+
+    assert cron_matches("15 17 * * 0", sunday)
+    assert cron_matches("15 17 * * 7", sunday)
+
+
 def test_scheduled_scripts_for_offices_filters_type_enabled_and_office(monkeypatch):
     monkeypatch.setattr(
         batch_events,
