@@ -2,14 +2,13 @@ from datetime import datetime, timedelta
 import json
 
 from airflow.decorators import dag, task
-from airflow.models import Variable
+from airflow.operators.python import get_current_context
 
 import helpers.batch_events as batch_events
 
-
 default_args = {
     "owner": "airflow",
-    "start_date": datetime(2025, 6, 1),
+    "start_date": datetime(2026, 1, 1),
     "catchup_by_default": False,
     "email_on_failure": False,
     "email_on_retry": False,
@@ -18,30 +17,20 @@ default_args = {
 }
 
 
-def configured_offices(name: str) -> list[str]:
-    return [
-        office.strip()
-        for office in Variable.get(name, default_var="").split(",")
-        if office.strip()
-    ]
-
-
 @dag(
     default_args=default_args,
-    schedule=None,
-    start_date=datetime(2025, 5, 3),
+    schedule="* * * * *",
+    start_date=datetime(2026, 1, 1),
     catchup=False,
-    tags=["batch-events", "jobs", "district", "manual"],
-    max_active_runs=1,
+    tags=["batch-events", "jobs", "scheduled"],
+    max_active_runs=2,
     max_active_tasks=30,
 )
-def cwms_daily_jobs():
-    @task(task_id="get-cron-scripts")
-    def get_cron_scripts():
-        scripts = batch_events.scheduled_scripts_for_offices(
-            "cron",
-            configured_offices("BATCH_DAILY_OFFICES"),
-        )
+def cwms_batch_events_scheduled_jobs():
+    @task(task_id="get-due-scripts")
+    def get_due_scripts():
+        logical_date = get_current_context()["logical_date"]
+        scripts = batch_events.scripts_due_at(logical_date)
         print(json.dumps(scripts, indent=2))
         return scripts
 
@@ -53,15 +42,13 @@ def cwms_daily_jobs():
             "scriptId": script["id"],
             "office": script["office"],
             "slug": script["slug"],
-            "scheduleType": script["scheduleType"],
-            "scheduleCron": script.get("scheduleCron"),
             "resourceProfile": script["resourceProfile"],
             "runtime": script["runtime"],
         }
         print(json.dumps(result, indent=2))
         return result
 
-    trigger_script.expand(script=get_cron_scripts())
+    trigger_script.expand(script=get_due_scripts())
 
 
-cwms_jobs_dag = cwms_daily_jobs()
+DAG_ = cwms_batch_events_scheduled_jobs()
