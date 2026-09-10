@@ -15,6 +15,7 @@ from airflow.operators.python import get_current_context
 WMES_SHEF_QUEUE_NAME = Variable.get("WMES_SHEF_QUEUE_NAME")
 CDA_API_KEY = Variable.get("API_KEY")
 CDA_URL = Variable.get("CDA_URL")
+OFFICES = Variable.get("SHEF_SQS_TS_OFFICES").split(",")
 
 
 default_args = {
@@ -102,7 +103,7 @@ def sqs_shef_process_messages():
         input = io.StringIO(response.text)
         shef_parser.parse(
             input_stream=input,
-            loader_spec=f"cda[{CDA_URL}][{CDA_API_KEY}]",
+            loader_spec=f"cda[{CDA_URL}][{CDA_API_KEY}][{OFFICES}]",
         )
 
     @task(trigger_rule="all_done")

@@ -1486,7 +1486,7 @@ RUN bash /scripts/docker/install_packaging_tools.sh; bash /scripts/docker/create
 COPY --chown=airflow:0 ${AIRFLOW_SOURCES_FROM} ${AIRFLOW_SOURCES_TO}
 
 # Add extra python dependencies
-ARG ADDITIONAL_PYTHON_DEPS="celery[sqs] celery[redis] pydantic dataretrieval==1.0.12 cwms-python==1.0.8 cwms-cli==0.7.4 shef-parser==1.10.0"
+ARG ADDITIONAL_PYTHON_DEPS="celery[sqs] celery[redis] pydantic dataretrieval==1.0.12 cwms-python==1.0.8 cwms-cli==0.7.4 shef-parser==1.11.0"
 
 
 ARG VERSION_SUFFIX_FOR_PYPI=""
