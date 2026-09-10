@@ -1,6 +1,7 @@
 
 {
     "USGS_TS_OFFICES": "mvp,lrl,swg",
+    "SHEF_SQS_TS_OFFICES": "mvp,lrl,swg",
     "USGS_TS_BACKFILL_OFFICES": "mvp,lrl,swg",
     "USGS_TS_DAYS_BACK": 0.5,
     "USGS_TS_BACKFILL_DAYS_BACK": 14,

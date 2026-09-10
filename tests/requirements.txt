@@ -11,4 +11,4 @@ pandas
 dataretrieval==1.0.12 
 cwms-python==1.0.8 
 cwms-cli==0.7.4 
-shef-parser==1.10.0
+shef-parser==1.11.0
