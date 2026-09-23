@@ -17,6 +17,7 @@ from helpers import batch_events
 
 def test_office_key_precedes_default(monkeypatch):
     values = {
+        "API_KEY": "shared-test-key",
         "BATCH_EVENTS_API_KEY": "default-test-key",
         "BATCH_EVENTS_API_KEY_SWT": "office-test-key",
     }
@@ -27,10 +28,11 @@ def test_office_key_precedes_default(monkeypatch):
     assert batch_events.get_api_key("LRL") == "default-test-key"
 
 
-def test_single_post_uses_existing_api_key_auth(monkeypatch):
+@pytest.mark.parametrize("key_name", ["BATCH_EVENTS_API_KEY", "API_KEY"])
+def test_single_post_uses_existing_api_key_auth(monkeypatch, key_name):
     values = {
         "BATCH_EVENTS_API_ROOT": "https://events.example/api",
-        "BATCH_EVENTS_API_KEY": "synthetic-key",
+        key_name: "synthetic-key",
     }
     monkeypatch.setattr(
         batch_events, "get_config", lambda name, default=None: values.get(name, default)
@@ -58,6 +60,22 @@ def test_single_post_uses_existing_api_key_auth(monkeypatch):
     assert calls[0].headers["Authorization"] == "apikey synthetic-key"
     assert calls[0].full_url == "https://events.example/api/jobs"
     assert json.loads(calls[0].data) == {"scriptId": "script-1"}
+
+
+def test_shared_key_from_existing_airflow_environment(monkeypatch):
+    monkeypatch.setattr(
+        batch_events, "Variable",
+        types.SimpleNamespace(get=lambda name, default_var=None: None),
+    )
+    for name in ("API_KEY", "BATCH_EVENTS_API_KEY", "BATCH_EVENTS_API_KEY_SWT"):
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(f"AIRFLOW_VAR_{name}", raising=False)
+    monkeypatch.setenv("AIRFLOW_VAR_API_KEY", "shared-test-key")
+    assert batch_events.get_api_key("SWT") == "shared-test-key"
+    assert batch_events.get_api_key() == "shared-test-key"
+    monkeypatch.delenv("AIRFLOW_VAR_API_KEY")
+    with pytest.raises(RuntimeError, match="Missing Airflow configuration value: API_KEY"):
+        batch_events.get_api_key("SWT")
 
 
 def test_explicit_office_list_does_not_expand_default_key_scope(monkeypatch):

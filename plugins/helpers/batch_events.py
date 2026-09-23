@@ -215,7 +215,11 @@ def get_api_key(office: str | None = None) -> str:
         key = get_optional_config(f"BATCH_EVENTS_API_KEY_{office_key}")
         if key:
             return key
-    return get_config("BATCH_EVENTS_API_KEY")
+    key = get_optional_config("BATCH_EVENTS_API_KEY")
+    if key:
+        return key
+    # WMES Airflow already injects AIRFLOW_VAR_API_KEY from Secrets Manager.
+    return get_config("API_KEY")
 
 
 def api_request(path: str, office: str | None = None, payload: dict | None = None):
