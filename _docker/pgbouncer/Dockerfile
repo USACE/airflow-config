@@ -1,8 +1,8 @@
 ### BUILD STAGE
 FROM chainguard/wolfi-base:latest AS build
 
-ARG PGBOUNCER_VERSION=1.24.1
-ARG PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_24_1/pgbouncer-1.24.1.tar.gz
+ARG PGBOUNCER_VERSION=1.26.1
+ARG PGBOUNCER_DOWNLOAD_URL=https://github.com/pgbouncer/pgbouncer/releases/download/pgbouncer_1_26_1/pgbouncer-1.26.1.tar.gz
 
 WORKDIR /build
 
@@ -28,8 +28,9 @@ RUN wget ${PGBOUNCER_DOWNLOAD_URL} \
     && ./configure \
         --with-cares \
         --prefix=/pgbouncer \
-    && make \
-    && make install
+    && make pgbouncer \
+    && mkdir -p /pgbouncer/bin \
+    && cp pgbouncer /pgbouncer/bin/pgbouncer
 
 ### RUNTIME STAGE
 FROM chainguard/wolfi-base:latest
